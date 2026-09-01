@@ -103,7 +103,7 @@
       "plan_name": "frontend-crew-a",
       "status": "active",
       "started_at": "2026-09-01T14:49:25.357Z",
-      "updated_at": "2026-09-01T15:31:29.480Z",
+      "updated_at": "2026-09-01T16:19:15.434Z",
       "session_ids": [
         "opencode:ses_fa2bfad38ffeigkm6rzO0NCP6q"
       ],
@@ -119,8 +119,47 @@
           "session_id": "opencode:ses_fa28cb1bcffeE4AGvHIuonAG77",
           "agent": "Sisyphus-Junior",
           "started_at": "2026-09-01T15:03:13.790Z",
+          "status": "completed",
+          "updated_at": "2026-09-01T15:35:22.677Z",
+          "ended_at": "2026-09-01T15:35:22.677Z",
+          "elapsed_ms": 1928887
+        },
+        "todo:2": {
+          "task_key": "todo:2",
+          "task_label": "2",
+          "task_title": "[FRD-03/05] Badge & Urgent List (UX UMKM 48px, 3-tap, multi-select) — TASK-11 isolated",
+          "session_id": "opencode:ses_fa25a45bbffeQtMj5fChHmp6jU",
+          "agent": "Sisyphus-Junior",
+          "category": "visual-engineering",
+          "updated_at": "2026-09-01T16:03:54.909Z",
+          "started_at": "2026-09-01T16:02:58.127Z",
+          "status": "completed",
+          "ended_at": "2026-09-01T16:03:54.909Z",
+          "elapsed_ms": 56782
+        },
+        "todo:3": {
+          "task_key": "todo:3",
+          "task_label": "3",
+          "task_title": "[FRD-04/05] 1-tap Approve → Dialog konfirmasi + Promo Aktif lifecycle UI — TASK-15 isolated",
+          "session_id": "opencode:ses_fa248f9dbffeOxwEpX4vuW3ZEW",
+          "agent": "Sisyphus-Junior",
+          "category": "visual-engineering",
+          "updated_at": "2026-09-01T16:18:00.449Z",
+          "started_at": "2026-09-01T16:15:27.993Z",
+          "status": "completed",
+          "ended_at": "2026-09-01T16:18:00.445Z",
+          "elapsed_ms": 152452
+        },
+        "todo:4": {
+          "task_key": "todo:4",
+          "task_label": "4",
+          "task_title": "[FRD-05] Dashboard Promo Aktif + Histori Saran UI — TASK-17 isolated",
+          "session_id": "opencode:ses_fa23bb49bffeVZ06oZo0D2g1zC",
+          "agent": "Sisyphus-Junior",
+          "category": "visual-engineering",
+          "started_at": "2026-09-01T16:18:18.443Z",
           "status": "running",
-          "updated_at": "2026-09-01T15:31:29.481Z"
+          "updated_at": "2026-09-01T16:19:15.434Z"
         }
       }
     }
@@ -128,7 +167,7 @@
   "active_plan": "/home/yusuf/dev/2026/UNEJ/.omo/plans/frontend-crew-a.md",
   "started_at": "2026-09-01T14:49:25.357Z",
   "status": "active",
-  "updated_at": "2026-09-01T15:31:29.480Z",
+  "updated_at": "2026-09-01T16:19:15.434Z",
   "session_ids": [
     "opencode:ses_fa2bfad38ffeigkm6rzO0NCP6q"
   ],
@@ -144,8 +183,47 @@
       "session_id": "opencode:ses_fa28cb1bcffeE4AGvHIuonAG77",
       "agent": "Sisyphus-Junior",
       "started_at": "2026-09-01T15:03:13.790Z",
+      "status": "completed",
+      "updated_at": "2026-09-01T15:35:22.677Z",
+      "ended_at": "2026-09-01T15:35:22.677Z",
+      "elapsed_ms": 1928887
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "[FRD-03/05] Badge & Urgent List (UX UMKM 48px, 3-tap, multi-select) — TASK-11 isolated",
+      "session_id": "opencode:ses_fa25a45bbffeQtMj5fChHmp6jU",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-09-01T16:03:54.909Z",
+      "started_at": "2026-09-01T16:02:58.127Z",
+      "status": "completed",
+      "ended_at": "2026-09-01T16:03:54.909Z",
+      "elapsed_ms": 56782
+    },
+    "todo:3": {
+      "task_key": "todo:3",
+      "task_label": "3",
+      "task_title": "[FRD-04/05] 1-tap Approve → Dialog konfirmasi + Promo Aktif lifecycle UI — TASK-15 isolated",
+      "session_id": "opencode:ses_fa248f9dbffeOxwEpX4vuW3ZEW",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-09-01T16:18:00.449Z",
+      "started_at": "2026-09-01T16:15:27.993Z",
+      "status": "completed",
+      "ended_at": "2026-09-01T16:18:00.445Z",
+      "elapsed_ms": 152452
+    },
+    "todo:4": {
+      "task_key": "todo:4",
+      "task_label": "4",
+      "task_title": "[FRD-05] Dashboard Promo Aktif + Histori Saran UI — TASK-17 isolated",
+      "session_id": "opencode:ses_fa23bb49bffeVZ06oZo0D2g1zC",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "started_at": "2026-09-01T16:18:18.443Z",
       "status": "running",
-      "updated_at": "2026-09-01T15:31:29.481Z"
+      "updated_at": "2026-09-01T16:19:15.434Z"
     }
   },
   "agent": "atlas"
