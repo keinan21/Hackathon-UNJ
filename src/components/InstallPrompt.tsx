@@ -11,62 +11,18 @@ export function InstallPrompt() {
       role="dialog"
       aria-label="Pasang aplikasi"
       aria-live="polite"
-      style={{
-        position: "fixed",
-        bottom: 16,
-        left: 16,
-        right: 16,
-        maxWidth: 480,
-        margin: "0 auto",
-        background: "#FFFFFF",
-        border: "1px solid #D9D9D9",
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: "0 4px 16px rgba(26,26,26,0.12)",
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        zIndex: 50,
-      }}
+      className="fixed bottom-4 left-4 right-4 max-w-[480px] mx-auto bg-white border border-[#D9D9D9] rounded-xl p-4 shadow-lg flex flex-col gap-3 z-50"
     >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <div className="flex items-start gap-3">
         <div
           aria-hidden="true"
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-            background: "#E8F5E9",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
+          className="w-10 h-10 rounded-lg bg-[#E8F5E9] flex items-center justify-center shrink-0"
         >
           <Download width={20} height={20} color="#0F7A4A" />
         </div>
-        <div style={{ flex: 1 }}>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 16,
-              fontWeight: 600,
-              color: "#1A1A1A",
-              fontFamily: "Inter, system-ui, sans-serif",
-              lineHeight: 1.4,
-            }}
-          >
-            Pasang aplikasi?
-          </p>
-          <p
-            style={{
-              margin: "4px 0 0",
-              fontSize: 14,
-              color: "#595959",
-              fontFamily: "Inter, system-ui, sans-serif",
-              lineHeight: 1.4,
-            }}
-          >
+        <div className="flex-1">
+          <p className="m-0 text-base font-semibold text-[#1A1A1A] leading-snug">Pasang aplikasi?</p>
+          <p className="mt-1 text-sm text-[#595959] leading-snug">
             Tambah ke layar utama biar buka lebih cepat, tetap jalan saat offline.
           </p>
         </div>
@@ -74,40 +30,17 @@ export function InstallPrompt() {
           type="button"
           onClick={dismiss}
           aria-label="Tutup"
-          style={{
-            width: 32,
-            height: 32,
-            minWidth: 32,
-            borderRadius: 8,
-            border: "1px solid #D9D9D9",
-            background: "#FFFFFF",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
+          className="btn btn-ghost btn-sm w-8 h-8 min-h-8 p-0 rounded-lg border border-[#D9D9D9] bg-white"
         >
           <Xmark width={16} height={16} color="#1A1A1A" />
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 8 }}>
+      <div className="flex gap-2">
         <button
           type="button"
           onClick={dismiss}
-          style={{
-            flex: 1,
-            minHeight: 48,
-            height: 48,
-            borderRadius: 12,
-            border: "1px solid #D9D9D9",
-            background: "#FFFFFF",
-            color: "#1A1A1A",
-            fontSize: 16,
-            fontWeight: 600,
-            fontFamily: "Inter, system-ui, sans-serif",
-            cursor: "pointer",
-          }}
+          className="btn flex-1 min-h-[48px] h-12 rounded-xl border border-[#D9D9D9] bg-white text-[#1A1A1A] text-base font-semibold hover:bg-gray-50"
         >
           Nanti
         </button>
@@ -115,23 +48,7 @@ export function InstallPrompt() {
           type="button"
           onClick={promptInstall}
           aria-label="Pasang aplikasi Tebus Murah"
-          style={{
-            flex: 1,
-            minHeight: 48,
-            height: 48,
-            borderRadius: 12,
-            border: "none",
-            background: "#0F7A4A",
-            color: "#FFFFFF",
-            fontSize: 16,
-            fontWeight: 600,
-            fontFamily: "Inter, system-ui, sans-serif",
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-          }}
+          className="btn btn-primary flex-1 min-h-[48px] h-12 rounded-xl text-base font-semibold gap-2 border-none w-full"
         >
           <Download width={18} height={18} color="#FFFFFF" />
           Pasang

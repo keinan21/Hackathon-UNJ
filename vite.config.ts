@@ -1,6 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import fs from "node:fs";
+import path from "node:path";
 
 export default defineConfig({
   plugins: [
@@ -44,5 +46,15 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//],
       },
     }),
+    {
+      name: "pretty-manifest",
+      closeBundle() {
+        const p = path.resolve("dist/manifest.webmanifest");
+        if (fs.existsSync(p)) {
+          const j = JSON.parse(fs.readFileSync(p, "utf-8"));
+          fs.writeFileSync(p, JSON.stringify(j, null, 2));
+        }
+      },
+    },
   ],
 });

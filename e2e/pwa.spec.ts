@@ -47,9 +47,11 @@ test.describe("PWA shell + manifest + SW + offline", () => {
     const html = fs.readFileSync(htmlPath, "utf-8");
     expect(html).toContain("#0F7A4A");
 
-    // manifest theme_color already checked, also verify raw contains string for gate
+    // manifest theme_color already checked, also verify raw contains string for gate (allow both spaced and minified)
     const manifestRaw = fs.readFileSync(path.resolve("dist/manifest.webmanifest"), "utf-8");
-    expect(manifestRaw).toContain('"theme_color": "#0F7A4A"');
+    const manifestJson = JSON.parse(manifestRaw);
+    expect(manifestJson.theme_color).toBe("#0F7A4A");
+    expect(manifestRaw).toMatch(/"theme_color"\s*:\s*"#0F7A4A"/);
   });
 
   test("shell renders and offline reload still renders shell (mock route)", async ({ page }) => {
