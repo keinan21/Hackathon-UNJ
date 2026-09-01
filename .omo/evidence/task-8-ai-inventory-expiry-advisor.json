@@ -1,0 +1,57 @@
+{
+  "task": "TASK-08",
+  "frd_trace": "FRD-02 fallback plus FRD-03 urgency input — Avg Daily Usage calculator + histori transaksi model",
+  "tanggal": "2026-09-02",
+  "executor": "Crew B (Core)",
+  "branch": "feat/TASK-08-avg-usage",
+  "acceptance_command": "bun test src/engine/avgUsage.test.ts",
+  "acceptance_result": "8 pass, 0 fail, 42 expect() calls",
+  "qa_happy": {
+    "command": "bun test src/engine/avgUsage.test.ts",
+    "result": "8/8 pass — (a) 10 hari histori 20 qty sold → avg 2 (20/10) PASS (10 distinct days total 20 via repo.createTransaksi listTransaksisBySKU sejak 14d → calc 2, calcAvgForSKU 2, window 10 fallback check), (b) <14 hari 5 hari 7 qty + manual 1.5 → return 1.5 PASS (5 distinct total 7 avg 1.4 without fallback, with fallback 1.5 returns 1.5, window 5 returns 1.4), (c) no histori → returns manual fallback not NaN PASS (empty list fallback 2.5 → 2.5, 1.8 → 1.8, no fallback → 0, all finite not NaN/Infinity), (d) histori 14d 28 qty → avg 2 PASS (14 distinct total 28 avg 2, pure 14 array avg 2, fallback ignored when distinct >=14, plus 14d 32 qty → avg 2.285 coverage), (e) distinct days same-day multiple → 2 days total 10 avg 5 PASS, (f) 14d 32 qty happy 2.3 PASS (avg 2.285 in range 2.1-2.5)"
+  },
+  "qa_failure": {
+    "command": "bun test src/engine/avgUsage.test.ts",
+    "result": "no histori fallback not NaN — PASS (empty [] fallback 2.5 finite, no fallback 0 not NaN, undefined input fallback 1.2); <14 hari fallback manual used — PASS (5 days total 7 fallback 1.5 triggers, without fallback returns 1.4); distinctDays 0 fallback — PASS; qty 0 edge not NaN — PASS; not Infinity — PASS; window guard fallback vs avg correctly handled — PASS"
+  },
+  "acceptance_criteria_check": {
+    "10_hari_histori_20_qty_sold_avg_2": "PASS (repo.createKategori Dairy [7,3,1] → createSKU Susu UHT 1L Indomilk → 10 transaksis qty 2 each distinct days via repo.createTransaksi sold_at ISO now-i*86400000 → listTransaksisBySKU sejak 14d → 10 entries → calcAvgDailyUsage 2, calcAvgForSKU 2)",
+    "_14_hari_fallback_manual_1.5_used": "PASS (5 days total 7 distinct 5 <14 → calcAvgDailyUsage(list,1.5)=1.5, calcAvgForSKU same; without fallback 1.4; with window 5 returns 1.4 not fallback)",
+    "ceil_days_logic_Asia_Jakarta": "PASS (sold_at ISO parsing via new Date(sold_at).toISOString().slice(0,10) distinct days; UTC slice consistent; tidak hallucinate usage — pure distinct days calc)",
+    "no_histori_returns_manual_fallback_not_NaN": "PASS (empty list fallback 2.5 → 2.5 finite, empty fallback undefined → 0, undefined input → 1.2, all not NaN/Infinity)"
+  },
+  "extra_checks": {
+    "typecheck": "PASS (bun run typecheck — tsc --noEmit exit 0)",
+    "build": "PASS (bun run build — tsc -b && vite build exit 0, precache 12 entries 236.20 KiB, sw.js + manifest.webmanifest generated)",
+    "sw_exists": "PASS (dist/sw.js exists, dist/manifest.webmanifest 0.52K exists, vite-plugin-pwa generateSW)",
+    "no_regression": "PASS (bun test src/db/db.test.ts src/features/sku/skuService.test.ts src/features/batch/batchService.test.ts src/engine/avgUsage.test.ts — 30 pass 0 fail 159 expect, isolated DB per test)",
+    "distinct_days_logic": "PASS (total qty_sold / distinctDays via Set YYYY-MM-DD; same-day multiple counted once: 3 trans same day+1 next day total 10/2=5)",
+    "must_not_hallucinate": "PASS (distinctDays < daysWindow && manualFallback !== undefined → return manualFallback; empty → return manualFallback ?? 0; never NaN)",
+    "daysWindow_param": "PASS (daysWindow default 14, override 10/5/30 tested; pure calc without DB filter, DB helper calcAvgDailyUsageForSKU handles since 14d or 30d fallback)",
+    "sold_at_ISO": "PASS (t.sold_at ISO parsing via new Date(t.sold_at).toISOString().slice(0,10), fallback slice 0,10 for invalid)",
+    "store_per_SKU_no_DB_write": "PASS (pure function calc, no DB write; async helper calcAvgDailyUsageForSKU read-only via db.transaksis.where sku_id equals and org_id)",
+    "org_id_sync_ready": "PASS (transaksis table org_id default toko-01 via DexieRepository, async helper forwards org_id, no cloud sync logic)",
+    "transaksis_table_exists": "PASS (src/db/db.ts transaksis: ++id, sku_id, sold_at, org_id already defined since TASK-02, verified)"
+  },
+  "files": {
+    "created": [
+      "src/engine/avgUsage.ts",
+      "src/engine/avgUsage.test.ts"
+    ],
+    "modified": [],
+    "evidence": ".omo/evidence/task-8-ai-inventory-expiry-advisor.json"
+  },
+  "avgUsage": {
+    "exports": ["calcAvgDailyUsage", "calcAvgForSKU", "calcAvgDailyUsageForSKU"],
+    "calcAvgDailyUsage_signature": "calcAvgDailyUsage(transaksis: Transaksi[], manualFallback?: number, daysWindow?: number = 14): number",
+    "calcAvgForSKU_signature": "calcAvgForSKU(transaksis: Transaksi[], manualFallback?: number, daysWindow?: number = 14): number",
+    "calcAvgDailyUsageForSKU_signature": "calcAvgDailyUsageForSKU(sku_id: number, manualFallback?: number, daysWindow?: number = 14, org_id?: string): Promise<number>",
+    "logic": "if empty → manualFallback ?? 0; sum qty_sold + Set distinct YYYY-MM-DD via toISOString slice; distinctDays < daysWindow && manualFallback defined → return fallback; else total / distinctDays; guard finite",
+    "must_not_hallucinate": true,
+    "fallback_when_less_than_14_days": true,
+    "30d_window": "async helper tries 30d if 14d empty, else caller can pass daysWindow 30",
+    "no_db_write": true,
+    "sold_at_ISO": true
+  },
+  "notes": "Test pakai fake-indexeddb inject globalThis SEBELUM dynamic import ../../db/db dan ./avgUsage (dexie cache indexedDB saat module load; pattern sama dengan src/db/db.test.ts dan src/features/batch/batchService.test.ts). Worktree ../wt-TASK-08 sesuai AGENTS.md 1 worktree per TASK. Hanya sentuh src/engine/** + evidence, tidak sentuh src/db/** (transaksis table sudah ada). Verifikasi: bun test 8 pass 42 expect, typecheck 0 error, build exit 0 (sw.js + manifest). Evidence sesuai TASK.md 202-211."
+}
