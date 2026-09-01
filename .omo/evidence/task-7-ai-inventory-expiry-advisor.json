@@ -1,0 +1,65 @@
+{
+  "task": "TASK-07",
+  "frd_trace": "FRD-02 F2 Inventaris SKU Batch Kategori + FRD-03 engine input",
+  "tanggal": "2026-09-01",
+  "executor": "Crew B (Core)",
+  "branch": "feat/TASK-07-batch-crud",
+  "acceptance_command": "bun test src/features/batch/batchService.test.ts",
+  "acceptance_result": "5 pass, 0 fail, 35 expect() calls",
+  "qa_happy": {
+    "command": "bun test src/features/batch/batchService.test.ts",
+    "result": "5/5 pass — (a) create batch qty 10 expiry 2026-09-05 passes hpp_snapshot copy 12000 + received_at ISO + org_id toko-01, (b) create batch expiry null passes tapi tidak muncul di listBatchesExpiring (only 1 expiring), listBatchesBySKU 2, (c) qty 0/-5 dan updateBatchQty 0 rejects ValidationError 'Qty harus lebih dari 0', (d) 3 batches 2026-09-10/03/07 → list sorted asc 03,07,10 baik bySKU maupun expiring, plus updateBatchQty 10→5 succeeds"
+  },
+  "qa_failure": {
+    "command": "bun test src/features/batch/batchService.test.ts",
+    "result": "qty 0 → reject ValidationError 'Qty harus lebih dari 0' — PASS; qty -5 → same — PASS; updateBatchQty 0 → same — PASS; sku_id 0/missing → 'sku_id wajib' (via db.ts) — PASS; expiry null excluded dari listBatchesExpiring — PASS; hpp_snapshot missing → auto copy dari SKU.hpp — PASS; SKU tidak ditemukan → 'SKU ... tidak ditemukan' — PASS"
+  },
+  "acceptance_criteria_check": {
+    "create_batch_qty_10_expiry_2026-09-05_passes": "PASS (createKategori Dairy [7,3,1] → createSKU Susu UHT 1L Indomilk hpp 12000 → createBatch qty 10 expiry 2026-09-05 tanpa hpp_snapshot → tersimpan dengan hpp_snapshot 12000 copy dari SKU.hpp, received_at ISO truthy, org_id toko-01)",
+    "create_batch_expiry_null_passes_but_not_returned_by_engine_query": "PASS (createBatch qty 20 expiry null → tersimpan expiry_date null hpp_snapshot 60000 copy, listBatchesBySKU 2, listBatchesExpiring 1 hanya 2026-09-05, null not in expiring ids)",
+    "qty_0_rejects": "PASS (createBatch qty 0 → ValidationError 'Qty harus lebih dari 0', qty -5 same, updateBatchQty 0 same, hanya 1 batch valid tersimpan)"
+  },
+  "extra_checks": {
+    "typecheck": "PASS (bun run typecheck — tsc --noEmit exit 0)",
+    "build": "PASS (bun run build — tsc -b && vite build exit 0, sw.js + manifest.webmanifest generated, precache 12 entries 234.83 KiB)",
+    "sw_exists": "PASS (dist/sw.js 1.7K exists, dist/manifest.webmanifest 671 bytes 0.52K exists, vite-plugin-pwa generateSW)",
+    "sorted_expiry_asc": "PASS (3 batches 2026-09-10, 2026-09-03, 2026-09-07 → listBatchesBySKU sorted 03,07,10; listBatchesExpiring sorted same)",
+    "hpp_snapshot_copy": "PASS (createBatch tanpa hpp_snapshot → copy SKU.hpp via defaultRepo.getSKU; explicit hpp_snapshot juga diterima; null case copy 60000)",
+    "received_at_auto_now": "PASS (semua batch received_at truthy ISO datetime, via DexieRepository received_at ?? new Date().toISOString())",
+    "org_id_forwarded_sync_ready": "PASS (org_id default toko-01 sync-ready sharding, forward via DexieRepository, tanpa cloud sync logic)",
+    "updateBatchQty": "PASS (create qty 10 → update 5 succeeds, getBatch confirms 5)",
+    "guardrails": {
+      "no_expiry_in_sku_schema": true,
+      "expiry_belongs_to_batch_only": "Batch.expiry_date nullable, SKU tidak punya expiry (FRD-02 guardrail)",
+      "expiry_null_correctly_handled": "listBatchesExpiring exclude null via Dexie where(expiry_date).notEqual('').and(x=>x.expiry_date!==null) — non-perishable skip engine",
+      "qty_gt0_validation": "validateBatchInput: qty >0 else ValidationError 'Qty harus lebih dari 0'; updateBatchQty via repo same",
+      "sku_id_required": "validateBatchInput sku_id integer>0 else 'sku_id wajib dan harus angka valid'",
+      "hpp_snapshot_copy_from_sku": "createBatch hpp_snapshot undefined → await defaultRepo.getSKU(sku_id) → sku.hpp; SKU tidak ditemukan → ValidationError",
+      "received_at_auto": "DexieRepository.createBatch received_at ?? new Date().toISOString()",
+      "org_id_default_single_value": "toko-01",
+      "org_id_forwarded_via_repository": "defaultRepo = new DexieRepository(db), semua method forward org_id ?? DEFAULT_ORG_ID",
+      "no_cloud_sync_logic": true,
+      "dexie_only_via_repository": "UI/engine tidak import dexie langsung — lewat InventoryRepository",
+      "service_thin_over_repository": "src/features/batch/batchService.ts hanya forward ke InventoryRepository + validation + hpp copy, tidak akses dexie langsung kecuali getBatch via db.batches.get",
+      "must_not_store_expiry_in_sku": true,
+      "must_handle_null_correctly": "createBatch expiry_date ?? null, listBatchesExpiring exclude null, listBatchesBySKU include null"
+    },
+    "db_regression": "PASS (bun test src/db/db.test.ts — 11 pass 50 expect, src/features/sku/skuService.test.ts — 6 pass 32 expect, combined 17 pass 82 expect no regression; batch 5 pass 35 expect total 22)",
+    "batch_service_unit": "PASS (5 pass 35 expect, coverage: hpp copy, null skip engine, qty guard, sorted asc, updateQty)"
+  },
+  "files": {
+    "created": ["src/features/batch/batchService.ts", "src/features/batch/batchService.test.ts"],
+    "modified": [],
+    "evidence": ".omo/evidence/task-7-ai-inventory-expiry-advisor.json"
+  },
+  "batchService": {
+    "exports": ["createBatch", "listBatchesBySKU", "listBatchesExpiring", "updateBatchQty", "getBatch"],
+    "validation": "sku_id wajib integer>0, qty>0 bahasa Indonesia, expiry_date string|null, hpp_snapshot>0 jika diisi",
+    "expiry_null_handling": "expiry_date ?? null saat create, listBatchesExpiring exclude null (Dexie index skip), listBatchesBySKU include null",
+    "hpp_snapshot": "jika tidak dikirim → copy dari SKU.hpp via getSKU, SKU tidak ditemukan → ValidationError",
+    "received_at": "auto now ISO via repository",
+    "org_id": "DEFAULT_ORG_ID toko-01 sync-ready sharding, forward via DexieRepository",
+    "no_cloud_sync": true
+  },
+  "notes": "Test pakai fake-indexeddb inject globalThis SEBELUM dynamic import ./db, ./batchService dan ../sku/skuService (dexie cache indexedDB saat module load; pattern sama dengan src/db/db.test.ts dan src/features/sku/skuService.test.ts). Worktree ../wt-TASK-07 sesuai AGENTS.md 1 worktree per TASK. Hanya sentuh src/features/batch/** + evidence, tidak sentuh src/db/**. Verifikasi: bun test 5 pass, typecheck 0 error, build exit 0 (sw.js + manifest)."
+}
