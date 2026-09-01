@@ -1,0 +1,60 @@
+{
+  "task": "TASK-09",
+  "frd_trace": "FRD-03 F3 Expiry Engine dan Notifikasi — Expiry engine: days_to_expiry + urgencyScore deterministik",
+  "tanggal": "2026-09-02",
+  "executor": "Crew B (Core)",
+  "branch": "feat/TASK-09-expiry-engine",
+  "acceptance_command": "bun test src/engine/expiry.test.ts",
+  "acceptance_result": "10 pass, 0 fail, 43 expect() calls",
+  "qa_happy": {
+    "command": "bun test src/engine/expiry.test.ts",
+    "result": "10/10 pass — daysToExpiry 2026-09-05 from 2026-09-02 =3 PASS (Jakarta 00:00 & 10:00 & 23:59 & UTC variant all 3 via toJakartaStartOfDay), expiry null→null PASS (null/empty/\"null\" & no today param), urgencyScore 10*3/2=15 PASS (5*4/0=20 guard), negative days -2→-10 PASS (10*-2/2=-10 < 25, daysToExpiry -2/-1/0/1 via Jakarta), avg 0 divisor 1 not Infinity PASS (20 not Infinity, sort with avg0 still correct), 5 batches sorted by urgency PASS (A 5 < B 10 < C 15 < D 20 < E 25 + filter null skip + stabil)"
+  },
+  "qa_failure": {
+    "command": "bun test src/engine/expiry.test.ts",
+    "result": "avg 0 → divisor 1 not Infinity PASS (urgencyScore 5*4/0=20 finite, -3 also 20); expiry null not throw PASS (returns null, sorted filter removes X); distinct sort stable PASS (tie first/second/third preserved); Jakarta TZ not UTC PASS (2026-09-01T17:00Z midnight edge, 00:00 vs 23:00 Jakarta diff correct)"
+  },
+  "acceptance_criteria_check": {
+    "daysToExpiry_2026-09-05_from_2026-09-02_3": "PASS (today jakartaDate 2026-09-02 +07:00 → toJakartaStartOfDay 2026-09-01T17:00Z, expiry 2026-09-05 midnight Jakarta 2026-09-04T17:00Z diff 259200000 ceil 3; also UTC 00:00Z variant 07:00 Jakarta still 3; 10:00 & 23:59 Jakarta same day)",
+    "expiry_null_returns_null": "PASS (daysToExpiry(null, today)=null, \"\"→null, expiry null skip engine verified, sortByUrgency filters null)",
+    "urgencyScore_10_3_2_15": "PASS (10*3/2=15, 5*4/0=20 via Math.max(avg,1))",
+    "negative_days_-2_-10": "PASS (10*-2/2=-10 < 10*5/2=25, daysToExpiry 2026-08-31 from 2026-09-02 = -2)",
+    "sort_urgent_first": "PASS (5 batches C/E/A/D/B → sorted A(5)/B(10)/C(15)/D(20)/E(25) via urgencyScore/qty*days/max(avg,1) ascending; not mutates original; skip null; stabil)",
+    "avg_0_divisor_1_not_Infinity": "PASS (urgencyScore 5*4/0=20 finite not Infinity, resolveAvg fallback 1, avg negatif also 1)"
+  },
+  "extra_checks": {
+    "typecheck": "PASS (bun run typecheck — tsc --noEmit exit 0)",
+    "build": "PASS (bun run build — tsc -b && vite build exit 0, precache 12 entries 236.20 KiB, sw.js + manifest.webmanifest generated, dist/sw.js exists)",
+    "sw_exists": "PASS (dist/sw.js exists, dist/manifest.webmanifest 0.52K exists, vite-plugin-pwa generateSW)",
+    "no_regression": "PASS (bun run test:unit — vitest run --exclude e2e/** — 6 files 45 pass 0 fail: expiry.test 10 + db.test 11 + seed.test 5 + skuService 6 + batchService 5 + avgUsage 8)",
+    "toJakartaStartOfDay_Intl": "PASS (Intl.DateTimeFormat en-CA Asia/Jakarta year/month/day → Date.UTC(y,m-1,d) -7h; Jakarta UTC+7 fixed tanpa DST; no date-fns-tz dep; ceil((expiryMidnight - todayMidnight)/86400000))",
+    "daysToExpiry_ceil": "PASS (Math.ceil diff/86400000, todayMidnight & expiryMidnight both Jakarta 00:00 → diff integer days, negative -2/-1 correct, 0 same day, 1 tomorrow)",
+    "must_not_LLM": "PASS (pure deterministic formula qty*days/max(avg,1), lower/more negative = more urgent, no LLM import, local TZ Asia/Jakarta not UTC)",
+    "expiry_null_skip_engine": "PASS (daysToExpiry null→null, sortByUrgency filters days null, non-perishable skip)",
+    "urgencyScore_deterministic": "PASS (urgencyScore pure, 2x call same result, formula exact)",
+    "Jakarta_not_UTC": "PASS (toJakartaStartOfDay test: 2026-09-02T01:00Z → 2026-09-01T17:00Z; 2026-09-02T17:00Z midnight 03 Sept Jakarta → expiry 03 Sept =0 not 1 (UTC would be 1))",
+    "sort_stable": "PASS (tie 10/10/10 preserves first/second/third order via idx stabil sort)"
+  },
+  "files": {
+    "created": [
+      "src/engine/expiry.ts",
+      "src/engine/expiry.test.ts"
+    ],
+    "modified": [],
+    "evidence": ".omo/evidence/task-9-ai-inventory-expiry-advisor.json"
+  },
+  "expiry": {
+    "exports": ["toJakartaStartOfDay", "daysToExpiry", "urgencyScore", "sortByUrgency"],
+    "daysToExpiry_signature": "daysToExpiry(expiry_date: string | null, today?: Date): number | null",
+    "urgencyScore_signature": "urgencyScore(qty: number, days: number, avgDailyUsage: number): number",
+    "sortByUrgency_signature": "sortByUrgency<T extends Record<string, any>>(items: T[]): T[]",
+    "toJakartaStartOfDay_signature": "toJakartaStartOfDay(d: Date): Date",
+    "logic_daysToExpiry": "if null→null; todayMidnight=toJakartaStartOfDay(today ?? now); expiryMidnight=Date.UTC(y,m-1,d)-7h via expiryDateToJakartaMidnight; return Math.ceil((expiryMidnight-todayMidnight)/86400000)",
+    "logic_urgencyScore": "qty*days / Math.max(avgDailyUsage,1), lower/more negative = more urgent",
+    "logic_sortByUrgency": "filter days null, map urgencyScore via resolveAvg(avg|avgDailyUsage|avg_daily_usage), sort ascending stabil idx, return new array not mutate",
+    "tz": "Asia/Jakarta via Intl.DateTimeFormat en-CA, no date-fns-tz, Jakarta offset fixed 7h",
+    "skip_expiry_null": true,
+    "deterministic_not_LLM": true
+  },
+  "notes": "Worktree ../wt-TASK-09 sesuai AGENTS.md 1 worktree per TASK. Hanya sentuh src/engine/** + evidence, tidak sentuh src/db/** atau src/features/**. Verifikasi: bun test 10 pass 43 expect, typecheck 0 error, build exit 0 (sw.js + manifest). Evidence sesuai TASK.md 213-222."
+}
