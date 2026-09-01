@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
 import { OfflineFallback } from "./components/OfflineFallback";
 import { InstallPrompt } from "./components/InstallPrompt";
+import { UrgentList } from "./features/dashboard/UrgentList";
+import { PromoAktifList } from "./features/promo/PromoAktifList";
 
 function AppShell() {
+  const seedMode = (() => {
+    if (typeof window === "undefined") return "demo" as const;
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("seed") === "many" || p.get("prototype") === "many") return "many" as const;
+    if (p.get("seed") === "empty") return "empty" as const;
+    if (p.get("seed") === "expiryNull") return "expiryNull" as const;
+    return "demo" as const;
+  })();
   return (
     <div
       style={{
@@ -45,53 +55,12 @@ function AppShell() {
         </span>
       </header>
 
-      <main style={{ maxWidth: 480, margin: "0 auto", padding: 16 }}>
-        <section
-          style={{
-            background: "#FFFFFF",
-            border: "1px solid #D9D9D9",
-            borderRadius: 12,
-            padding: 16,
-          }}
-        >
-          <h2
-            style={{
-              margin: "0 0 8px",
-              fontSize: 18,
-              fontWeight: 600,
-              color: "#1A1A1A",
-            }}
-          >
-            Stok Mepet
-          </h2>
-          <p style={{ margin: 0, fontSize: 16, color: "#595959", lineHeight: 1.5 }}>
-            Stok aman, tidak ada yang mepet kadaluarsa. Cek lagi besok jam 7 pagi.
-          </p>
-        </section>
+      <main style={{ maxWidth: 480, margin: "0 auto", padding: 16, paddingBottom: 80 }}>
+        <UrgentList seedMode={seedMode} />
 
-        <section
-          style={{
-            marginTop: 16,
-            background: "#FFFFFF",
-            border: "1px solid #D9D9D9",
-            borderRadius: 12,
-            padding: 16,
-          }}
-        >
-          <h2
-            style={{
-              margin: "0 0 8px",
-              fontSize: 18,
-              fontWeight: 600,
-              color: "#1A1A1A",
-            }}
-          >
-            Promo Aktif
-          </h2>
-          <p style={{ margin: 0, fontSize: 16, color: "#595959", lineHeight: 1.5 }}>
-            Belum ada promo aktif. Buat tebus murah dari stok mepet biar tidak jadi sampah.
-          </p>
-        </section>
+        <div style={{ marginTop: 16 }}>
+          <PromoAktifList />
+        </div>
       </main>
 
       <nav
