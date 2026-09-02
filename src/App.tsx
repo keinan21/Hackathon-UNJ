@@ -1,18 +1,48 @@
 import { useEffect, useState } from "react";
 import { OfflineFallback } from "./components/OfflineFallback";
 import { InstallPrompt } from "./components/InstallPrompt";
-import { UrgentList } from "./features/dashboard/UrgentList";
-import { PromoAktifList } from "./features/promo/PromoAktifList";
+import { DashboardPage } from "./features/dashboard/DashboardPage";
+import { HistoriDetailPage } from "./features/dashboard/HistoriDetailPage";
+
+function useHistoriRoute(): string | null {
+  const getId = () => {
+    const p = window.location.pathname;
+    const m = p.match(/^\/histori\/([^/]+)/);
+    return m ? m[1] : null;
+  };
+  const [historiId, setHistoriId] = useState<string | null>(() => (typeof window !== "undefined" ? getId() : null));
+  useEffect(() => {
+    const onPop = () => setHistoriId(getId());
+    window.addEventListener("popstate", onPop);
+    const origPush = window.history.pushState.bind(window.history);
+    const wrappedPush = (...args: Parameters<typeof window.history.pushState>) => {
+      const ret = (origPush as unknown as (...a: Parameters<typeof window.history.pushState>) => ReturnType<typeof window.history.pushState>)(...args);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      return ret;
+    };
+    window.history.pushState = wrappedPush as typeof window.history.pushState;
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  return historiId;
+}
 
 function AppShell() {
-  const seedMode = (() => {
-    if (typeof window === "undefined") return "demo" as const;
-    const p = new URLSearchParams(window.location.search);
-    if (p.get("seed") === "many" || p.get("prototype") === "many") return "many" as const;
-    if (p.get("seed") === "empty") return "empty" as const;
-    if (p.get("seed") === "expiryNull") return "expiryNull" as const;
-    return "demo" as const;
-  })();
+  const historiId = useHistoriRoute();
+
+  if (historiId) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#F5F5F0", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
+        <header
+          style={{ background: "#0F7A4A", color: "#FFFFFF", padding: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+        >
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, lineHeight: 1.25, color: "#FFFFFF" }}>Inventaris Tebus Murah</h1>
+          <span style={{ fontSize: 12, background: "rgba(255,255,255,0.2)", padding: "4px 8px", borderRadius: 8, color: "#FFFFFF" }}>PWA</span>
+        </header>
+        <HistoriDetailPage id={historiId} />
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -56,11 +86,7 @@ function AppShell() {
       </header>
 
       <main style={{ maxWidth: 480, margin: "0 auto", padding: 16, paddingBottom: 80 }}>
-        <UrgentList seedMode={seedMode} />
-
-        <div style={{ marginTop: 16 }}>
-          <PromoAktifList />
-        </div>
+        <DashboardPage />
       </main>
 
       <nav
