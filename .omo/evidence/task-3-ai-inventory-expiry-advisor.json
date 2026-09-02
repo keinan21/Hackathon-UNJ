@@ -1,0 +1,44 @@
+{
+  "task": "TASK-03",
+  "frd_trace": "FRD-06 F6 Backup Restore + FRD-01 single device",
+  "tanggal": "2026-09-02",
+  "executor": "Crew D — Platform",
+  "branch": "main",
+  "acceptance_command": "bun test src/features/auth/pinStore.test.ts",
+  "acceptance_result": "5 pass, 0 fail (setPin 1234 verify true, wrong 0000 false, API key roundtrip, no plaintext in storage, hash not plaintext)",
+  "qa_happy": {
+    "command": "bun test src/features/auth/pinStore.test.ts",
+    "result": "5/5 pass — set PIN 1234 → verify true, wrong 0000 false, API key encrypt/decrypt roundtrip succeeds, storage contains only base64 ciphertext"
+  },
+  "qa_failure": {
+    "command": "bun test src/features/auth/pinStore.test.ts",
+    "result": "wrong PIN decrypt returns null (not throw), hash mismatch increments failCount without lockout escalation — PASS"
+  },
+  "acceptance_criteria_check": {
+    "set_pin_1234_verify_true": "PASS (hashPin via PBKDF2 100k SHA-256, salt 16b, verify recomputes hash constant-time compare)",
+    "wrong_0000_false": "PASS (verifyPin 0000 returns false, failCount++)",
+    "api_key_roundtrip": "PASS (setApiKey secret-key-xyz with PIN 1234 → getApiKey 1234 returns same, ciphertext stored as {salt,iv,ciphertext} base64)",
+    "no_plaintext_in_dexie": "PASS (apiKey not in Dexie.settings, only localStorage ciphertext; assertNoPlaintextInStorage true)",
+    "pin_not_plaintext": "PASS (pinStore-v1 contains {salt,hash} base64, not PIN)"
+  },
+  "extra_checks": {
+    "crypto_pbkdf2_100k": "PASS (src/lib/crypto.ts deriveKey PBKDF2 100k SHA-256 -> AES-GCM-256, salt 16b generateSalt, iv 12b generateIv, WebCrypto subtle)",
+    "crypto_encrypt_decrypt": "PASS (/tmp/test-crypto.mjs manual: encrypt hello world 1234 -> decrypt same PASS, wrong PIN throws OperationError PASS)",
+    "single_supervisor": "PASS (single org toko-01, no multi-role, no lockout beyond failCount)",
+    "no_backend": "PASS (no Supabase/Firebase/OCR/QR deps)",
+    "storage_key": "pinStore-v1 + gemini-api-key-enc-v1 localStorage, not plaintext localStorage.setItem('apiKey', plain)"
+  },
+  "files": {
+    "created": ["src/lib/crypto.ts", "src/features/auth/pinStore.ts", "src/features/auth/pinStore.test.ts"],
+    "modified": [],
+    "evidence": ".omo/evidence/task-3-ai-inventory-expiry-advisor.json"
+  },
+  "crypto": {
+    "iterations": 100000,
+    "hash": "SHA-256",
+    "saltLen": 16,
+    "ivLen": 12,
+    "algo": "AES-GCM-256"
+  },
+  "notes": "WebCrypto subtle via globalThis.crypto (jsdom + Node 24). Salt/iv via crypto.getRandomValues 16b/12b. PIN hash via deriveBits 256 -> base64. API key encrypt via deriveKey(PIN,salt) -> AES-GCM iv -> base64 ciphertext. Single device, no multi-role, failCount simple no escalation beyond increment. Touched only src/lib/crypto.ts + src/features/auth/ (Crew D ownership, AGENTS.md Must NOT plain text)."
+}
