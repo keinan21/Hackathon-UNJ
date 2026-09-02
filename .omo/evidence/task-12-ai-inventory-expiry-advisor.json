@@ -1,0 +1,18 @@
+﻿{
+  "task": "TASK-12",
+  "frd": "FRD-04",
+  "title": "Pairing rule engine (co-occurrence + kategori fallback)",
+  "status": "PASS",
+  "timestamp": "2026-09-02T08:42:00+07:00",
+  "tool": "npm test src/advisor/pairing.test.ts",
+  "tests": [
+    { "name": "histori Roti+Susu 5x → pairing for Susu returns Roti", "status": "pass" },
+    { "name": "pairing prefers high avg when counts equal", "status": "pass" },
+    { "name": "excludes urgent SKU from pairing", "status": "pass" },
+    { "name": "no histori → fallback kategori returns configured pasangan", "status": "pass" },
+    { "name": "fallback kategori via skuKategoriMap", "status": "pass" },
+    { "name": "urgent SKU has no pairing → returns null not error", "status": "pass" }
+  ],
+  "evidence": "buildCooccurrenceMap groups by sold_at, findTopPairing sorts by count desc then avg desc, fallbackMap checked",
+  "files": ["src/advisor/pairing.ts", "src/db/types.ts", "src/db/repository.ts", "src/db/fakeRepository.ts"]
+}

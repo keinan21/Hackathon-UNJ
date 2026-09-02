@@ -1,0 +1,21 @@
+﻿{
+  "task": "TASK-14",
+  "frd": "FRD-04",
+  "title": "Tebus Murah template manual + AI assist flow (proposed)",
+  "status": "PASS",
+  "timestamp": "2026-09-02T08:42:00+07:00",
+  "tool": "npm test src/features/promo/promoService.test.ts",
+  "tests": [
+    { "name": "create manual promo valid passes", "status": "pass", "harga_tebus": 9000, "expectedStatus": "proposed" },
+    { "name": "create with harga_tebus 0.84*HPP rejects with error below HPP*0.85", "status": "pass", "error": "HPP x 0.85" },
+    { "name": "AI prefill sets harga_tebus", "status": "pass", "harga": 9000 },
+    { "name": "harga_tebus exactly at floor 0.85 passes", "status": "pass" },
+    { "name": "prefillFromAdvisor helper fills form", "status": "pass" },
+    { "name": "harga_tebus > harga_normal → warn but allow", "status": "pass" },
+    { "name": "MUST NOT auto-activate - always proposed", "status": "pass" },
+    { "name": "proposed promos list query", "status": "pass" }
+  ],
+  "flow": "manual template vs AI assist prefill from AdvisorSuggestion, status proposed, guardrail HPP*0.85",
+  "mustNot": "auto-activate",
+  "files": ["src/features/promo/promoService.ts", "src/features/promo/TebusForm.tsx", "src/lib/validation.ts"]
+}
