@@ -56,9 +56,9 @@ test.describe("PWA shell + manifest + SW + offline", () => {
 
   test("shell renders and offline reload still renders shell (mock route)", async ({ page }) => {
     await page.goto("/");
-    // Shell must render without white crash
+    // Shell must render without white crash — check main heading and Stok Mepet section (demo has 2 urgent)
     await expect(page.getByRole("heading", { name: "Inventaris Tebus Murah" })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("Stok aman")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Stok Mepet" })).toBeVisible();
 
     // Simulate offline: block all subsequent network for js/css? Instead use page.route to mock offline reload
     // Emulate offline by routing fallback: ensure page still renders shell after route block
