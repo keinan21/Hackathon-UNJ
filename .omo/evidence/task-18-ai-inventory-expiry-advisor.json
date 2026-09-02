@@ -1,0 +1,47 @@
+{
+  "task": "TASK-18",
+  "frd_trace": "FRD-06 F6 Backup dan Restore",
+  "tanggal": "2026-09-02",
+  "executor": "Crew D — Platform",
+  "branch": "main",
+  "acceptance_command": "bun test src/features/backup/backupService.test.ts",
+  "acceptance_result": "5 pass, 0 fail (roundtrip 2 SKU 3 Batch, wrong PIN fails PIN salah, corrupt file File rusak, header salt/version, drive fallback)",
+  "qa_happy": {
+    "command": "bun test src/features/backup/backupService.test.ts",
+    "result": "export -> clear -> import restores 2 SKU 3 Batch, header contains salt iv version 1 org_id toko-01, drive manual fallback message correct"
+  },
+  "qa_failure": {
+    "command": "bun test src/features/backup/backupService.test.ts",
+    "result": "wrong PIN 0000 on file encrypted with 1234 -> throws 'PIN salah, tidak bisa buka backup' PASS; corrupt not-a-json -> 'File rusak, coba file lain' without crash PASS; empty -> same PASS"
+  },
+  "acceptance_criteria_check": {
+    "export_import_roundtrip": "PASS (buildPlainPayload reads all Dexie tables filtered org_id toko-01 -> encryptBackup salt 16b iv 12b PBKDF2 100k AES-GCM -> JSON envelope {header,ciphertext} -> import decrypt -> JSON.parse -> transaction clear+bulkAdd -> counts match 2 SKU 3 Batch)",
+    "wrong_pin_decrypt_fails": "PASS (decryptBackup with 0000 throws PIN salah, not silent)",
+    "unencrypted_flag_deferred": "PASS (no plaintext backup default, must use encrypted envelope)",
+    "corrupt_not_crash": "PASS (JSON.parse fail or missing header/salt/iv -> throws File rusak, caught without crash)",
+    "drive_hook": "PASS (backupToDriveHook checks window.showPicker, fallback manual message 'File sudah diunduh, upload manual ke Google Drive')",
+    "reminder": "PASS (getLastBackupAt + shouldShowBackupReminder >7 days via localStorage lastBackupAt-v1)"
+  },
+  "extra_checks": {
+    "header_salt_iv": "PASS (header version 1, org_id toko-01, salt base64 16b ~24 chars, iv base64 12b ~16 chars, created_at ISO)",
+    "pbkdf2_params": "PASS (deriveKey PIN+salt 100k SHA-256 -> AES-GCM-256, WebCrypto subtle, no hardcoded salt)",
+    "no_plaintext_backup": "PASS (file content is envelope JSON, not plain payload; payload is AES-GCM ciphertext)",
+    "idempotent_replace": "PASS (import clears then bulkAdd, v1 replace semantics)",
+    "no_backend": "PASS (manual file download via Blob URL.createObjectURL, no server, Drive hook stub only)"
+  },
+  "files": {
+    "created": ["src/features/backup/backupService.ts", "src/features/backup/backupService.test.ts"],
+    "modified": [],
+    "evidence": ".omo/evidence/task-18-ai-inventory-expiry-advisor.json"
+  },
+  "backup": {
+    "version": 1,
+    "org_id": "toko-01",
+    "saltLen": 16,
+    "ivLen": 12,
+    "iterations": 100000,
+    "algo": "AES-GCM-256",
+    "fileExt": ".json.enc"
+  },
+  "notes": "Uses singleton db from src/db/db.ts (Dexie) inside transaction rw all tables. Plain payload version 1 includes tables skus/kategoris/batches/transaksis/promos/advisorCache + meta counts. Envelope header stored plaintext for salt/iv, ciphertext is AES-GCM. LastBackupAt in localStorage, not Dexie. Only touched src/features/backup/ + src/lib/crypto.ts (Crew D)."
+}
