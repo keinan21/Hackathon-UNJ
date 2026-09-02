@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Katalog SKU - Tebus Murah</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<script src="./assets/tailwind-config.js"></script>
+<style>
+        body { -webkit-tap-highlight-color: transparent; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-muted text-on-surface antialiased min-h-screen flex flex-col pb-24 md:pb-0 md:pt-16">
+<!-- TopAppBar: bg-primary text-on-primary header hijau docs/design.md -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-margin-mobile h-16 bg-primary text-on-primary border-b border-primary-pressed md:flex hidden">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+<span class="font-headline-lg text-headline-lg tracking-tight text-on-primary">Tebus Murah</span>
+</div>
+<div>
+<button aria-label="Notifikasi" class="min-h-[48px] min-w-[48px] flex items-center justify-center p-2 rounded-full hover:bg-primary-pressed transition-colors text-on-primary">
+<span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+</button>
+</div>
+</header>
+<!-- Mobile Header Context -->
+<div class="md:hidden pt-4 px-margin-mobile pb-2 bg-surface-muted z-40 sticky top-0">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary tracking-tight mb-4">Katalog SKU</h1>
+<!-- Bilah Pencarian -->
+<div class="relative w-full mb-4">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-gray" aria-hidden="true">search</span>
+<input aria-label="Cari SKU atau Batch" class="w-full bg-surface-container-lowest border border-slate-gray/30 rounded-xl py-3 pl-10 pr-4 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all min-h-[48px]" placeholder="Cari SKU atau Batch..." type="text"/>
+</div>
+<!-- Filter Chips - 4 chips Semuanya/Dairy/Snack/Beras, min-h 48px, active Semua bg-primary -->
+<div class="flex gap-2 overflow-x-auto hide-scrollbar pb-2 -mx-margin-mobile px-margin-mobile" role="group" aria-label="Filter kategori">
+<button aria-pressed="true" class="whitespace-nowrap min-h-[48px] px-4 py-2 rounded-full bg-primary text-white font-body-md text-body-md border border-primary transition-colors flex-shrink-0">Semua</button>
+<button aria-pressed="false" class="whitespace-nowrap min-h-[48px] px-4 py-2 rounded-full bg-surface-container-lowest text-text-primary border border-border hover:bg-surface-container-low hover:text-primary transition-colors font-body-md text-body-md flex-shrink-0">Dairy</button>
+<button aria-pressed="false" class="whitespace-nowrap min-h-[48px] px-4 py-2 rounded-full bg-surface-container-lowest text-text-primary border border-border hover:bg-surface-container-low hover:text-primary transition-colors font-body-md text-body-md flex-shrink-0">Snack</button>
+<button aria-pressed="false" class="whitespace-nowrap min-h-[48px] px-4 py-2 rounded-full bg-surface-container-lowest text-text-primary border border-border hover:bg-surface-container-low hover:text-primary transition-colors font-body-md text-body-md flex-shrink-0">Beras</button>
+</div>
+</div>
+<!-- Main Content -->
+<main class="flex-1 w-full max-w-7xl mx-auto px-margin-mobile md:px-lg py-4 md:py-8 grid grid-cols-4 md:grid-cols-12 gap-gutter-mobile md:gap-lg">
+<!-- SKU List Column -->
+<div class="col-span-4 md:col-span-8 flex flex-col gap-4">
+<!-- SKU Item 1: Expanding Card Pattern -->
+<div class="bg-surface-container-lowest border border-border rounded-xl shadow-[0px_2px_4px_rgba(30,41,59,0.05)] overflow-hidden">
+<!-- SKU Header Summary -->
+<div class="p-4 flex items-start justify-between border-b border-border cursor-pointer hover:bg-surface-container-low transition-colors" onclick="this.nextElementSibling.classList.toggle('hidden')" role="button" tabindex="0" aria-expanded="true" aria-label="Buka detail SKU Greenfields UHT Milk Full Cream 1L">
+<div class="flex gap-3">
+<div class="w-12 h-12 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0 border border-slate-gray/10">
+<span class="material-symbols-outlined text-primary" aria-hidden="true">local_drink</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-primary">Greenfields UHT Milk Full Cream 1L</h3>
+<p class="font-body-md text-body-md text-slate-gray mt-1">SKU: GF-UHT-FC-1L • Dairy</p>
+<div class="flex gap-2 mt-2">
+<span class="px-2 py-1 bg-surface-container text-slate-gray font-label-caps text-label-caps rounded">Total: 450 pcs</span>
+<span class="px-2 py-1 bg-danger text-white font-label-caps text-label-caps rounded flex items-center gap-1"><span class="material-symbols-outlined text-[14px]" aria-hidden="true">warning</span> 1 Batch Kritis</span>
+</div>
+</div>
+</div>
+<button aria-label="Buka tutup detail batch" class="min-h-[48px] min-w-[48px] flex items-center justify-center rounded-full hover:bg-surface-container transition-colors shrink-0">
+<span class="material-symbols-outlined text-slate-gray transition-transform duration-200" aria-hidden="true">expand_more</span>
+</button>
+</div>
+<!-- Batch List Details (Expanded) -->
+<div class="bg-surface-bright p-4 flex flex-col gap-3">
+<!-- Batch Row - H-3 warning -->
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest border border-border rounded-lg border-l-4 border-l-warning">
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<span class="font-data-mono text-data-mono text-primary">Batch #B-8821</span>
+<span aria-label="Batch H-3, 120 pcs, kadaluarsa 15 Okt 2023" class="font-label-caps text-label-caps bg-warning text-black px-2 py-1 rounded">H-3</span>
+</div>
+<div class="flex justify-between items-end">
+<span class="font-body-md text-body-md text-slate-gray">Qty: <strong class="text-primary">120 pcs</strong></span>
+<span class="font-body-md text-body-md text-text-primary font-semibold">Kadaluarsa: 15 Okt 2023</span>
+</div>
+<!-- Stress Bar -->
+<div class="w-full h-1.5 bg-surface-container rounded-full mt-2 overflow-hidden flex">
+<div class="h-full bg-warning w-full"></div>
+</div>
+</div>
+</div>
+<!-- Batch Row - H-7 caution -->
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest border border-border rounded-lg border-l-4 border-l-caution">
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<span class="font-data-mono text-data-mono text-primary">Batch #B-8822</span>
+<span aria-label="Batch H-7, 330 pcs, kadaluarsa 19 Okt 2023" class="font-label-caps text-label-caps bg-caution text-black px-2 py-1 rounded">H-7</span>
+</div>
+<div class="flex justify-between items-end">
+<span class="font-body-md text-body-md text-slate-gray">Qty: <strong class="text-primary">330 pcs</strong></span>
+<span class="font-body-md text-body-md text-text-primary font-semibold">Kadaluarsa: 19 Okt 2023</span>
+</div>
+<!-- Stress Bar -->
+<div class="w-full h-1.5 bg-surface-container rounded-full mt-2 overflow-hidden flex">
+<div class="h-full bg-surface-container w-[20%]"></div>
+<div class="h-full bg-caution w-[80%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- SKU Item 2 -->
+<div class="bg-surface-container-lowest border border-border rounded-xl shadow-[0px_2px_4px_rgba(30,41,59,0.05)] overflow-hidden">
+<div class="p-4 flex items-start justify-between border-b border-border cursor-pointer hover:bg-surface-container-low transition-colors" onclick="this.nextElementSibling.classList.toggle('hidden')" role="button" tabindex="0" aria-expanded="false" aria-label="Buka detail SKU Oreo Vanilla 133g">
+<div class="flex gap-3">
+<div class="w-12 h-12 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0 border border-slate-gray/10">
+<span class="material-symbols-outlined text-primary" aria-hidden="true">cookie</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-primary">Oreo Vanilla 133g</h3>
+<p class="font-body-md text-body-md text-slate-gray mt-1">SKU: OR-VAN-133G • Snack</p>
+<div class="flex gap-2 mt-2">
+<span class="px-2 py-1 bg-surface-container text-slate-gray font-label-caps text-label-caps rounded">Total: 800 pcs</span>
+<span class="px-2 py-1 bg-safe text-black font-label-caps text-label-caps rounded border border-safe/30">Aman</span>
+</div>
+</div>
+</div>
+<button aria-label="Buka tutup detail batch" class="min-h-[48px] min-w-[48px] flex items-center justify-center rounded-full hover:bg-surface-container transition-colors shrink-0">
+<span class="material-symbols-outlined text-slate-gray transition-transform duration-200" aria-hidden="true">expand_more</span>
+</button>
+</div>
+<div class="bg-surface-bright p-4 flex flex-col gap-3 hidden">
+<!-- Batch Row - Safe -->
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest border border-border rounded-lg border-l-4 border-l-safe">
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<span class="font-data-mono text-data-mono text-primary">Batch #B-9010</span>
+<span aria-label="Batch aman, 800 pcs, kadaluarsa 12 Des 2024" class="font-label-caps text-label-caps bg-safe text-black border border-safe/30 px-2 py-1 rounded">Aman</span>
+</div>
+<div class="flex justify-between items-end">
+<span class="font-body-md text-body-md text-slate-gray">Qty: <strong class="text-primary">800 pcs</strong></span>
+<span class="font-body-md text-body-md text-slate-gray">Kadaluarsa: 12 Des 2024</span>
+</div>
+<!-- Stress Bar -->
+<div class="w-full h-1.5 bg-surface-container rounded-full mt-2 overflow-hidden flex">
+<div class="h-full bg-surface-container w-[80%]"></div>
+<div class="h-full bg-safe w-[20%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar (Desktop) / Summary (Mobile) -->
+<div class="col-span-4 md:col-span-4 flex flex-col gap-4">
+<!-- Kartu Ringkasan Katalog -->
+<div class="bg-surface-container-lowest/80 backdrop-blur-md border border-border rounded-xl p-6 shadow-[0px_2px_4px_rgba(30,41,59,0.05)] sticky top-24">
+<h3 class="font-headline-md text-headline-md text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-gray" aria-hidden="true">analytics</span>
+                    Ringkasan Katalog
+                </h3>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between font-body-md text-body-md mb-1">
+<span class="text-slate-gray">Total SKU</span>
+<span class="font-data-mono text-primary">1,240</span>
+</div>
+</div>
+<div class="pt-4 border-t border-border">
+<p class="font-label-caps text-label-caps text-slate-gray mb-2">DISTRIBUSI RISIKO</p>
+<div class="flex gap-1 h-2 rounded-full overflow-hidden mb-2">
+<div class="bg-danger w-[15%]"></div>
+<div class="bg-caution w-[25%]"></div>
+<div class="bg-safe w-[60%]"></div>
+</div>
+<ul class="font-body-md text-body-md space-y-2">
+<li class="flex justify-between"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-danger"></span> Kritis</span> <span>15%</span></li>
+<li class="flex justify-between"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-caution"></span> Peringatan</span> <span>25%</span></li>
+<li class="flex justify-between"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-safe"></span> Aman</span> <span>60%</span></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar: 5 item id Dashboard/SKU/Batch/Promo/Pengaturan, tiap min-h 48px -->
+<nav aria-label="Navigasi utama" class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-1 h-14 bg-surface border-t border-border shadow-sm">
+<a aria-label="Ke halaman Dashboard" class="flex flex-col items-center justify-center min-h-[48px] min-w-[48px] text-slate-gray hover:text-primary transition-colors px-3 py-1" href="./dashboard.html">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;" aria-hidden="true">dashboard</span>
+<span class="font-label-caps text-label-caps mt-1">Dashboard</span>
+</a>
+<a aria-current="page" aria-label="Halaman Katalog SKU aktif" class="flex flex-col items-center justify-center min-h-[48px] min-w-[48px] text-primary font-bold bg-primary/10 rounded-xl px-3 py-1" href="./katalog-sku.html">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">inventory</span>
+<span class="font-label-caps text-label-caps mt-1">SKU</span>
+</a>
+<a aria-label="Ke halaman Batch" class="flex flex-col items-center justify-center min-h-[48px] min-w-[48px] text-slate-gray hover:text-primary transition-colors px-3 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;" aria-hidden="true">inventory_2</span>
+<span class="font-label-caps text-label-caps mt-1">Batch</span>
+</a>
+<a aria-label="Ke halaman Promo" class="flex flex-col items-center justify-center min-h-[48px] min-w-[48px] text-slate-gray hover:text-primary transition-colors px-3 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;" aria-hidden="true">local_offer</span>
+<span class="font-label-caps text-label-caps mt-1">Promo</span>
+</a>
+<a aria-label="Ke halaman Pengaturan" class="flex flex-col items-center justify-center min-h-[48px] min-w-[48px] text-slate-gray hover:text-primary transition-colors px-3 py-1" href="./detail-config.html">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;" aria-hidden="true">settings</span>
+<span class="font-label-caps text-label-caps mt-1">Pengaturan</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tebus Murah - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<script src="./assets/tailwind-config.js"></script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen pt-16 pb-24 md:pb-8 flex flex-col items-center">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-margin-mobile h-16 bg-primary text-on-primary border-b border-primary-pressed">
+<button aria-label="Menu inventaris" class="min-h-[48px] min-w-[48px] hover:bg-primary-pressed transition-colors p-2 rounded-full flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;" aria-hidden="true">inventory_2</span>
+</button>
+<h1 class="text-headline-lg-mobile font-headline-lg-mobile text-on-primary tracking-tight">Tebus Murah</h1>
+<button aria-label="Notifikasi" class="min-h-[48px] min-w-[48px] hover:bg-primary-pressed transition-colors p-2 rounded-full flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;" aria-hidden="true">notifications</span>
+</button>
+</header>
+<main class="w-full max-w-3xl px-margin-mobile flex-1 flex flex-col gap-lg mt-md">
+<!-- Seksi Sambutan & Ringkasan -->
+<section class="flex flex-col gap-md">
+<div>
+<h2 class="font-headline-md text-headline-md text-primary">Halo, Supervisor</h2>
+<p class="font-body-md text-body-md text-slate-gray">Ringkasan stok hari ini.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<!-- Kartu 1 -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-md shadow-sm flex flex-col gap-sm">
+<span class="font-body-md text-body-md text-slate-gray">Total SKU</span>
+<span class="font-headline-lg text-headline-lg text-primary">1,248</span>
+</div>
+<!-- Kartu 2 - klikable stok mepet dengan border danger -->
+<a href="#stok-mepet" aria-label="Lihat stok mepet 12 batch" class="bg-error-container border-2 border-danger rounded-xl p-md shadow-sm flex flex-col gap-sm relative overflow-hidden cursor-pointer hover:opacity-90 transition-opacity min-h-[48px]">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-critical-red"></div>
+<span class="font-body-md text-body-md text-on-error-container pl-sm">Urgent Batches</span>
+<span class="font-headline-lg text-headline-lg text-on-error-container pl-sm">12</span>
+</a>
+<!-- Kartu 3 - usulan promo dengan aksen warning -->
+<div class="bg-secondary-fixed border border-secondary-fixed rounded-xl p-md shadow-sm flex flex-col gap-sm relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-warning"></div>
+<span class="font-body-md text-body-md text-on-secondary-fixed pl-sm">Proposed Promos</span>
+<span class="font-headline-lg text-headline-lg text-on-secondary-fixed pl-sm">5</span>
+</div>
+</div>
+</section>
+<!-- Filter Kategori Chips - TASK-11 -->
+<section aria-label="Filter kategori" class="flex flex-col gap-sm">
+<span class="font-body-md text-body-md text-slate-gray">Filter kategori</span>
+<div class="flex flex-wrap gap-sm">
+<button aria-pressed="true" class="min-h-[48px] px-4 py-2 rounded-full bg-primary text-on-primary font-body-md text-body-md hover:bg-primary-pressed transition-colors">Semua</button>
+<button aria-pressed="false" class="min-h-[48px] px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-text-primary font-body-md text-body-md hover:bg-surface-container-low transition-colors">Dairy</button>
+<button aria-pressed="false" class="min-h-[48px] px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-text-primary font-body-md text-body-md hover:bg-surface-container-low transition-colors">Snack</button>
+<button aria-pressed="false" class="min-h-[48px] px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-text-primary font-body-md text-body-md hover:bg-surface-container-low transition-colors">Beras</button>
+</div>
+</section>
+<!-- Stok Mepet -->
+<section id="stok-mepet" class="flex flex-col gap-md">
+<h3 class="font-headline-md text-headline-md text-primary">Stok Mepet</h3>
+<div class="flex flex-col gap-sm">
+<!-- Kartu Batch 1 (Kritis) H-1 danger #C62828 teks putih -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-md shadow-sm flex items-center justify-between relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-danger"></div>
+<div class="flex flex-col gap-xs pl-sm">
+<span class="font-headline-md text-headline-md text-primary text-base">Susu UHT 1L</span>
+<span class="font-data-mono text-data-mono text-slate-gray">ID Batch: #B7492-C</span>
+<span class="font-body-md text-body-md text-slate-gray">Kadaluarsa: 26 Okt 2023</span>
+</div>
+<div class="flex flex-col items-end gap-xs">
+<span aria-label="Stok mepet H-1, 10 pcs, kadaluarsa 2026-09-02" class="bg-danger text-white font-data-mono text-data-mono px-2 py-1 rounded-DEFAULT">H-1</span>
+<span class="font-label-caps text-label-caps text-slate-gray">Skor: 98</span>
+</div>
+</div>
+<!-- Kartu Batch 2 (Peringatan) H-2 warning #EF6C00 teks hitam -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-md shadow-sm flex items-center justify-between relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-warning"></div>
+<div class="flex flex-col gap-xs pl-sm">
+<span class="font-headline-md text-headline-md text-primary text-base">Roti Tawar Gandum</span>
+<span class="font-data-mono text-data-mono text-slate-gray">ID Batch: #B9201-A</span>
+<span class="font-body-md text-body-md text-slate-gray">Kadaluarsa: 29 Okt 2023</span>
+</div>
+<div class="flex flex-col items-end gap-xs">
+<span aria-label="Stok mepet H-2, 8 pcs, kadaluarsa 2026-09-04" class="bg-warning text-black font-data-mono text-data-mono px-2 py-1 rounded-DEFAULT">H-2</span>
+<span class="font-label-caps text-label-caps text-slate-gray">Skor: 85</span>
+</div>
+</div>
+<!-- Kartu Batch 3 (Peringatan) H-3 -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-md shadow-sm flex items-center justify-between relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-warning"></div>
+<div class="flex flex-col gap-xs pl-sm">
+<span class="font-headline-md text-headline-md text-primary text-base">Yogurt Plain 500ml</span>
+<span class="font-data-mono text-data-mono text-slate-gray">ID Batch: #B1102-Y</span>
+<span class="font-body-md text-body-md text-slate-gray">Kadaluarsa: 30 Okt 2023</span>
+</div>
+<div class="flex flex-col items-end gap-xs">
+<span aria-label="Stok mepet H-3, 5 pcs, kadaluarsa 2026-09-05" class="bg-warning text-black font-data-mono text-data-mono px-2 py-1 rounded-DEFAULT">H-3</span>
+<span class="font-label-caps text-label-caps text-slate-gray">Skor: 72</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Saran Tebus Murah -->
+<section class="flex flex-col gap-md">
+<h3 class="font-headline-md text-headline-md text-primary">Saran Tebus Murah</h3>
+<div class="bg-primary-fixed border border-primary-fixed-dim rounded-xl p-md shadow-sm flex flex-col gap-md">
+<div class="flex items-start gap-sm">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">psychology</span>
+<div class="flex flex-col gap-xs">
+<span class="font-headline-md text-headline-md text-primary text-base">Usulan Tebus Murah: Paket Sarapan</span>
+<p class="font-body-md text-body-md text-on-primary-fixed-variant">Pasangkan Susu UHT 1L (mepet kadaluarsa) dengan Roti Tawar Gandum diskon 20% agar stok cepat habis tanpa rugi.</p>
+</div>
+</div>
+<div class="flex gap-sm w-full">
+<button aria-label="Tutup saran" class="flex-1 min-h-[48px] bg-surface-container-lowest border border-border-subtle text-primary font-body-md text-body-md py-3 px-5 rounded-lg hover:bg-surface-container-low transition-colors">Tutup</button>
+<button aria-label="Lihat dan setujui tebus murah Paket Sarapan harga 9000" class="flex-1 min-h-[48px] bg-primary text-on-primary font-body-md text-body-md py-3 px-5 rounded-lg hover:bg-primary-pressed transition-colors">Lihat &amp; Setujui</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Navigasi Bawah (Hanya Mobile) - 5 item, h-14 56px -->
+<nav aria-label="Navigasi utama" class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-1 h-14 bg-surface border-t border-border-subtle shadow-sm">
+<a aria-current="page" aria-label="Dashboard aktif" class="flex flex-col items-center justify-center min-h-[48px] min-w-[48px] text-primary font-bold bg-primary/10 rounded-xl px-3 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">dashboard</span>
+<span class="font-label-caps text-label-caps mt-1">Dashboard</span>
+</a>
+<a aria-label="Ke halaman SKU" class="flex flex-col items-center justify-center min-h-[48px] min-w-[48px] text-slate-gray hover:text-primary transition-colors px-3 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;" aria-hidden="true">inventory</span>
+<span class="font-label-caps text-label-caps mt-1">SKU</span>
+</a>
+<a aria-label="Ke halaman Batch" class="flex flex-col items-center justify-center min-h-[48px] min-w-[48px] text-slate-gray hover:text-primary transition-colors px-3 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;" aria-hidden="true">inventory_2</span>
+<span class="font-label-caps text-label-caps mt-1">Batch</span>
+</a>
+<a aria-label="Ke halaman Promo" class="flex flex-col items-center justify-center min-h-[48px] min-w-[48px] text-slate-gray hover:text-primary transition-colors px-3 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;" aria-hidden="true">local_offer</span>
+<span class="font-label-caps text-label-caps mt-1">Promo</span>
+</a>
+<a aria-label="Ke halaman Pengaturan" class="flex flex-col items-center justify-center min-h-[48px] min-w-[48px] text-slate-gray hover:text-primary transition-colors px-3 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;" aria-hidden="true">settings</span>
+<span class="font-label-caps text-label-caps mt-1">Pengaturan</span>
+</a>
+</nav>
+</body></html>

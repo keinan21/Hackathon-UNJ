@@ -84,6 +84,8 @@ Token ini dipakai konsisten di semua layar. Developer cukup pakai token, jangan 
 | `text-secondary` | `#595959` | Keterangan kecil | Di atas putih 7.0:1 lolos AA |
 | `border` | `#D9D9D9` | Garis kartu |  |
 | `success-bg` | `#E8F5E9` | Latar sukses approve |  |
+| `safe` | `#4edea3` teal | Badge Aman, status Safe | Teks hitam `#1A1A1A` 11.2:1 lolos AA |
+| `safe-bg` | `#E8F5E9` | Latar Safe (reuse success-bg) |  |
 | `error-bg` | `#FFEBEE` | Latar error |  |
 
 **Aturan kontras AA:** semua teks normal minimal 4.5:1, teks besar minimal 3:1. Kombinasi di atas sudah diuji. Jangan pakai `text-secondary` di atas `surface-muted` untuk teks penting.
@@ -596,6 +598,23 @@ Tabel ini jadi bukti bahwa tugas utama selesai dalam maksimal tiga tap. QA wajib
 **Jika ada yang melebihi 3 tap, revisi desain dulu sebelum kode.** Tambah shortcut atau prefill, jangan tambah langkah.
 
 Trace: FRD-04 KPI 3-tap flow dan e2e 3tap.spec.ts, FRD-05 akses 5 detik.
+
+---
+
+## Arah Visual Hi-Fi (dari Stitch)
+
+> Seksi ini menampung bahasa visual hi-fi yang bagus dari Stitch (`DESIGN.md` — Precision Logistics) setelah di-remap token-nya ke Design Token di atas. Bukan sumber aturan baru — semua semantik (3-tap, 48px, warna H-1/H-3/H-7, bahasa Indonesia) tetap dari bab Prinsip dan Token. Stitch dipakai sebagai **mesin layout**, bukan penentu UX.
+
+**Remap token Stitch → docs/design.md (agar tidak redundant):** `primary #091426` → `primary #0F7A4A`, `critical-red #EF4444` → `danger #C62828`, `secondary-container #fea619` → `warning #EF6C00` (H-3) dan `caution #F9A825` (H-7) dipisah, `surface #f7f9fb` → `surface-muted #F5F5F0`, `border-subtle #E2E8F0` → `border #D9D9D9`, `body-md 14px` → `text-base 16px` (min), radius `xl 8px` → `radius-md 12px` (kartu) / `radius-sm 8px` (badge). Token baru `safe #4edea3` + `safe-bg #E8F5E9` diambil dari `tertiary-fixed-dim` Stitch untuk badge Aman (ghost-style `all Safe`) yang belum ada di FRD. `ui-docs/assets/tailwind-config.js` adalah single source setelah remap.
+
+**Yang dipertahankan dari Stitch karena bagus (UX tetap dari docs):**
+* **Brand & Style — Authoritative, Vigilant, Systematic.** Corporate / Modern, Minimalist: data density tinggi tapi legible, warna hanya untuk urgency (bukan hiasan). Dipertahankan sebagai arahan hi-fi, tapi palette diganti hijau UMKM.
+* **Layout & Spacing — Fluid grid.** Mobile 4 kolom → desktop 12 kolom, 4px baseline grid, margin horizontal 16px (`margin-mobile`), reflow: list utama mengisi kolom primer, sidebar Advisor menempel kanan di desktop. Dipertahankan untuk `ui-docs/*` dan implementasi React.
+* **Elevation & Depth — Tonal Layers + Soft Lift.** Surface tiers (`surface-muted` page `#F5F5F0`, kartu `surface #FFFFFF` + border `1px #D9D9D9`), shadow cuma satu `Soft Lift 0px 2px 4px rgba(30,41,59,0.05)` untuk active/FAB, tidak untuk urgency (urgency pakai warna, bukan shadow). Dipertahankan.
+* **Shapes — Soft 12px/8px.** Radius `DEFAULT` Stitch 0.125rem → `radius-sm 8px` (badge/input), `lg 0.25rem` → tidak dipakai, `xl 0.5rem` → `radius-md 12px` (Batch Card, Advisor). Pill `full` untuk status badge. Dipertahankan.
+* **Components — Pola yang bagus:** (1) Batch Card wajib stress bar kiri tebal warna status + score di pojok kanan atas, (2) AdvisorSuggestion pakai background `primary-fixed/30` tint tipis beda dari log biasa, (3) Status Badge high-contrast solid untuk Critical/Warning, ghost tint untuk Safe/Proposed, (4) Visual Progress Bar segmented H-7/H-3/H-1 isi kanan→kiri sesuai `daysToExpiry`, (5) Input `h-12` (48px) border `1px #D9D9D9` + focus ring 2px `#0F7A4A`. Semua pola ini dipakai di `ui-docs/*` setelah remap.
+
+Stitch boleh regenerate layout lagi, tapi tiap regenerate harus lewat remap pass di atas sebelum jadi sumber copy-paste `src/features/**`. Jika ragu, cek `AGENTS.md:42` — warna/tombol tetap tanya `docs/design.md`.
 
 ---
 
