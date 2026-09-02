@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { CheckCircle, WarningCircle, Xmark, Shop, Timer } from "iconoir-react";
 import ApproveDialog from "./ApproveDialog";
+import AdvisorCard from "./AdvisorCard";
 import type { Promo } from "./promo.types";
 import { createDemoPromos, formatRupiah } from "./promo.types";
 
@@ -12,6 +13,49 @@ export type PromoAktifListProps = {
   /** Force stale cache banner */
   staleCache?: boolean;
 };
+
+function formatExpiryLabel(expiryDate: string, daysToExpiry: number): string {
+  if (daysToExpiry === 1) return "Besok";
+  if (daysToExpiry === 0) return "Hari ini";
+  if (daysToExpiry < 0) return `Lewat ${Math.abs(daysToExpiry)} hari`;
+  try {
+    const d = new Date(expiryDate + "T00:00:00");
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+    }
+  } catch {
+    // fallback
+  }
+  return expiryDate;
+}
+
+function variantFromDays(days: number): "danger" | "warning" {
+  return days <= 1 ? "danger" : "warning";
+}
+
+function confidenceFromDays(days: number): number {
+  if (days <= 1) return 88;
+  if (days <= 3) return 92;
+  return 85;
+}
+
+function pasanganLabelFor(promo: Promo): string {
+  // hi-fi html: Roti→Barang Laris, Granola→Stok Stabil. Use id heuristic for demo fixtures
+  if (promo.id === "promo-2" || promo.sku_name.toLowerCase().includes("yogurt") || promo.sku_name.toLowerCase().includes("yoghurt")) {
+    return "Stok Stabil";
+  }
+  return "Barang Laris";
+}
+
+function marginPctFromPromo(promo: Promo): number {
+  if (promo.harga_floor > 0) {
+    return Math.round((promo.keuntungan_tipis / promo.harga_floor) * 100);
+  }
+  if (promo.modal > 0) {
+    return Math.round(((promo.harga_tebus - promo.modal) / promo.modal) * 100);
+  }
+  return 0;
+}
 
 export function PromoAktifList({ initialPromos, forceOffline, staleCache }: PromoAktifListProps) {
   // Allow window injection for e2e: __PROMO_SEED__ , __OFFLINE_STALE__
@@ -90,9 +134,8 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache }: Prom
     setToastVisible(true);
     const t = setTimeout(() => {
       setToastVisible(false);
-      // after transition, clear
       setTimeout(() => setToast(null), 220);
-    }, 4000);
+    }, 3000);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -123,10 +166,9 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache }: Prom
   const proposedCount = promos.filter((p) => p.status === "proposed").length;
   const activePromos = promos.filter((p) => p.status === "active");
 
-  // For isolated demo, also show proposed section + active section
   return (
-    <section className="w-full max-w-[480px] mx-auto px-4" aria-labelledby="promo-heading">
-      <h2 id="promo-heading" className="text-[20px] font-bold text-[#1A1A1A] mb-3" style={{ fontSize: "20px" }}>
+    <section className="w-full flex flex-col gap-md" aria-labelledby="promo-heading">
+      <h2 id="promo-heading" className="font-headline-md text-headline-md text-primary">
         Promo Tebus Murah
       </h2>
 
@@ -149,20 +191,28 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache }: Prom
         </div>
       )}
 
-      {/* Empty state for promo */}
       {promos.length === 0 ? (
         <div
           role="status"
           aria-live="polite"
-          className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 text-center"
+          className="bg-white border border-[#D9D9D9] rounded-[12px] p-6 text-center flex flex-col items-center gap-3"
           style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+          data-testid="empty-promo-aktif"
         >
-          <p className="text-base text-[#1A1A1A]" style={{ fontSize: "16px" }}>
+          <span className="material-symbols-outlined text-[#595959]" style={{ fontSize: 48 }} aria-hidden="true">
+            local_offer
+          </span>
+          <p className="text-base text-[#1A1A1A] leading-relaxed" style={{ fontSize: "16px", color: "#1A1A1A" }}>
             Belum ada promo aktif. Buat tebus murah dari stok mepet biar tidak jadi sampah.
           </p>
           <button
             type="button"
-            className="btn btn-primary w-full min-h-[48px] mt-3 text-base font-semibold rounded-[12px]"
+            aria-label="Lihat stok mepet untuk buat promo"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("app:navigate", { detail: "dashboard" }));
+              document.querySelector('[data-testid="section-urgent"]')?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="btn btn-primary w-full min-h-[48px] mt-1 text-base font-semibold rounded-[12px] hover:bg-primary-pressed active:bg-primary-pressed transition-colors"
             style={{ minHeight: "48px", fontSize: "16px", backgroundColor: "#0F7A4A", color: "#FFFFFF", border: "none" }}
           >
             Lihat Stok Mepet
@@ -170,25 +220,47 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache }: Prom
         </div>
       ) : (
         <>
-          {/* Proposed section — needs approve */}
           {proposedCount > 0 && (
-            <div className="mb-4">
-              <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-2" style={{ fontSize: "16px" }}>
-                Usulan Tebus Murah ({proposedCount})
-              </h3>
+            <div className="flex flex-col gap-sm">
+              <h3 className="font-headline-md text-headline-md text-primary text-base">Usulan Tebus Murah ({proposedCount})</h3>
               <ul className="space-y-3" aria-label="Daftar usulan tebus murah">
                 {promos
                   .filter((p) => p.status === "proposed")
-                  .map((p) => (
-                    <PromoCard key={p.id} promo={p} onApprove={() => handleRequestApprove(p)} />
+                  .map((p, idx) => (
+                    <li
+                      key={p.id}
+                      className="list-none motion-stagger-item"
+                      style={{ animationDelay: `${idx * 50}ms` } as React.CSSProperties}
+                      data-testid="promo-card-proposed"
+                      data-promo-id={p.id}
+                      data-status={p.status}
+                    >
+                      <AdvisorCard
+                        batchName={p.sku_name}
+                        qty={p.qty}
+                        expiryLabel={formatExpiryLabel(p.expiry_date, p.daysToExpiry)}
+                        daysToExpiry={p.daysToExpiry}
+                        variant={variantFromDays(p.daysToExpiry)}
+                        confidence={confidenceFromDays(p.daysToExpiry)}
+                        pasanganName={p.sku_pasangan_name}
+                        pasanganLabel={pasanganLabelFor(p)}
+                        hargaTebus={p.harga_tebus}
+                        hpp={p.modal}
+                        guardrailFloor={p.harga_floor}
+                        marginPct={marginPctFromPromo(p)}
+                        narrative={p.alasan}
+                        onApprove={() => handleRequestApprove(p)}
+                        onEdit={() => handleRequestApprove(p)}
+                        approveAriaLabel={`Setujui tebus murah ${p.sku_name} dengan ${p.sku_pasangan_name} harga ${p.harga_tebus.toLocaleString("id-ID")}`}
+                      />
+                    </li>
                   ))}
               </ul>
             </div>
           )}
 
-          {/* Active section */}
-          <div>
-            <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-2" style={{ fontSize: "16px" }}>
+          <div className="flex flex-col gap-sm">
+            <h3 className="font-headline-md text-headline-md text-primary text-base">
               Promo Aktif {activePromos.length > 0 ? `(${activePromos.length})` : ""}
             </h3>
             {activePromos.length === 0 ? (
@@ -204,8 +276,14 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache }: Prom
               </div>
             ) : (
               <ul className="space-y-3" aria-label="Daftar promo aktif" data-testid="promo-aktif-list">
-                {activePromos.map((p) => (
-                  <PromoCard key={p.id} promo={p} onApprove={() => handleRequestApprove(p)} isActiveList />
+                {activePromos.map((p, idx) => (
+                  <PromoCard
+                    key={p.id}
+                    promo={p}
+                    onApprove={() => handleRequestApprove(p)}
+                    isActiveList
+                    staggerIndex={idx}
+                  />
                 ))}
               </ul>
             )}
@@ -263,10 +341,12 @@ function PromoCard({
   promo,
   onApprove,
   isActiveList = false,
+  staggerIndex,
 }: {
   promo: Promo;
   onApprove: () => void;
   isActiveList?: boolean;
+  staggerIndex?: number;
 }) {
   const isActive = promo.status === "active";
   const isProposed = promo.status === "proposed";
@@ -279,8 +359,11 @@ function PromoCard({
     <li
       role="article"
       aria-label={`Tebus murah ${promo.sku_name} dengan ${promo.sku_pasangan_name}`}
-      className="bg-white border border-[#D9D9D9] rounded-[12px] p-4"
-      style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+      className={`bg-white border border-[#D9D9D9] rounded-[12px] p-4 transition-colors hover:border-primary/20 ${staggerIndex !== undefined ? "motion-stagger-item" : ""}`}
+      style={{
+        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        ...(staggerIndex !== undefined ? ({ animationDelay: `${staggerIndex * 50}ms` } as React.CSSProperties) : {}),
+      }}
       data-testid={isActive ? "promo-card-active" : "promo-card-proposed"}
       data-promo-id={promo.id}
       data-status={promo.status}

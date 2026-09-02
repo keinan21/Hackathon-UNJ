@@ -8,8 +8,8 @@
 - **Zona waktu:** Asia/Jakarta (WIB)
 - **Target pengguna:** Supervisor UMKM 35 sampai 55 tahun, non-tech, pegang satu HP Android
 - **Prinsip:** 3-tap max, offline-first, bahasa Indonesia, angka dari DB bukan dari LLM
-- **Prototype Figma:** _Belum tersedia, link akan diisi di sini saat desain hi-fi siap. Saat ini pakai wireframe low-fi di dokumen ini sebagai acuan._
-  - `Figma: -` (kosong, wireframe low-fi di bawah jadi sumber kebenaran untuk Wave 1 sampai 4)
+- **Prototype Figma:** [`./ui-docs/`](./ui-docs/) — 4 HTML hi-fi ([`dashboard.html`](./ui-docs/dashboard.html), [`katalog-sku.html`](./ui-docs/katalog-sku.html), [`ai-advisor.html`](./ui-docs/ai-advisor.html), [`detail-config.html`](./ui-docs/detail-config.html)) + [`assets/tailwind-config.js`](./ui-docs/assets/tailwind-config.js) single source (Stitch regenerate setelah remap)
+  - `Figma: ./ui-docs/` — hi-fi source, wireframe low-fi di bawah tetap acuan semantik untuk Wave 1 sampai 4
 
 ---
 
@@ -615,6 +615,8 @@ Trace: FRD-04 KPI 3-tap flow dan e2e 3tap.spec.ts, FRD-05 akses 5 detik.
 * **Components — Pola yang bagus:** (1) Batch Card wajib stress bar kiri tebal warna status + score di pojok kanan atas, (2) AdvisorSuggestion pakai background `primary-fixed/30` tint tipis beda dari log biasa, (3) Status Badge high-contrast solid untuk Critical/Warning, ghost tint untuk Safe/Proposed, (4) Visual Progress Bar segmented H-7/H-3/H-1 isi kanan→kiri sesuai `daysToExpiry`, (5) Input `h-12` (48px) border `1px #D9D9D9` + focus ring 2px `#0F7A4A`. Semua pola ini dipakai di `ui-docs/*` setelah remap.
 
 Stitch boleh regenerate layout lagi, tapi tiap regenerate harus lewat remap pass di atas sebelum jadi sumber copy-paste `src/features/**`. Jika ragu, cek `AGENTS.md:42` — warna/tombol tetap tanya `docs/design.md`.
+
+Update 2026-09-02: `ui-docs/` sudah jadi hi-fi, remap Stitch→DESIGN.md verified, `tailwind-config.js` di `ui-docs/assets/` pruned dan di-sync ke root `tailwind.config.js`.
 
 ---
 

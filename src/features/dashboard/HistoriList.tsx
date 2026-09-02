@@ -14,31 +14,39 @@ export function HistoriList({ onSelect, limit = 5, historiOverride }: HistoriLis
   const total = demoHistori.length;
 
   if (histori.length === 0) {
+    const handleReload = () => window.location.reload();
     return (
-      <section className="w-full max-w-[480px] mx-auto px-4" aria-labelledby="histori-heading" data-testid="section-histori">
-        <h2 id="histori-heading" className="text-[20px] font-bold text-[#1A1A1A] mb-3" style={{ fontSize: "20px" }}>Histori Saran</h2>
+      <section className="w-full flex flex-col gap-md" aria-labelledby="histori-heading" data-testid="section-histori">
+        <h2 id="histori-heading" className="font-headline-md text-headline-md text-primary">Histori Saran</h2>
         <div
           role="status"
           aria-live="polite"
-          className="bg-white border border-[#D9D9D9] rounded-[12px] p-6 text-center flex flex-col items-center gap-3"
-          style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+          className="bg-surface-container-lowest border border-border-subtle rounded-xl p-md shadow-sm flex flex-col items-center gap-3 text-center py-8"
           data-testid="histori-empty"
         >
           <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" className="shrink-0">
             <circle cx="24" cy="24" r="16" fill="none" stroke="#D9D9D9" strokeWidth="2" />
             <path d="M24 14 L24 24 L32 28" fill="none" stroke="#595959" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          <p className="text-base text-[#595959]" style={{ fontSize: "16px" }}>Belum ada histori saran. Buat promo dulu.</p>
+          <p className="font-body-md text-body-md text-text-primary leading-relaxed">Belum ada saran. Saran baru muncul tiap jam 7 pagi atau saat ada stok mepet baru.</p>
+          <button
+            type="button"
+            onClick={handleReload}
+            aria-label="Muat ulang histori saran"
+            className="min-h-[48px] w-full px-6 py-3 bg-surface-container-lowest border border-border-subtle text-primary font-body-md text-body-md rounded-lg hover:bg-surface-container-low transition-colors"
+          >
+            Muat Ulang
+          </button>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="w-full max-w-[480px] mx-auto px-4" aria-labelledby="histori-heading" data-testid="section-histori">
-      <h2 id="histori-heading" className="text-[20px] font-bold text-[#1A1A1A] mb-3" style={{ fontSize: "20px" }}>Histori Saran</h2>
-      <p className="text-sm text-[#595959] mb-2" style={{ fontSize: "12px" }}>Menampilkan {histori.length} terbaru dari {total} saran</p>
-      <ul className="space-y-3" aria-label="Daftar histori saran">
+    <section className="w-full flex flex-col gap-md" aria-labelledby="histori-heading" data-testid="section-histori">
+      <h2 id="histori-heading" className="font-headline-md text-headline-md text-primary">Histori Saran</h2>
+      <p className="font-label-caps text-label-caps text-slate-gray">Menampilkan {histori.length} terbaru dari {total} saran</p>
+      <ul className="flex flex-col gap-sm" aria-label="Daftar histori saran">
         {histori.map((h) => (
           <li
             key={h.id}
@@ -52,8 +60,7 @@ export function HistoriList({ onSelect, limit = 5, historiOverride }: HistoriLis
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }
             }}
-            className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 cursor-pointer hover:border-[#0F7A4A] transition-colors"
-            style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+            className="bg-surface-container-lowest border border-border-subtle rounded-xl p-md shadow-sm cursor-pointer hover:bg-surface-container-low transition-colors"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === "Enter") {

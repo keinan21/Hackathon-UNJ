@@ -1,7 +1,14 @@
 import { useMemo, useReducer, useState, useEffect } from "react";
-import { WarningCircle } from "iconoir-react";
-import Badge from "../../components/Badge";
+import BatchCard, { type BatchCardVariant } from "../../components/BatchCard";
 import { FakeRepository, type UrgentBatch } from "../../lib/fakeRepository";
+
+function variantFromDays(days: number | null): BatchCardVariant {
+  if (days === null) return "safe";
+  if (days <= 1) return "danger";
+  if (days <= 3) return "warning";
+  if (days <= 7) return "caution";
+  return "safe";
+}
 
 type FilterState = string[];
 type FilterAction = { type: "TOGGLE"; payload: string };
@@ -10,17 +17,11 @@ const ALL_CATEGORIES = ["Semua", "Dairy", "Snack", "Beras"] as const;
 
 function filterReducer(state: FilterState, action: FilterAction): FilterState {
   const payload = action.payload;
-  if (payload === "Semua") {
-    return ["Semua"];
-  }
-  // toggle kategori: deselect Semua, add/remove payload
+  if (payload === "Semua") return ["Semua"];
   const withoutSemua = state.filter((s) => s !== "Semua");
   let next: string[];
-  if (withoutSemua.includes(payload)) {
-    next = withoutSemua.filter((s) => s !== payload);
-  } else {
-    next = [...withoutSemua, payload];
-  }
+  if (withoutSemua.includes(payload)) next = withoutSemua.filter((s) => s !== payload);
+  else next = [...withoutSemua, payload];
   if (next.length === 0) return ["Semua"];
   return next;
 }
@@ -36,21 +37,14 @@ export function UrgentList({ initialFilter, seedMode = "demo", batchesOverride }
   const [sortBy, setSortBy] = useState<"expiry" | "urgency">("expiry");
   const [visibleCount, setVisibleCount] = useState(50);
   const [repo] = useState(() => new FakeRepository());
-
-  // Determine today once
   const today = useMemo(() => new Date(), []);
-
-  // Seed repository based on mode or window injection
   const [urgentBatches, setUrgentBatches] = useState<UrgentBatch[]>(() => {
     if (batchesOverride) return batchesOverride;
-    // Check window injection for e2e seeding
     const win = typeof window !== "undefined" ? (window as unknown as { __FAKE_SEED_MODE?: string; __FAKE_MANY?: number }) : null;
     const mode = win?.__FAKE_SEED_MODE ?? seedMode;
-    if (mode === "many") {
-      repo.seedManyUrgent(win?.__FAKE_MANY ?? 60, today);
-    } else if (mode === "empty") {
-      repo.clear();
-    } else if (mode === "expiryNull") {
+    if (mode === "many") repo.seedManyUrgent(win?.__FAKE_MANY ?? 60, today);
+    else if (mode === "empty") repo.clear();
+    else if (mode === "expiryNull") {
       repo.clear();
       repo.batches = [
         {
@@ -69,49 +63,23 @@ export function UrgentList({ initialFilter, seedMode = "demo", batchesOverride }
       ];
     } else {
       repo.seedUrgentDemo(today);
-      // If URL param prototype=many, seed many
       if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
-        if (params.get("prototype") === "many") {
-          repo.seedManyUrgent(60, today);
-        }
-        if (params.get("empty") === "1") {
-          repo.clear();
-        }
-        if (params.get("seed") === "many") {
-          repo.clear();
-          repo.seedManyUrgent(60, today);
-        }
+        if (params.get("prototype") === "many") repo.seedManyUrgent(60, today);
+        if (params.get("empty") === "1") repo.clear();
+        if (params.get("seed") === "many") { repo.clear(); repo.seedManyUrgent(60, today); }
         if (params.get("seed") === "expiryNull") {
           repo.clear();
-          repo.batches = [
-            {
-              id: "b-null",
-              sku_id: "sku-susu",
-              sku_name: "Susu UHT 1L",
-              kategori_id: "k-dairy",
-              kategori_name: "Dairy",
-              qty: 10,
-              expiry_date: null,
-              received_at: new Date().toISOString(),
-              hpp_snapshot: 10000,
-              org_id: "toko-01",
-              avg_daily_usage: 2,
-            },
-          ];
+          repo.batches = [{ id: "b-null", sku_id: "sku-susu", sku_name: "Susu UHT 1L", kategori_id: "k-dairy", kategori_name: "Dairy", qty: 10, expiry_date: null, received_at: new Date().toISOString(), hpp_snapshot: 10000, org_id: "toko-01", avg_daily_usage: 2 }];
         }
-        if (params.get("seed") === "empty") {
-          repo.clear();
-        }
+        if (params.get("seed") === "empty") repo.clear();
       }
     }
     return repo.getUrgentBatches(today, "expiry");
   });
 
-  // Recompute when sortBy changes
   useEffect(() => {
     if (batchesOverride) {
-      // sort override batches
       const sorted = [...batchesOverride].sort((a, b) => {
         if (sortBy === "urgency") return a.urgencyScore - b.urgencyScore;
         if (a.daysToExpiry !== b.daysToExpiry) return a.daysToExpiry - b.daysToExpiry;
@@ -123,7 +91,6 @@ export function UrgentList({ initialFilter, seedMode = "demo", batchesOverride }
     setUrgentBatches(repo.getUrgentBatches(today, sortBy));
   }, [sortBy, repo, today, batchesOverride]);
 
-  // Also handle window seed mode change after mount
   useEffect(() => {
     const handler = () => {
       const win = window as unknown as { __FAKE_SEED_MODE?: string };
@@ -144,31 +111,21 @@ export function UrgentList({ initialFilter, seedMode = "demo", batchesOverride }
   const hasMore = filtered.length > visibleCount;
   const totalCount = filtered.length;
 
-  // badge count per SKU
-  const badgePerSku = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const b of filtered) {
-      m.set(b.sku_name ?? b.sku_id, (m.get(b.sku_name ?? b.sku_id) ?? 0) + b.qty);
-    }
-    return m;
-  }, [filtered]);
-
   const handleChip = (cat: string) => {
     dispatch({ type: "TOGGLE", payload: cat });
-    // reset pagination on filter change
     setVisibleCount(50);
   };
 
   const showExpiryNullSkipped = urgentBatches.length === 0 && seedMode === "expiryNull";
 
   return (
-    <section className="w-full max-w-[480px] mx-auto px-4" aria-labelledby="urgent-heading">
-      <h2 id="urgent-heading" className="text-[20px] font-bold text-[#1A1A1A] mb-3" style={{ fontSize: "20px" }}>
+    <section className="w-full flex flex-col gap-md" aria-labelledby="urgent-heading">
+      <h2 id="urgent-heading" className="font-headline-md text-headline-md text-primary">
         Stok Mepet
       </h2>
 
-      {/* Filter chips */}
-      <div className="flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter kategori">
+      {/* Filter chips — token persis dashboard */}
+      <div className="flex flex-wrap gap-sm" role="group" aria-label="Filter kategori">
         {ALL_CATEGORIES.map((cat) => {
           const isPressed = selected.includes(cat);
           return (
@@ -178,10 +135,11 @@ export function UrgentList({ initialFilter, seedMode = "demo", batchesOverride }
               aria-pressed={isPressed}
               aria-label={`Filter ${cat}`}
               onClick={() => handleChip(cat)}
-              className={`btn btn-sm min-h-[48px] text-base font-semibold rounded-full px-5 ${
-                isPressed ? "btn-primary" : "btn-outline border-[#D9D9D9] text-[#1A1A1A]"
+              className={`min-h-[48px] px-4 py-2 rounded-full font-body-md text-body-md transition-colors ${
+                isPressed
+                  ? "bg-primary text-on-primary hover:bg-primary-pressed"
+                  : "bg-surface-container-lowest border border-border-subtle text-text-primary hover:bg-surface-container-low"
               }`}
-              style={{ fontSize: "16px", minHeight: "48px" }}
             >
               {cat}
             </button>
@@ -189,90 +147,85 @@ export function UrgentList({ initialFilter, seedMode = "demo", batchesOverride }
         })}
       </div>
 
-      {/* Sort toggle */}
-      <div className="flex items-center justify-between mb-3">
-        <div aria-live="polite" aria-atomic="true" className="text-sm text-[#595959]">
-          <span role="status" aria-live="polite">
-            {totalCount} stok mepet
-          </span>
-          {badgePerSku.size > 0 && (
-            <span className="ml-2 text-xs">• {Array.from(badgePerSku.entries()).map(([k, v]) => `${k}: ${v} pcs`).join(", ")}</span>
-          )}
-        </div>
+      {/* Sort + count — minimal */}
+      <div className="flex items-center justify-between">
+        <span role="status" aria-live="polite" className="font-body-md text-body-md text-slate-gray text-sm">
+          {totalCount} stok mepet
+        </span>
         <button
           type="button"
           onClick={() => setSortBy((s) => (s === "expiry" ? "urgency" : "expiry"))}
-          className="btn btn-ghost btn-sm min-h-[48px] text-base"
-          style={{ fontSize: "16px", minHeight: "48px" }}
+          className="min-h-[48px] px-3 font-body-md text-body-md text-primary hover:underline"
           aria-label={`Urut ${sortBy === "expiry" ? "expiry terdekat" : "urgencyScore"}`}
         >
           Urut: {sortBy === "expiry" ? "Expiry terdekat" : "Urgency"}
         </button>
       </div>
 
-      {/* Empty state */}
       {filtered.length === 0 ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 text-center"
-        >
-          <p className="text-base text-[#1A1A1A] leading-relaxed" style={{ fontSize: "16px" }}>
-            Stok aman, tidak ada yang mepet kadaluarsa. Cek lagi besok jam 7 pagi.
-          </p>
-          {showExpiryNullSkipped && (
-            <p className="text-sm text-[#595959] mt-2">Batch tanpa tanggal kadaluarsa tidak masuk daftar.</p>
-          )}
-        </div>
-      ) : (
-        <ul className="space-y-3" aria-label="Daftar stok mepet">
-          {visible.map((b) => (
-            <li
-              key={b.id}
-              className="bg-white border border-[#D9D9D9] rounded-[12px] p-4"
-              style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+        urgentBatches.length === 0 ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="bg-surface-container-lowest border border-border-subtle rounded-xl p-md shadow-sm flex flex-col items-center gap-3 text-center py-8"
+            data-testid="empty-stok-aman"
+          >
+            <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 0", fontSize: 48 }} aria-hidden="true">
+              check_circle
+            </span>
+            <p className="font-body-md text-body-md text-text-primary">Stok aman, tidak ada yang mepet kadaluarsa. Cek lagi besok jam 7 pagi.</p>
+            {showExpiryNullSkipped && (
+              <p className="font-body-md text-body-md text-slate-gray text-sm">Batch tanpa tanggal kadaluarsa tidak masuk daftar.</p>
+            )}
+          </div>
+        ) : (
+          <div
+            role="status"
+            aria-live="polite"
+            className="bg-surface-container-lowest border border-border-subtle rounded-xl p-md shadow-sm flex flex-col items-center gap-3 text-center py-8"
+            data-testid="empty-filter-kategori"
+          >
+            <span className="material-symbols-outlined text-slate-gray" style={{ fontVariationSettings: "'FILL' 0", fontSize: 48 }} aria-hidden="true">
+              filter_alt_off
+            </span>
+            <p className="font-body-md text-body-md text-text-primary">Tidak ada stok mepet di kategori ini. Coba pilih Semua.</p>
+            <button
+              type="button"
+              onClick={() => { dispatch({ type: "TOGGLE", payload: "Semua" }); setVisibleCount(50); }}
+              aria-label="Tampilkan semua kategori"
+              className="min-h-[48px] w-full px-6 py-3 bg-surface-container-lowest border border-border-subtle text-primary font-body-md text-body-md rounded-lg hover:bg-surface-container-low transition-colors"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <WarningCircle width={16} height={16} aria-hidden="true" className="text-[#1A1A1A] shrink-0" />
-                    <span className="font-semibold text-[#1A1A1A] truncate" style={{ fontSize: "16px" }}>
-                      {b.sku_name}
-                    </span>
-                  </div>
-                  <p className="text-sm text-[#595959]" style={{ fontSize: "16px" }}>
-                    {b.qty} pcs • exp {b.expiry_date}
-                  </p>
-                  <p className="text-xs text-[#595959] mt-1">Urgency: {b.urgencyScore.toFixed(1)} • {b.kategori_name}</p>
-                </div>
-                <Badge daysToExpiry={b.daysToExpiry} qty={b.qty} expiryDate={b.expiry_date as string} showIcon />
-              </div>
-              <button
-                type="button"
-                className="btn btn-primary w-full min-h-[48px] mt-3 text-base font-semibold"
-                style={{ fontSize: "16px", minHeight: "48px" }}
-                aria-label={`Lihat saran tebus untuk ${b.sku_name}`}
-              >
-                Lihat Saran Tebus
-              </button>
-            </li>
+              Tampilkan Semua
+            </button>
+          </div>
+        )
+      ) : (
+        <div className="flex flex-col gap-sm">
+          {visible.map((b) => (
+            <BatchCard
+              key={b.id}
+              batchId={b.id}
+              skuName={b.sku_name ?? b.sku_id}
+              qty={b.qty}
+              expiryDate={b.expiry_date}
+              daysToExpiry={b.daysToExpiry}
+              urgencyScore={b.urgencyScore}
+              variant={variantFromDays(b.daysToExpiry)}
+            />
           ))}
-        </ul>
+        </div>
       )}
 
-      {/* Pagination */}
       {hasMore && (
         <button
           type="button"
           onClick={() => setVisibleCount(filtered.length)}
-          className="btn btn-primary w-full min-h-[48px] mt-4 text-base font-semibold"
-          style={{ fontSize: "16px", minHeight: "48px" }}
+          className="min-h-[48px] w-full bg-primary text-on-primary font-body-md text-body-md py-3 px-5 rounded-lg hover:bg-primary-pressed transition-colors"
         >
           Lihat semua ({filtered.length - visibleCount} lagi)
         </button>
       )}
 
-      {/* Toast/banner */}
       <div role="status" aria-live="polite" className="sr-only">
         {totalCount} item mepet kadaluarsa
       </div>

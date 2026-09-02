@@ -8,12 +8,13 @@ export type BadgeProps = {
   className?: string;
 };
 
+// Sinkron dengan BatchCard VARIANT_STYLES — DESIGN.md token: danger #C62828, warning #EF6C00, caution #F9A825, safe #4edea3
 function getBadgeStyle(days: number): { bg: string; color: string } {
-  if (days <= 1) return { bg: "#C62828", color: "#FFFFFF" };
-  if (days <= 3) return { bg: "#EF6C00", color: "#1A1A1A" };
-  if (days <= 7) return { bg: "#F9A825", color: "#1A1A1A" };
-  // fallback for >7 should not be shown, but provide muted
-  return { bg: "#D9D9D9", color: "#1A1A1A" };
+  if (days <= 1) return { bg: "#C62828", color: "#FFFFFF" }; // danger
+  if (days <= 3) return { bg: "#EF6C00", color: "#1A1A1A" }; // warning
+  if (days <= 7) return { bg: "#F9A825", color: "#1A1A1A" }; // caution
+  // safe fallback for >7 (tidak tampil di urgent, tapi sinkron dengan BatchCard safe)
+  return { bg: "#4edea3", color: "#1A1A1A" };
 }
 
 export function Badge({ daysToExpiry, qty, expiryDate, showIcon = true, className }: BadgeProps) {
