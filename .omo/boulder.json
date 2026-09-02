@@ -20,7 +20,7 @@
         "todo:21": {
           "task_key": "todo:21",
           "task_label": "21",
-          "task_title": "FRD hands-off per feature (`docs/frd.md`) — comprehensive",
+          "task_title": "FRD hands-off per feature (`docs/frd.md`) \u2014 comprehensive",
           "session_id": "opencode:ses_fa9fd599dffekMlcpyPlt1860Y",
           "agent": "Sisyphus-Junior",
           "category": "writing",
@@ -83,7 +83,7 @@
         "todo:25": {
           "task_key": "todo:25",
           "task_label": "25",
-          "task_title": "Agent rules 4-crew (`AGENTS.md`) — GitHub flow + pembagian Frontend 1 orang + 3 orang lain + opencode discipline",
+          "task_title": "Agent rules 4-crew (`AGENTS.md`) \u2014 GitHub flow + pembagian Frontend 1 orang + 3 orang lain + opencode discipline",
           "session_id": "opencode:ses_fa9b4b520ffe0HPmDv1rIc2UFY",
           "agent": "Sisyphus-Junior",
           "category": "writing",
@@ -101,9 +101,9 @@
       "work_id": "frontend-crew-a-1b5ed193",
       "active_plan": "/home/yusuf/dev/2026/UNEJ/.omo/plans/frontend-crew-a.md",
       "plan_name": "frontend-crew-a",
-      "status": "active",
+      "status": "completed",
       "started_at": "2026-09-01T14:49:25.357Z",
-      "updated_at": "2026-09-02T05:01:03.637Z",
+      "updated_at": "2026-09-02T05:05:21.016189+00:00",
       "session_ids": [
         "opencode:ses_fa2bfad38ffeigkm6rzO0NCP6q"
       ],
@@ -115,7 +115,7 @@
         "todo:1": {
           "task_key": "todo:1",
           "task_label": "1",
-          "task_title": "[FRD-01] PWA shell + manifest + SW offline cache + install prompt + Tailwind+DaisyUI (Crew A — Frontend) — TASK-04 isolated",
+          "task_title": "[FRD-01] PWA shell + manifest + SW offline cache + install prompt + Tailwind+DaisyUI (Crew A \u2014 Frontend) \u2014 TASK-04 isolated",
           "session_id": "opencode:ses_fa28cb1bcffeE4AGvHIuonAG77",
           "agent": "Sisyphus-Junior",
           "started_at": "2026-09-01T15:03:13.790Z",
@@ -127,7 +127,7 @@
         "todo:2": {
           "task_key": "todo:2",
           "task_label": "2",
-          "task_title": "[FRD-03/05] Badge & Urgent List (UX UMKM 48px, 3-tap, multi-select) — TASK-11 isolated",
+          "task_title": "[FRD-03/05] Badge & Urgent List (UX UMKM 48px, 3-tap, multi-select) \u2014 TASK-11 isolated",
           "session_id": "opencode:ses_fa25a45bbffeQtMj5fChHmp6jU",
           "agent": "Sisyphus-Junior",
           "category": "visual-engineering",
@@ -140,7 +140,7 @@
         "todo:3": {
           "task_key": "todo:3",
           "task_label": "3",
-          "task_title": "[FRD-04/05] 1-tap Approve → Dialog konfirmasi + Promo Aktif lifecycle UI — TASK-15 isolated",
+          "task_title": "[FRD-04/05] 1-tap Approve \u2192 Dialog konfirmasi + Promo Aktif lifecycle UI \u2014 TASK-15 isolated",
           "session_id": "opencode:ses_fa248f9dbffeOxwEpX4vuW3ZEW",
           "agent": "Sisyphus-Junior",
           "category": "visual-engineering",
@@ -153,7 +153,7 @@
         "todo:4": {
           "task_key": "todo:4",
           "task_label": "4",
-          "task_title": "[FRD-05] Dashboard Promo Aktif + Histori Saran UI — TASK-17 isolated",
+          "task_title": "[FRD-05] Dashboard Promo Aktif + Histori Saran UI \u2014 TASK-17 isolated",
           "session_id": "opencode:ses_f9fb0a798ffeUEwQRb09Wue0f9",
           "agent": "Sisyphus-Junior",
           "category": "visual-engineering",
@@ -166,7 +166,7 @@
         "todo:5": {
           "task_key": "todo:5",
           "task_label": "5",
-          "task_title": "[FRD-05/02] Threshold Settings Page + HPP/margin config — TASK-19 isolated",
+          "task_title": "[FRD-05/02] Threshold Settings Page + HPP/margin config \u2014 TASK-19 isolated",
           "session_id": "opencode:ses_f9fa1c130ffeaLlBw21alDHVVo",
           "agent": "Sisyphus-Junior",
           "category": "visual-engineering",
@@ -179,7 +179,7 @@
         "todo:6": {
           "task_key": "todo:6",
           "task_label": "6",
-          "task_title": "[FRD-01..06] E2E + Build + PWA installability + Offline QA Polish — TASK-20 isolated (Crew A owns)",
+          "task_title": "[FRD-01..06] E2E + Build + PWA installability + Offline QA Polish \u2014 TASK-20 isolated (Crew A owns)",
           "session_id": "opencode:ses_f9f91e597ffez8440N6nK9al6N",
           "agent": "Sisyphus-Junior",
           "category": "visual-engineering",
@@ -192,7 +192,7 @@
         "final-wave:f1": {
           "task_key": "final-wave:f1",
           "task_label": "F1",
-          "task_title": "Plan compliance audit — verify every Must have/Must NOT have from Scope carried to todos, 20 interview answers locked (Q1-20), skill frontend-design + web-design-guidelines installed, no backend leak, token 48px/16px/#0F7A4A enforced, 1 kolom mobile-first, Full width, Teks+warna+ikon, Dialog, Top50 pagination — Evidence `.omo/evidence/final/frontend-crew-a-f1.json`",
+          "task_title": "Plan compliance audit \u2014 verify every Must have/Must NOT have from Scope carried to todos, 20 interview answers locked (Q1-20), skill frontend-design + web-design-guidelines installed, no backend leak, token 48px/16px/#0F7A4A enforced, 1 kolom mobile-first, Full width, Teks+warna+ikon, Dialog, Top50 pagination \u2014 Evidence `.omo/evidence/final/frontend-crew-a-f1.json`",
           "session_id": "opencode:ses_f9f87f985ffeMMFCZJ4AsZBZrW",
           "agent": "Sisyphus-Junior",
           "category": "visual-engineering",
@@ -205,7 +205,7 @@
         "final-wave:f2": {
           "task_key": "final-wave:f2",
           "task_label": "F2",
-          "task_title": "Code quality review — `bun run build && bun test` 0 errors, `grep -r \"from.*dexie\" src/components src/features/dashboard src/features/promo src/features/settings` == 0, no TODO/FIXME/as any, iconoir used, repository pattern followed — Evidence `.omo/evidence/final/frontend-crew-a-f2.log`",
+          "task_title": "Code quality review \u2014 `bun run build && bun test` 0 errors, `grep -r \"from.*dexie\" src/components src/features/dashboard src/features/promo src/features/settings` == 0, no TODO/FIXME/as any, iconoir used, repository pattern followed \u2014 Evidence `.omo/evidence/final/frontend-crew-a-f2.log`",
           "session_id": "opencode:ses_f9f84f2d9ffe3seohrmndSu9SO",
           "agent": "Sisyphus-Junior",
           "category": "visual-engineering",
@@ -215,13 +215,15 @@
           "ended_at": "2026-09-02T05:01:03.637Z",
           "elapsed_ms": 10429
         }
-      }
+      },
+      "ended_at": "2026-09-02T05:05:21.016189+00:00",
+      "elapsed_ms": 51355680
     }
   },
   "active_plan": "/home/yusuf/dev/2026/UNEJ/.omo/plans/frontend-crew-a.md",
   "started_at": "2026-09-01T14:49:25.357Z",
-  "status": "active",
-  "updated_at": "2026-09-02T05:01:03.637Z",
+  "status": "completed",
+  "updated_at": "2026-09-02T05:05:21.016189+00:00",
   "session_ids": [
     "opencode:ses_fa2bfad38ffeigkm6rzO0NCP6q"
   ],
@@ -233,7 +235,7 @@
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "[FRD-01] PWA shell + manifest + SW offline cache + install prompt + Tailwind+DaisyUI (Crew A — Frontend) — TASK-04 isolated",
+      "task_title": "[FRD-01] PWA shell + manifest + SW offline cache + install prompt + Tailwind+DaisyUI (Crew A \u2014 Frontend) \u2014 TASK-04 isolated",
       "session_id": "opencode:ses_fa28cb1bcffeE4AGvHIuonAG77",
       "agent": "Sisyphus-Junior",
       "started_at": "2026-09-01T15:03:13.790Z",
@@ -245,7 +247,7 @@
     "todo:2": {
       "task_key": "todo:2",
       "task_label": "2",
-      "task_title": "[FRD-03/05] Badge & Urgent List (UX UMKM 48px, 3-tap, multi-select) — TASK-11 isolated",
+      "task_title": "[FRD-03/05] Badge & Urgent List (UX UMKM 48px, 3-tap, multi-select) \u2014 TASK-11 isolated",
       "session_id": "opencode:ses_fa25a45bbffeQtMj5fChHmp6jU",
       "agent": "Sisyphus-Junior",
       "category": "visual-engineering",
@@ -258,7 +260,7 @@
     "todo:3": {
       "task_key": "todo:3",
       "task_label": "3",
-      "task_title": "[FRD-04/05] 1-tap Approve → Dialog konfirmasi + Promo Aktif lifecycle UI — TASK-15 isolated",
+      "task_title": "[FRD-04/05] 1-tap Approve \u2192 Dialog konfirmasi + Promo Aktif lifecycle UI \u2014 TASK-15 isolated",
       "session_id": "opencode:ses_fa248f9dbffeOxwEpX4vuW3ZEW",
       "agent": "Sisyphus-Junior",
       "category": "visual-engineering",
@@ -271,7 +273,7 @@
     "todo:4": {
       "task_key": "todo:4",
       "task_label": "4",
-      "task_title": "[FRD-05] Dashboard Promo Aktif + Histori Saran UI — TASK-17 isolated",
+      "task_title": "[FRD-05] Dashboard Promo Aktif + Histori Saran UI \u2014 TASK-17 isolated",
       "session_id": "opencode:ses_f9fb0a798ffeUEwQRb09Wue0f9",
       "agent": "Sisyphus-Junior",
       "category": "visual-engineering",
@@ -284,7 +286,7 @@
     "todo:5": {
       "task_key": "todo:5",
       "task_label": "5",
-      "task_title": "[FRD-05/02] Threshold Settings Page + HPP/margin config — TASK-19 isolated",
+      "task_title": "[FRD-05/02] Threshold Settings Page + HPP/margin config \u2014 TASK-19 isolated",
       "session_id": "opencode:ses_f9fa1c130ffeaLlBw21alDHVVo",
       "agent": "Sisyphus-Junior",
       "category": "visual-engineering",
@@ -297,7 +299,7 @@
     "todo:6": {
       "task_key": "todo:6",
       "task_label": "6",
-      "task_title": "[FRD-01..06] E2E + Build + PWA installability + Offline QA Polish — TASK-20 isolated (Crew A owns)",
+      "task_title": "[FRD-01..06] E2E + Build + PWA installability + Offline QA Polish \u2014 TASK-20 isolated (Crew A owns)",
       "session_id": "opencode:ses_f9f91e597ffez8440N6nK9al6N",
       "agent": "Sisyphus-Junior",
       "category": "visual-engineering",
@@ -310,7 +312,7 @@
     "final-wave:f1": {
       "task_key": "final-wave:f1",
       "task_label": "F1",
-      "task_title": "Plan compliance audit — verify every Must have/Must NOT have from Scope carried to todos, 20 interview answers locked (Q1-20), skill frontend-design + web-design-guidelines installed, no backend leak, token 48px/16px/#0F7A4A enforced, 1 kolom mobile-first, Full width, Teks+warna+ikon, Dialog, Top50 pagination — Evidence `.omo/evidence/final/frontend-crew-a-f1.json`",
+      "task_title": "Plan compliance audit \u2014 verify every Must have/Must NOT have from Scope carried to todos, 20 interview answers locked (Q1-20), skill frontend-design + web-design-guidelines installed, no backend leak, token 48px/16px/#0F7A4A enforced, 1 kolom mobile-first, Full width, Teks+warna+ikon, Dialog, Top50 pagination \u2014 Evidence `.omo/evidence/final/frontend-crew-a-f1.json`",
       "session_id": "opencode:ses_f9f87f985ffeMMFCZJ4AsZBZrW",
       "agent": "Sisyphus-Junior",
       "category": "visual-engineering",
@@ -323,7 +325,7 @@
     "final-wave:f2": {
       "task_key": "final-wave:f2",
       "task_label": "F2",
-      "task_title": "Code quality review — `bun run build && bun test` 0 errors, `grep -r \"from.*dexie\" src/components src/features/dashboard src/features/promo src/features/settings` == 0, no TODO/FIXME/as any, iconoir used, repository pattern followed — Evidence `.omo/evidence/final/frontend-crew-a-f2.log`",
+      "task_title": "Code quality review \u2014 `bun run build && bun test` 0 errors, `grep -r \"from.*dexie\" src/components src/features/dashboard src/features/promo src/features/settings` == 0, no TODO/FIXME/as any, iconoir used, repository pattern followed \u2014 Evidence `.omo/evidence/final/frontend-crew-a-f2.log`",
       "session_id": "opencode:ses_f9f84f2d9ffe3seohrmndSu9SO",
       "agent": "Sisyphus-Junior",
       "category": "visual-engineering",
@@ -334,5 +336,7 @@
       "elapsed_ms": 10429
     }
   },
-  "agent": "atlas"
+  "agent": "atlas",
+  "ended_at": "2026-09-02T05:05:21.016189+00:00",
+  "elapsed_ms": 51355680
 }
