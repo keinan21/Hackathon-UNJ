@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html class="light" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Detail Batch &amp; Konfigurasi Kategori — Tebus Murah</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="./assets/tailwind-config.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1;
+        }
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 16px); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md pt-16 safe-area-bottom min-h-screen">
+<!-- TopAppBar -->
+<header class="bg-primary text-on-primary border-b border-primary-pressed fixed top-0 left-0 w-full z-50 flex items-center justify-between px-margin-mobile h-16">
+<button aria-label="Kembali" class="min-h-[48px] min-w-[48px] text-on-primary hover:bg-primary-pressed transition-colors p-2 rounded-full -ml-2 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary">
+<span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-primary tracking-tight truncate flex-1 text-center pr-10">Tebus Murah</h1>
+</header>
+<main class="max-w-3xl mx-auto px-margin-mobile py-lg space-y-lg">
+<!-- Header Section -->
+<section class="mb-lg">
+<div class="flex items-start justify-between mb-sm">
+<div>
+<span class="font-label-caps text-label-caps text-slate-gray uppercase tracking-wider block mb-1">Batch ID</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">B-20231024-DAIRY-01</h2>
+</div>
+<div class="bg-danger text-white rounded-full px-3 py-1.5 shadow-sm flex items-center gap-1.5" aria-label="Status mendesak">
+<span class="w-2 h-2 rounded-full bg-white animate-pulse" aria-hidden="true"></span>
+<span class="font-data-mono text-data-mono text-white">Urgent</span>
+</div>
+</div>
+</section>
+<!-- Bento Grid: Batch Details -->
+<section class="grid grid-cols-2 gap-sm">
+<div class="col-span-2 md:col-span-1 bg-surface-container-lowest border border-border-subtle p-md rounded-xl shadow-sm">
+<span class="font-label-caps text-label-caps text-slate-gray block mb-xs">SKU</span>
+<p class="font-body-lg text-body-lg text-on-surface font-semibold">Fresh Milk 1L - Ultra</p>
+<div class="mt-xs inline-flex items-center gap-1 bg-surface-container-low px-2 py-1 rounded text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" aria-hidden="true">category</span> Kategori: Dairy
+                </div>
+</div>
+<div class="bg-surface-container-lowest border border-border-subtle p-md rounded-xl shadow-sm flex flex-col justify-between">
+<span class="font-label-caps text-label-caps text-slate-gray block mb-xs">Total Qty</span>
+<div class="flex items-end gap-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">1,250</span>
+<span class="text-on-surface-variant font-body-md text-body-md mb-1">units</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-border-subtle p-md rounded-xl shadow-sm">
+<span class="font-label-caps text-label-caps text-slate-gray block mb-xs">Received Date</span>
+<p class="font-body-md text-body-md text-on-surface">24 Okt 2023</p>
+</div>
+<div class="bg-surface-container-lowest border border-border-subtle p-md rounded-xl shadow-sm">
+<span class="font-label-caps text-label-caps text-slate-gray block mb-xs">HPP (Unit)</span>
+<p class="font-data-mono text-data-mono text-on-surface">Rp 12.500</p>
+</div>
+</section>
+<!-- Threshold Configuration -->
+<section class="bg-surface-container-lowest border border-border-subtle rounded-xl shadow-sm overflow-hidden mt-xl" aria-labelledby="threshold-heading">
+<div class="p-md border-b border-border-subtle bg-surface-bright">
+<h3 id="threshold-heading" class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" aria-hidden="true">settings_suggest</span>
+                    Konfigurasi Kategori: Dairy
+                </h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Atur pemicu notifikasi untuk kategori ini.</p>
+</div>
+<div class="p-md space-y-md">
+<!-- H-7 -->
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<div>
+<label for="threshold-h7" class="font-data-mono text-data-mono text-on-surface block">H-7 Peringatan</label>
+<span class="text-xs text-slate-gray">Hari sebelum kadaluarsa</span>
+</div>
+<input id="threshold-h7" aria-label="Threshold H-7 Peringatan" aria-describedby="hint-h7" class="h-12 min-h-[48px] w-20 text-center font-body-md text-base bg-surface border border-border rounded-lg focus:border-primary focus:ring-2 focus:ring-primary outline-none transition-shadow" type="number" value="7"/>
+</div>
+<p id="hint-h7" class="hidden text-xs text-error text-right">Threshold tidak boleh kosong</p>
+</div>
+<hr class="border-border-subtle"/>
+<!-- H-3 -->
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<div>
+<label for="threshold-h3" class="font-data-mono text-data-mono text-on-surface block">H-3 Waspada</label>
+<span class="text-xs text-slate-gray">Hari sebelum kadaluarsa</span>
+</div>
+<input id="threshold-h3" aria-label="Threshold H-3 Waspada" aria-describedby="hint-h3" class="h-12 min-h-[48px] w-20 text-center font-body-md text-base bg-surface border border-border rounded-lg focus:border-primary focus:ring-2 focus:ring-primary outline-none transition-shadow" type="number" value="3"/>
+</div>
+<p id="hint-h3" class="hidden text-xs text-error text-right">Angka tidak boleh sama</p>
+</div>
+<hr class="border-border-subtle"/>
+<!-- H-1 -->
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<div>
+<label for="threshold-h1" class="font-data-mono text-data-mono text-on-surface block">H-1 Kritis</label>
+<span class="text-xs text-slate-gray">Hari sebelum kadaluarsa</span>
+</div>
+<input id="threshold-h1" aria-label="Threshold H-1 Kritis" aria-describedby="hint-h1" aria-invalid="true" class="h-12 min-h-[48px] w-20 text-center font-body-md text-base bg-error-container text-error border border-error rounded-lg focus:border-error focus:ring-2 focus:ring-error outline-none transition-shadow" type="number" value="1"/>
+</div>
+<p id="hint-h1" class="hidden text-xs text-error text-right">Harus urut besar ke kecil</p>
+</div>
+<div class="pt-sm space-y-3">
+<div class="flex items-center justify-between bg-surface-container p-3 rounded-lg min-h-[48px]">
+<span class="font-body-md text-body-md font-semibold">Notifikasi Push</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value="" aria-label="Aktifkan Notifikasi Push"/>
+<div class="w-11 h-6 bg-slate-gray peer-focus:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex items-center justify-between bg-surface-container p-3 rounded-lg min-h-[48px]">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold">Notifikasi WhatsApp</span>
+<span class="text-xs text-slate-gray">stub, hanya log</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value="" aria-label="Aktifkan Notifikasi WhatsApp"/>
+<div class="w-11 h-6 bg-slate-gray peer-focus:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+<div class="p-md bg-surface-container-low border-t border-border-subtle">
+<button class="w-full bg-primary text-white min-h-[48px] h-12 rounded-lg font-body-md text-base font-semibold shadow-sm hover:bg-primary-pressed transition-colors flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+<span class="material-symbols-outlined" aria-hidden="true">save</span> Simpan Konfigurasi
+                </button>
+</div>
+</section>
+<!-- History Log -->
+<section class="mt-xl" aria-labelledby="history-heading">
+<h3 id="history-heading" class="font-headline-md text-headline-md text-on-surface mb-md">Riwayat Perubahan</h3>
+<div class="relative border-l-2 border-border-subtle ml-3 space-y-md">
+<div class="relative pl-6">
+<div class="absolute w-3 h-3 bg-surface border-2 border-primary rounded-full -left-[7px] top-1" aria-hidden="true"></div>
+<p class="text-xs text-slate-gray mb-1">Hari ini, 09:41</p>
+<div class="bg-surface-container-lowest border border-border-subtle p-3 rounded-lg shadow-sm">
+<p class="font-body-md text-body-md text-on-surface">Sistem menandai batch sebagai <span class="text-danger font-semibold">Peringatan (H-3)</span>.</p>
+</div>
+</div>
+<div class="relative pl-6">
+<div class="absolute w-3 h-3 bg-surface border-2 border-slate-gray rounded-full -left-[7px] top-1" aria-hidden="true"></div>
+<p class="text-xs text-slate-gray mb-1">24 Okt 2023, 14:20</p>
+<div class="bg-surface-container-lowest border border-border-subtle p-3 rounded-lg shadow-sm">
+<p class="font-body-md text-body-md text-on-surface">Supervisor <span class="font-semibold">Budi S.</span> menerima batch awal.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+</body></html>
