@@ -149,4 +149,17 @@ Trace: TASK-08, TASK-09, TASK-10, TASK-11
 
 ---
 
-*FRD-03 self-contained. Verifikasi: `grep -q "FRD-03" docs/frd/frd-03-expiry.md && grep -q "TASK-" docs/frd/frd-03-expiry.md`*
+---
+
+## Polish Wave 5 — Biar Jadi (Real Data, Anti-Dummy)
+
+**Gap sekarang:** engine sudah pass unit test tapi notif masih stub, belum baca threshold real per kategori dari Dexie.
+
+| Crew | Sisa kerja di FRD-03 | File | Done jika |
+|------|----------------------|------|-----------|
+| **B Core** | `notifScheduler` baca `threshold_h_minus` real per Kategori, trigger `07:00 + on open + on batch insert`, batch `expiry=null` skip | `src/engine/expiry.ts`, `src/engine/notifScheduler.ts`, `src/sw/notif.ts` | `bun test src/engine/notifScheduler.test.ts` H-3 trigger H-10 tidak, null tidak |
+| **A Frontend** | Badge warna H-1 merah H-3 oranye H-7 kuning real dari `daysToExpiry` Asia/Jakarta | `src/components/Badge.tsx`, `src/features/dashboard/UrgentList.tsx` | `npx playwright test e2e/badge.spec.ts` merah/oranye/kuning |
+
+Branch: `feat/polish-expiry-b` (core) & `feat/polish-expiry-a` (badge).
+
+*FRD-03 self-contained. Verifikasi: `grep -q "FRD-03" docs/frd/frd-03-expiry.md && grep -q "TASK-" docs/frd/frd-03-expiry.md && grep -q "Wave 5 Polish" docs/frd/frd-03-expiry.md`*

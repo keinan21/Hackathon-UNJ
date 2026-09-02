@@ -165,4 +165,17 @@ Trace: TASK-12, TASK-13, TASK-14, TASK-15, TASK-16
 
 ---
 
-*FRD-04 self-contained. Verifikasi: `grep -q "FRD-04" docs/frd/frd-04-tebus-murah.md && grep -q "TASK-" docs/frd/frd-04-tebus-murah.md`*
+---
+
+## Polish Wave 5 — Biar Jadi (Real Data, Anti-Dummy)
+
+**Gap sekarang:** pairing + advisor sudah mock, belum pakai angka DB real (`hpp_snapshot`/`harga_normal`).
+
+| Crew | Sisa kerja di FRD-04 | File | Done jika |
+|------|----------------------|------|-----------|
+| **C Advisor** | Prompt LLM pakai angka DB real, guardrail `>=HPP*0.85` before LLM, cache `advisorCache` TTL 24h `07:05 + on-demand` | `src/advisor/LangChainGeminiAdvisor.ts`, `src/advisor/pairing.ts` | `bun test src/advisor/*.test.ts` 3 saran cached, 0.84*HPP ditolak |
+| **A Frontend** | Tebus form manual vs AI assist prefill, approve 48px `proposed→active`, bahasa Indonesia | `src/features/promo/**` | `npx playwright test e2e/promo-approve.spec.ts` Dialog Yakin 1-tap → Promo Aktif |
+
+Branch: `feat/polish-tebus-c` & `feat/polish-tebus-a`.
+
+*FRD-04 self-contained. Verifikasi: `grep -q "FRD-04" docs/frd/frd-04-tebus-murah.md && grep -q "TASK-" docs/frd/frd-04-tebus-murah.md && grep -q "Wave 5 Polish" docs/frd/frd-04-tebus-murah.md`*

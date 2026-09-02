@@ -132,4 +132,16 @@ Trace: TASK-03, TASK-18
 
 ---
 
-*FRD-06 self-contained. Verifikasi: `grep -q "FRD-06" docs/frd/frd-06-backup.md && grep -q "TASK-" docs/frd/frd-06-backup.md`*
+---
+
+## Polish Wave 5 — Biar Jadi (Real Data, Anti-Dummy)
+
+**Gap sekarang:** backup sudah roundtrip tapi belum dipanggil dari UI real + gitleaks fix baru merge.
+
+| Crew | Sisa kerja di FRD-06 | File | Done jika |
+|------|----------------------|------|-----------|
+| **D Platform** | Pastikan `backupService.ts` export semua tabel Dexie real + `crypto.ts` PBKDF2 100k salt 16B, `pinStore.ts` no plaintext | `src/features/backup/**`, `src/lib/crypto.ts`, `src/features/auth/**` | `bun test src/features/backup/*.test.ts` roundtrip + `grep AIza src/features/auth/pinStore.test.ts` 0 |
+
+Branch: `feat/polish-backup-d` (sudah include `fix-gitleaks-allowlist`).
+
+*FRD-06 self-contained. Verifikasi: `grep -q "FRD-06" docs/frd/frd-06-backup.md && grep -q "TASK-" docs/frd/frd-06-backup.md && grep -q "Wave 5 Polish" docs/frd/frd-06-backup.md`*

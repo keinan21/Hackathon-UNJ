@@ -142,4 +142,19 @@ Ketergantungan: FRD-01 blokir semua feature lain. Tanpa shell offline, tidak ada
 
 ---
 
-*FRD-01 self-contained. Verifikasi: `grep -q "FRD-01" docs/frd/frd-01-pwa.md && grep -q "TASK-" docs/frd/frd-01-pwa.md`*
+---
+
+## Polish Wave 5 — Biar Jadi (Real Data, Anti-Dummy)
+
+> Bagian ini untuk teman yang tidak pakai `.omo` — baca ini saja, bukan `.omo/plans`.
+
+**Gap sekarang:** shell sudah ada tapi `src/App.tsx` masih `seedMode=many` dummy + `OfflineFallback` belum colok Dexie real.
+
+| Crew | Sisa kerja di FRD-01 | File | Done jika |
+|------|----------------------|------|-----------|
+| **A Frontend** | Hilangkan `seedMode`, `?offline=1` tetap render shell dari cache real, tombol 48px | `src/App.tsx`, `src/components/OfflineFallback.tsx` | `npx playwright test e2e/pwa.spec.ts` 5 pass offline |
+| **D Platform** | `vite.config.ts` PWA `manifest.webmanifest` + `sw.js` must ada di `dist/` | `vite.config.ts`, `public/icons/**` | `bun run build && test -f dist/sw.js` PASS |
+
+Branch: `feat/polish-pwa-a` & `feat/polish-pwa-d` (1 FRD = 1 file polish, no tabrakan).
+
+*FRD-01 self-contained. Verifikasi: `grep -q "FRD-01" docs/frd/frd-01-pwa.md && grep -q "TASK-" docs/frd/frd-01-pwa.md && grep -q "Wave 5 Polish" docs/frd/frd-01-pwa.md`*

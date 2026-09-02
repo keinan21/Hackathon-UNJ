@@ -142,4 +142,17 @@ Trace: TASK-02, TASK-05, TASK-06, TASK-07, TASK-08
 
 ---
 
-*FRD-02 self-contained. Verifikasi: `grep -q "FRD-02" docs/frd/frd-02-inventaris.md && grep -q "TASK-" docs/frd/frd-02-inventaris.md`*
+---
+
+## Polish Wave 5 — Biar Jadi (Real Data, Anti-Dummy)
+
+**Gap sekarang:** Dexie schema ada tapi UI CRUD masih mock, `FakeRepository` belum ganti Dexie real.
+
+| Crew | Sisa kerja di FRD-02 | File | Done jika |
+|------|----------------------|------|-----------|
+| **B Core** | Final `db.ts` `org_id=toko-01` indexed `sync-ready sharding`, `seed.ts [7,3,1]` editable `updateKategoriThreshold` | `src/db/**` | `bun test src/db/*.test.ts` 16 pass, batch null skip engine |
+| **A Frontend** | Form SKU/Batch real 48px Bahasa Indonesia, validasi `hpp>0`, `harga_normal>=hpp`, empty `Belum ada SKU` | `src/features/sku/**`, `src/features/batch/**`, `src/App.tsx` | `npx playwright test` tambah SKU→Batch H-2 muncul di dashboard |
+
+Branch: `feat/polish-inventaris-b` & `feat/polish-inventaris-a`.
+
+*FRD-02 self-contained. Verifikasi: `grep -q "FRD-02" docs/frd/frd-02-inventaris.md && grep -q "TASK-" docs/frd/frd-02-inventaris.md && grep -q "Wave 5 Polish" docs/frd/frd-02-inventaris.md`*

@@ -143,4 +143,17 @@ Trace: TASK-11, TASK-17, TASK-19
 
 ---
 
-*FRD-05 self-contained. Verifikasi: `grep -q "FRD-05" docs/frd/frd-05-dashboard.md && grep -q "TASK-" docs/frd/frd-05-dashboard.md`*
+---
+
+## Polish Wave 5 — Biar Jadi (Real Data, Anti-Dummy)
+
+**Gap sekarang:** Dashboard 3 seksi sudah ada tapi masih baca `FakeRepository` dummy.
+
+| Crew | Sisa kerja di FRD-05 | File | Done jika |
+|------|----------------------|------|-----------|
+| **A Frontend** | Colok Dashboard 3 seksi ke Dexie real: `UrgentList` real + `PromoAktifList` real + `HistoriList` 5 terbaru, empty `Belum ada promo`, font 16px tombol 48px | `src/features/dashboard/DashboardPage.tsx`, `src/features/dashboard/Histori*.tsx` | `npx playwright test e2e/dashboard.spec.ts` 3 seksi + histori detail `/histori/:id` |
+| **B Core** | Badge per SKU sum qty urgent real, filter kategori multi-select | `src/components/Badge.tsx` | Badge count = sum qty urgent |
+
+Branch: `feat/polish-dashboard-a`.
+
+*FRD-05 self-contained. Verifikasi: `grep -q "FRD-05" docs/frd/frd-05-dashboard.md && grep -q "TASK-" docs/frd/frd-05-dashboard.md && grep -q "Wave 5 Polish" docs/frd/frd-05-dashboard.md`*

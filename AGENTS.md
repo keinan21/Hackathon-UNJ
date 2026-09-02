@@ -144,6 +144,23 @@ Matriks trace FRD ke Crew:
 
 ---
 
+## 4b. Wave 5 Polish — Biar Jadi (Real Data, Anti-Dummy)
+
+> Teman-teman tidak pakai `.omo`, jadi pembagian polish tulis di sini dan di `docs/frd/frd-0x-*.md`, bukan di `.omo/plans`. Satu FRD = satu file polish, satu crew kerjakan tanpa tabrakan.
+
+**Kenapa produk masih dummy:** `main` masih pakai `FakeRepository` + `?seed=many` + `src/App.tsx` mock SKU. Dexie + engine + advisor sudah ada tapi belum dicolok ke UI real. Wave 5 ini colok real data + hilangkan dummy + hijau kan CI.
+
+| Crew | Polish TASK (1 TASK = 1 branch `feat/polish-*`) | File yang disentuh | Acceptance (cek manual) |
+|---|---|---|---|
+| **A — Frontend** | **A1 Real Data Switch**: ganti `UrgentList`/`PromoAktifList`/`HistoriList` dari `fake*` ke `InventoryRepository` Dexie real, hapus `seedMode` di `src/App.tsx`, empty state `Belum ada SKU → Tambah SKU`. **A2 SKU/Batch CRUD real UI**: form `src/features/sku/**` & `batch/**` 48px, bahasa Indonesia, validasi HPP. **A3 Runner fix**: `vitest.config.ts` exclude `e2e/**`, `bun test` 54 pass, `npx playwright test` 37/37 hijau. | `src/App.tsx`, `src/features/dashboard/**`, `src/features/sku/**`, `src/features/batch/**`, `src/components/**`, `e2e/**`, `vitest.config.ts` | `bun test` tanpa error Playwright, `npx playwright test` 37 pass, buka `?offline=1` tetap shell, dashboard 3 seksi real |
+| **B — Core** | **B1 Dexie final**: `src/db/db.ts` `org_id=toko-01` indexed + `seed.ts [7,3,1]` editable, migrasi aman. **B2 Notif real**: `engine/notifScheduler.ts` + `sw/notif.ts` baca `daysToExpiry` Asia/Jakarta startOfDay ceil + threshold per kategori, trigger `07:00 + on open + on batch insert`. **B3 Urgency deterministik**: `expiry.ts` + `avgUsage.ts` skip `expiry_date=null`. | `src/db/**`, `src/engine/**`, `src/sw/notif.ts` | `bun test src/engine/*.test.ts` 27 pass, batch null tidak masuk badge |
+| **C — Advisor** | **C1 Hybrid real**: `LangChainGeminiAdvisor.ts` prompt pakai angka DB (`hpp_snapshot`/`harga_normal`/`qty`/`days`), guardrail `harga_tebus >= HPP*0.85` before LLM, cache `advisorCache` TTL 24h `07:05 + on-demand`. **C2 Pairing real**: `pairing.ts` co-occurrence `transaksis` + fallback kategori. **C3 Guardrail**: `validation.ts` + `guardrail.test.ts` 4 case. | `src/advisor/**`, `src/lib/validation.ts` | `bun test src/advisor/*.test.ts` pass, harga ngarang ditolak |
+| **D — Platform** | **D1 Gate Polish**: update `docs/frd/frd-0x-*.md` pasal Polish + `AGENTS.md` ini, `bun run build` `dist/manifest.webmanifest`+`sw.js` ada, sync `docs/**` ke git. **D2 CI hijau**: push `main`, hapus branch `feat/polish-*`, `grep -r supabase|firebase|ocr|qrcode src` 0. | `docs/**`, `vite.config.ts`, `src/features/auth/**`, `src/features/backup/**`, `src/lib/crypto.ts`, `package.json` | `test -f docs/frd/frd-01-pwa.md && grep -q "Wave 5 Polish" docs/frd/frd-*.md` PASS, `bun run build` 0 |
+
+**Cara kerja tanpa `.omo`:** tiap crew baca `docs/frd/frd-0x-*.md` bab **Polish Wave 5** di FRD-nya, buat branch `feat/polish-<frd>-<crew>`, PR 1 reviewer, CI hijau, squash merge. Tidak perlu buka `.omo/plans`.
+
+---
+
 ## 5. Orkestrasi 6 Langkah
 
 > Urutan tetap untuk tiap TASK. Jangan lompat, jangan implementasi langsung tanpa delegasi jika kamu adalah lead 4-crew.
