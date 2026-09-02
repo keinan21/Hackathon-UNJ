@@ -1,0 +1,62 @@
+{
+  "task": "TASK-10",
+  "frd_trace": "FRD-03 F3 Expiry Engine dan Notifikasi — Notifikasi scheduler (daily 07:00 + threshold per kategori)",
+  "tanggal": "2026-09-02",
+  "executor": "Crew B (Core)",
+  "branch": "feat/TASK-10-notif-scheduler",
+  "acceptance_command": "bun test src/engine/notifScheduler.test.ts",
+  "acceptance_result": "9 pass, 0 fail, 41 expect() calls",
+  "qa_happy": {
+    "command": "bun test src/engine/notifScheduler.test.ts",
+    "result": "9/9 pass — happy mock today 2026-09-02 batch Dairy H-3 in threshold [7,3,1] triggers 1 notif PASS (due 1, sku Susu UHT 1L Indomilk, kategori Dairy, days 3, urgency 15/30 finite), batch H-10 not trigger PASS (10 not in [7,3,1] → 0, isolasi per kategori), expiry null not trigger PASS (2 expiry null → 0 due, listBatchesExpiring 0), threshold per kategori custom Dairy [14,7,3] vs Snack [7,3,1] PASS (Dairy H-14 trigger, Snack H-14 filtered, Snack H-7 trigger → 2 due sorted [7,14]), urgencyScore qty*days/max(avg,1) PASS (10*3/1=30 fallback 1, finite not Infinity, distinct 5 <14 → fallback 1), checkAndNotify granted → notified 1 badge 1 PASS, WA hook stub logged MUST NOT send verified"
+  },
+  "qa_failure": {
+    "command": "bun test src/engine/notifScheduler.test.ts",
+    "result": "permission denied → fallback badge only no throw PASS (badgeCount 1 notified 0, setAppBadge(1) called, WA hook logged, no warn throw), tanpa Notification support → fallback badge only PASS (badge 1 notified 0, no throw), WA hook MUST NOT send PASS (log contains [WA hook stub] + MUST NOT send, no fetch/whatsApp send), expiry null skip engine PASS, H-10 filtered PASS"
+  },
+  "acceptance_criteria_check": {
+    "mock_today_2026-09-02_batch_H-3_threshold_[7,3,1]_triggers": "PASS (today jakartaDate 2026-09-02 +07:00 → daysToExpiry 2026-09-05 =3 via toJakartaStartOfDay, dairy threshold [7,3,1].includes(3)=true → 1 due with sku Susu UHT 1L Indomilk kategori Dairy days 3 urgency 30 (10*3/1) or 15 if avg 2)",
+    "batch_H-10_not_trigger": "PASS (days 10 not in [7,3,1] → due 0, isolasi per kategori Snack H-10 filtered; Dairy H-14 custom threshold vs Snack verified)",
+    "expiry_null_not_trigger": "PASS (batch expiry null → skip, listBatchesExpiring excludes null index, due 0, listBatchesExpiring 0)",
+    "permission_denied_fallback_badge_only_no_throw": "PASS (Notification.permission denied → checkAndNotify returns {notified:0,badgeCount:1}, setAppBadge(1) called, no throw, warn not called, WA hook logged)",
+    "seed_Kategori_SKU_Batch_Transaksi_setup": "PASS (seedDefaultKategoris creates 3 kategori [7,3,1], createSKU valid, createBatch qty>0 expiry nullable hpp_snapshot, createTransaksi 5 entries for avg calc, all via InventoryRepository DexieRepository)"
+  },
+  "extra_checks": {
+    "typecheck": "PASS (bun run typecheck — tsc --noEmit exit 0)",
+    "build": "PASS (bun run build — tsc -b && vite build exit 0, precache 12 entries 236.20 KiB, sw.js + manifest.webmanifest generated, dist/sw.js exists)",
+    "sw_exists": "PASS (dist/sw.js exists, dist/manifest.webmanifest 0.52K exists, vite-plugin-pwa generateSW, src/sw/notif.ts stub showNotification handles fallback)",
+    "no_regression": "PASS (bun run test:unit — vitest run --exclude e2e/** — 7 files 54 pass 0 fail: notifScheduler 9 + expiry 10 + db 11 + seed 5 + skuService 6 + batchService 5 + avgUsage 8)",
+    "getDueNotifications_logic": "PASS (listKategoris → map id, listBatchesExpiring → filter expiry null/\"\", getSKU → getKategori, daysToExpiry with Asia/Jakarta, filter days in threshold_h_minus per kategori exact match, calc avg via repo.listTransaksisBySKU 14d + calcAvgDailyUsage fallback 1, urgencyScore qty*days/max(avg,1))",
+    "checkAndNotify_logic": "PASS (getDueNotifications → badgeCount due.length, waHookStub console.log, Notification permission request → if granted showNotification per batch via ../sw/notif + native fallback + setAppBadge, if denied fallback badge only, try/catch MUST NOT throw → warn + return {notified:0,badgeCount})",
+    "waHook_stub_no_send": "PASS (waHookStub only console.log [WA hook stub] + MUST NOT send, grep supabase|firebase|ocr|qrcode empty, grep whatsapp.*send empty, waHook.log allowed but not send)",
+    "daily_07_00_on_demand": "PASS (getDelayUntilNext07Jakarta pure via Intl Asia/Jakarta, startDailyScheduler on app open call checkAndNotify + setTimeout until next 07:00 + setInterval 24h, stop function cleanup, Daily 07:00 + on-demand cukup function no real setInterval in test)",
+    "sw_notif_stub": "PASS (src/sw/notif.ts export showNotification stub: try SW registration → reg.showNotification else native Notification else console.log, never throw, handlePushEvent stub, requestNotificationPermission wrapper)"
+  },
+  "files": {
+    "created": [
+      "src/engine/notifScheduler.ts",
+      "src/sw/notif.ts",
+      "src/engine/notifScheduler.test.ts"
+    ],
+    "modified": [],
+    "evidence": ".omo/evidence/task-10-ai-inventory-expiry-advisor.json"
+  },
+  "notifScheduler": {
+    "exports": [
+      "getDueNotifications",
+      "checkAndNotify",
+      "getDelayUntilNext07Jakarta",
+      "startDailyScheduler"
+    ],
+    "getDueNotifications_signature": "async function getDueNotifications(repo: InventoryRepository, today?: Date): Promise<Array<{batch, sku, kategori, daysToExpiry, urgencyScore}>>",
+    "checkAndNotify_signature": "async function checkAndNotify(repo: InventoryRepository, today?: Date): Promise<{notified: number, badgeCount: number}>",
+    "logic_getDueNotifications": "kategoris→map, batches=listBatchesExpiring (expiry != null sorted), loop batch → getSKU → kategori, days=daysToExpiry(expiry, today Asia/Jakarta), skip null, if !threshold.includes(days) skip, avg=calcAvgDailyUsage(listTransaksisBySKU 14d,1) fallback 1, urgency=qty*days/max(avg,1), push",
+    "logic_checkAndNotify": "due=await getDueNotifications, badgeCount=due.length, waHookStub log, try Notification.permission → requestPermission if not granted/denied, if granted import showNotification per batch + native fallback + setAppBadge, if denied fallback badge only, catch warn return {notified:0,badgeCount}",
+    "tz": "Asia/Jakarta via src/engine/expiry.ts daysToExpiry + toJakartaStartOfDay Intl, no UTC",
+    "threshold_per_kategori": true,
+    "skip_expiry_null": true,
+    "wa_hook_no_send": true,
+    "permission_fallback": "denied → badge only no throw, no Notification → badge only"
+  },
+  "notes": "Worktree ../wt-TASK-10 sesuai AGENTS.md 1 worktree per TASK (Branch feat/TASK-10-notif-scheduler dari main a5ab511 setelah merge TASK-09). Hanya src/engine/notifScheduler.ts + src/sw/notif.ts + test + evidence, tidak sentuh src/db/** atau engine lain. Verifikasi: bun test 9 pass 41 expect, typecheck 0, build 12 precache 236.20 KiB. Commit feat(notif): scheduler threshold Trace TASK-10."
+}

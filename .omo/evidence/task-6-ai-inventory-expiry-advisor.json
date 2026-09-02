@@ -1,0 +1,56 @@
+{
+  "task": "TASK-06",
+  "frd_trace": "FRD-02 F2 Inventaris SKU Batch Kategori",
+  "tanggal": "2026-09-01",
+  "executor": "Crew B (Core)",
+  "branch": "feat/TASK-06-sku-crud",
+  "acceptance_command": "bun test src/features/sku/skuService.test.ts",
+  "acceptance_result": "6 pass, 0 fail, 32 expect() calls",
+  "qa_happy": {
+    "command": "bun test src/features/sku/skuService.test.ts",
+    "result": "6/6 pass — create SKU Dairy valid (kategori Dairy [7,3,1] → SKU Susu UHT 1L Indomilk hpp 12000 harga_normal 15000 tersimpan, listSKUsByKategori 1, org_id toko-01, no expiry_date), updateSKU harga 16000 succeeds, Kategori CRUD create Snack [7,3,1] + updateThreshold [14,7,3] succeeds"
+  },
+  "qa_failure": {
+    "command": "bun test src/features/sku/skuService.test.ts",
+    "result": "hpp 0 → reject ValidationError 'HPP harus lebih dari 0' — PASS; hpp -100 → same — PASS; harga_normal<hpp → reject 'harga_normal tidak boleh di bawah HPP' — PASS; payload expiry_date → reject ValidationError /expiry/i (guard FRD-02) tidak tersimpan — PASS; kategori_id 0/missing → reject 'kategori_id wajib' — PASS; nama empty → 'Nama SKU tidak boleh kosong' — PASS; updateSKU patch expiry_date → reject /expiry/i — PASS; updateKategoriThreshold [3,3,1] dup → 'tidak boleh sama' — PASS; [] empty → 'tidak boleh kosong' — PASS"
+  },
+  "acceptance_criteria_check": {
+    "create_SKU_Dairy_valid_passes": "PASS (createKategori Dairy [7,3,1] → createSKU Susu UHT 1L Indomilk hpp 12000 harga_normal 15000 → list 1, org_id toko-01)",
+    "create_SKU_hpp_le_0_rejects": "PASS (hpp 0, -100 → ValidationError 'HPP harus lebih dari 0', harga_normal<hpp → 'tidak boleh di bawah HPP', list 0 setelah reject)",
+    "create_SKU_with_expiry_field_rejects_schema": "PASS (payload expiry_date → ValidationError /expiry/ 'SKU tidak boleh memiliki field expiry_date — expiry milik Batch', tidak tersimpan, valid tanpa expiry tetap tidak punya expiry_date)",
+    "kategori_required": "PASS (kategori_id missing/0 → 'kategori_id wajib', nama empty/blank → 'Nama SKU tidak boleh kosong')"
+  },
+  "extra_checks": {
+    "typecheck": "PASS (bun run typecheck — tsc --noEmit exit 0)",
+    "build": "PASS (bun run build — tsc -b && vite build exit 0, sw.js + manifest.webmanifest generated)",
+    "sw_exists": "PASS (dist/sw.js exists, dist/manifest.webmanifest exists, vite-plugin-pwa generateSW 12 entries)",
+    "idempotent": "N/A (service thin wrapper, no seed duplication)",
+    "editable_guardrail": "PASS (threshold editable via updateKategoriThreshold, validasi via DexieRepository)",
+    "guardrails": {
+      "no_expiry_in_sku_schema": true,
+      "expiry_guard_in_service": "assertNoExpiry throws ValidationError if 'expiry_date' in payload (createSKU & updateSKU)",
+      "validation_mirror_db": "validateSKUPayload: nama non-empty, kategori_id wajib >0 integer, hpp>0, harga_normal>=hpp (sama dengan db.ts validateSKU)",
+      "org_id_default_single_value": "toko-01",
+      "org_id_forwarded_sync_ready": "defaultRepo.createSKU/listSKUsByKategori via DexieRepository, komentar sync-ready sharding, tanpa cloud sync logic",
+      "service_thin_over_repository": "src/features/sku/skuService.ts hanya forward ke InventoryRepository (DexieRepository) + validation + expiry guard, tidak akses dexie langsung kecuali db.skus.update untuk updateSKU",
+      "no_cloud_sync_logic": true,
+      "dexie_only_via_repository": true,
+      "barcode_optional": true
+    },
+    "db_regression": "PASS (bun test src/db/db.test.ts — 11 pass 50 expect, no regression; combined 17 pass 82 expect)",
+    "sku_service_unit": "PASS (6 pass 32 expect, coverage: valid, hpp guard, expiry guard, kategori required, updateSKU, Kategori CRUD)"
+  },
+  "files": {
+    "created": ["src/features/sku/skuService.ts", "src/features/sku/skuService.test.ts"],
+    "modified": [],
+    "evidence": ".omo/evidence/task-6-ai-inventory-expiry-advisor.json"
+  },
+  "skuService": {
+    "exports": ["createSKU", "updateSKU", "getSKU", "listSKUsByKategori", "createKategori", "listKategoris", "updateKategoriThreshold"],
+    "validation": "nama non-empty, kategori_id wajib integer>0, hpp>0, harga_normal>=hpp (mirror db.ts), bahasa Indonesia",
+    "expiry_guard": "if ('expiry_date' in payload) throw ValidationError('SKU tidak boleh memiliki field expiry_date — expiry milik Batch')",
+    "org_id": "DEFAULT_ORG_ID toko-01 sync-ready sharding, forward via DexieRepository",
+    "no_cloud_sync": true
+  },
+  "notes": "Test pakai fake-indexeddb inject globalThis sebelum dynamic import ./db dan ./skuService (dexie cache indexedDB saat module load; pattern sama dengan src/db/db.test.ts). Worktree ../wt-TASK-06 sesuai AGENTS.md 1 worktree per TASK. Hanya sentuh src/features/sku/** + evidence, tidak sentuh src/db/seed.ts. Verifikasi: bun test 6 pass, typecheck 0 error, build exit 0 (sw.js + manifest)."
+}

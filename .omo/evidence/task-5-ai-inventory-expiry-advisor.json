@@ -1,0 +1,54 @@
+{
+  "task": "TASK-05",
+  "frd_trace": "FRD-02 F2 Inventaris SKU Batch Kategori + FRD-03 threshold per kategori",
+  "tanggal": "2026-09-01",
+  "executor": "Crew B (Core)",
+  "branch": "feat/TASK-05-seed-threshold",
+  "acceptance_command": "bun test src/db/seed.test.ts",
+  "acceptance_result": "5 pass, 0 fail, 16 expect() calls",
+  "qa_happy": {
+    "command": "bun test src/db/seed.test.ts",
+    "result": "5/5 pass — seed creates 3 kategori Dairy/Snack/Beras each [7,3,1] (org_id toko-01), idempotent second seed still 3, edit to [14,7,3] succeeds"
+  },
+  "qa_failure": {
+    "command": "bun test src/db/seed.test.ts",
+    "result": "edit to [3,3,1] rejects ValidationError 'Angka threshold tidak boleh sama' — PASS; edit to [] rejects 'Threshold tidak boleh kosong' — PASS; threshold [1,7,3] not descending would also reject 'Threshold harus urut besar ke kecil' via DexieRepository.updateKategoriThreshold (validated in src/db/db.test.ts)"
+  },
+  "acceptance_criteria_check": {
+    "seed_creates_3_kategori": "PASS (listKategoris length 3, names Dairy/Snack/Beras sorted)",
+    "each_threshold_[7,3,1]": "PASS (threshold_h_minus [7,3,1] for all, org_id toko-01)",
+    "edit_to_[14,7,3]_succeeds": "PASS (updateKategoriThreshold Dairy -> [14,7,3] and getKategori confirms)",
+    "edit_to_[3,3,1]_rejects_duplicate": "PASS (throws ValidationError 'tidak boleh sama')",
+    "edit_to_[]_rejects_empty": "PASS (throws ValidationError 'tidak boleh kosong')"
+  },
+  "extra_checks": {
+    "typecheck": "PASS (bun run typecheck — tsc --noEmit exit 0)",
+    "build": "PASS (bun run build — tsc -b && vite build exit 0, sw.js + manifest.webmanifest generated)",
+    "sw_exists": "PASS (dist/sw.js exists 1.7K, dist/manifest.webmanifest 671 bytes)",
+    "idempotent": "PASS (seed twice -> still 3, names Set check)",
+    "editable_guardrail": "PASS (threshold editable via updateKategoriThreshold, not hardcode non-editable)",
+    "guardrails": {
+      "no_hardcode_non_editable": true,
+      "threshold_default_generic_truth": "[7,3,1]",
+      "validation_non_empty_descending_gt0_no_dup": "via DexieRepository.updateKategoriThreshold",
+      "org_id_default_single_value": "toko-01",
+      "seed_uses_createKategori_and_listKategoris": true,
+      "uses_InventoryRepository_interface": true,
+      "no_cloud_sync_logic": true,
+      "dexie_only_via_repository": true
+    },
+    "db_regression": "PASS (bun test src/db/db.test.ts — 11 pass 50 expect, no regression)"
+  },
+  "files": {
+    "created": ["src/db/seed.ts", "src/db/seed.test.ts"],
+    "modified": [],
+    "evidence": ".omo/evidence/task-5-ai-inventory-expiry-advisor.json"
+  },
+  "seed": {
+    "kategoris": ["Dairy", "Snack", "Beras"],
+    "threshold_h_minus": [7, 3, 1],
+    "editable_via": "updateKategoriThreshold",
+    "idempotent": "cek listKategoris dulu, skip jika nama sudah ada"
+  },
+  "notes": "Test pakai fake-indexeddb inject globalThis sebelum dynamic import ./db dan ./seed (dexie cache indexedDB saat module load; pattern sama dengan src/db/db.test.ts). Worktree ../wt-TASK-05 sesuai AGENTS.md 1 worktree per TASK. Hanya sentuh src/db/seed* + evidence."
+}

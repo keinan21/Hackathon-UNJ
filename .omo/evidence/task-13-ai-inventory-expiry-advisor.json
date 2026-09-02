@@ -1,0 +1,24 @@
+﻿{
+  "task": "TASK-13",
+  "frd": "FRD-04",
+  "title": "LangChain+Gemini hybrid advisor service + cache + guardrail",
+  "status": "PASS",
+  "timestamp": "2026-09-02T08:42:00+07:00",
+  "tool": "npm test src/advisor/geminiAdvisor.test.ts --reporter=verbose",
+  "tests": [
+    { "name": "mock urgent batch → advisor returns {aksi, alasan, pasangan, harga_tebus >=HPP*0.85}", "status": "pass", "harga_tebus": 9000, "floor": 8500 },
+    { "name": "cache hit second call no LLM", "status": "pass", "llmCallCount": "1 -> 1 (no increment)" },
+    { "name": "harga_tebus 0.84*HPP rejects", "status": "pass", "error": "HPP x 0.85" },
+    { "name": "top-N 3 urgent → 3 suggestions cached", "status": "pass" },
+    { "name": "offline → returns cached stale, not throw", "status": "pass" },
+    { "name": "offline without cache throws", "status": "pass" },
+    { "name": "expiry null batch not suggested", "status": "pass" },
+    { "name": "trigger daily 07:05 + on-demand after batch insert urgent", "status": "pass" },
+    { "name": "cache TTL 24h expiry → after 25h calls LLM again", "status": "pass" }
+  ],
+  "guardrail": "harga_tebus >= HPP*0.85 enforced BEFORE save, angka dari DB, LLM only wording & pairing",
+  "cache": "advisorCache Dexie TTL 24h, key org_id:batch_id, created_at check",
+  "trigger": "daily 07:05 via triggerDailyCheck + onBatchInserted if days <=7",
+  "mock": "MockLLM with forceHargaTebus and shouldFail for offline tests",
+  "files": ["src/advisor/AdvisorPort.ts", "src/advisor/LangChainGeminiAdvisor.ts", "src/engine/expiry.ts", "src/db/repository.ts"]
+}

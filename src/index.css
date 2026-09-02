@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-[#F5F5F0] text-[#1A1A1A];
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+  }
+}
+
+@layer utilities {
+  .btn-primary {
+    @apply bg-[#0F7A4A] text-white border-none hover:bg-[#0B5C38];
+  }
+}
+
+button:focus-visible {
+  outline: 2px solid #0f7a4a;
+  outline-offset: 2px;
+}

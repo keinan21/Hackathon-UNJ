@@ -1,0 +1,39 @@
+{
+  "task": "TASK-02",
+  "frd_trace": "FRD-02 F2 Inventaris SKU Batch Kategori",
+  "tanggal": "2026-09-01",
+  "executor": "Crew B (Core)",
+  "branch": "feat/TASK-02-dexie-schema",
+  "acceptance_command": "bun test src/db/db.test.ts",
+  "acceptance_result": "11 pass, 0 fail, 50 expect() calls",
+  "qa_happy": {
+    "command": "bun test src/db/db.test.ts",
+    "result": "11/11 pass — 3 batches beda expiry query sorted asc, received_at auto, hpp_snapshot tersimpan"
+  },
+  "qa_failure": {
+    "command": "bun test src/db/db.test.ts",
+    "result": "insert Batch sku_id=0 dan qty=0 → reject ValidationError (sku_id wajib / Qty harus lebih dari 0)"
+  },
+  "acceptance_criteria_check": {
+    "create_SKU_Batch_with_expiry": "PASS",
+    "query_by_sku_id_returns_N": "PASS (3 batch → 3 hasil)",
+    "batch_expiry_null_not_indexed_for_engine": "PASS (listBatchesExpiring exclude null)",
+    "repository_interface_has_methods_for_each_entity": "PASS (18 method dicek di test contract)"
+  },
+  "extra_checks": {
+    "typecheck": "PASS (tsc --noEmit)",
+    "build": "PASS (tsc -b && vite build, sw.js + manifest generated)",
+    "guardrails": {
+      "no_cloud_sync_logic": true,
+      "org_id_default_single_value": "toko-01",
+      "expiry_not_in_sku_schema": true,
+      "indexes": ["expiry_date", "sku_id", "kategori_id", "org_id"]
+    }
+  },
+  "files": {
+    "created": ["src/db/db.ts", "src/db/db.test.ts"],
+    "removed": ["src/db/.gitkeep"]
+  },
+  "tables": ["skus", "kategoris", "batches", "transaksis", "promos", "advisorCache"],
+  "notes": "Test pakai fake-indexeddb inject globalThis sebelum dynamic import ./db (dexie cache indexedDB saat module load; bun test tidak resolve fake-indexeddb/auto side-effect). Worktree ../wt-TASK-02 sesuai AGENTS.md 1 worktree per TASK."
+}
