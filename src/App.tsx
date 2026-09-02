@@ -43,13 +43,14 @@ function AppShell() {
   });
 
   const seedMode = (() => {
-    if (typeof window === "undefined") return "demo" as const;
-    const p = new URLSearchParams(window.location.search);
-    if (p.get("seed") === "many" || p.get("prototype") === "many") return "many" as const;
-    if (p.get("seed") === "empty") return "empty" as const;
-    if (p.get("seed") === "expiryNull") return "expiryNull" as const;
-    return "demo" as const;
-  })();
+    const p = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    if (p?.get("seed") === "many" || p?.get("prototype") === "many") return "many" as const;
+    if (p?.get("seed") === "empty") return "empty" as const;
+    if (p?.get("seed") === "expiryNull") return "expiryNull" as const;
+    if (p?.get("seed") === "demo") return "demo" as const;
+    // Real data from nol — no dummy by default (reset)
+    return undefined;
+  })() as "demo" | "many" | "empty" | "expiryNull" | undefined;
 
   // expose view for e2e counting
   useEffect(() => {

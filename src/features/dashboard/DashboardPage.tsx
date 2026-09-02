@@ -7,7 +7,7 @@ export type DashboardPageProps = {
   seedMode?: "demo" | "many" | "empty" | "expiryNull";
 };
 
-export function DashboardPage({ seedMode = "demo" }: DashboardPageProps) {
+export function DashboardPage({ seedMode }: DashboardPageProps) {
   const [activePromoCount] = useState(0);
 
   return (
