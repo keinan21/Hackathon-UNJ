@@ -103,7 +103,7 @@
       "plan_name": "frontend-crew-a",
       "status": "active",
       "started_at": "2026-09-01T14:49:25.357Z",
-      "updated_at": "2026-09-02T04:43:03.256Z",
+      "updated_at": "2026-09-02T05:01:03.637Z",
       "session_ids": [
         "opencode:ses_fa2bfad38ffeigkm6rzO0NCP6q"
       ],
@@ -175,6 +175,45 @@
           "status": "completed",
           "ended_at": "2026-09-02T04:43:03.256Z",
           "elapsed_ms": 60781
+        },
+        "todo:6": {
+          "task_key": "todo:6",
+          "task_label": "6",
+          "task_title": "[FRD-01..06] E2E + Build + PWA installability + Offline QA Polish — TASK-20 isolated (Crew A owns)",
+          "session_id": "opencode:ses_f9f91e597ffez8440N6nK9al6N",
+          "agent": "Sisyphus-Junior",
+          "category": "visual-engineering",
+          "updated_at": "2026-09-02T04:54:03.528Z",
+          "started_at": "2026-09-02T04:53:22.911Z",
+          "status": "completed",
+          "ended_at": "2026-09-02T04:54:03.528Z",
+          "elapsed_ms": 40617
+        },
+        "final-wave:f1": {
+          "task_key": "final-wave:f1",
+          "task_label": "F1",
+          "task_title": "Plan compliance audit — verify every Must have/Must NOT have from Scope carried to todos, 20 interview answers locked (Q1-20), skill frontend-design + web-design-guidelines installed, no backend leak, token 48px/16px/#0F7A4A enforced, 1 kolom mobile-first, Full width, Teks+warna+ikon, Dialog, Top50 pagination — Evidence `.omo/evidence/final/frontend-crew-a-f1.json`",
+          "session_id": "opencode:ses_f9f87f985ffeMMFCZJ4AsZBZrW",
+          "agent": "Sisyphus-Junior",
+          "category": "visual-engineering",
+          "updated_at": "2026-09-02T04:57:36.591Z",
+          "started_at": "2026-09-02T04:57:25.840Z",
+          "status": "completed",
+          "ended_at": "2026-09-02T04:57:36.591Z",
+          "elapsed_ms": 10751
+        },
+        "final-wave:f2": {
+          "task_key": "final-wave:f2",
+          "task_label": "F2",
+          "task_title": "Code quality review — `bun run build && bun test` 0 errors, `grep -r \"from.*dexie\" src/components src/features/dashboard src/features/promo src/features/settings` == 0, no TODO/FIXME/as any, iconoir used, repository pattern followed — Evidence `.omo/evidence/final/frontend-crew-a-f2.log`",
+          "session_id": "opencode:ses_f9f84f2d9ffe3seohrmndSu9SO",
+          "agent": "Sisyphus-Junior",
+          "category": "visual-engineering",
+          "updated_at": "2026-09-02T05:01:03.637Z",
+          "started_at": "2026-09-02T05:00:53.208Z",
+          "status": "completed",
+          "ended_at": "2026-09-02T05:01:03.637Z",
+          "elapsed_ms": 10429
         }
       }
     }
@@ -182,7 +221,7 @@
   "active_plan": "/home/yusuf/dev/2026/UNEJ/.omo/plans/frontend-crew-a.md",
   "started_at": "2026-09-01T14:49:25.357Z",
   "status": "active",
-  "updated_at": "2026-09-02T04:43:03.256Z",
+  "updated_at": "2026-09-02T05:01:03.637Z",
   "session_ids": [
     "opencode:ses_fa2bfad38ffeigkm6rzO0NCP6q"
   ],
@@ -254,6 +293,45 @@
       "status": "completed",
       "ended_at": "2026-09-02T04:43:03.256Z",
       "elapsed_ms": 60781
+    },
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "[FRD-01..06] E2E + Build + PWA installability + Offline QA Polish — TASK-20 isolated (Crew A owns)",
+      "session_id": "opencode:ses_f9f91e597ffez8440N6nK9al6N",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-09-02T04:54:03.528Z",
+      "started_at": "2026-09-02T04:53:22.911Z",
+      "status": "completed",
+      "ended_at": "2026-09-02T04:54:03.528Z",
+      "elapsed_ms": 40617
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "Plan compliance audit — verify every Must have/Must NOT have from Scope carried to todos, 20 interview answers locked (Q1-20), skill frontend-design + web-design-guidelines installed, no backend leak, token 48px/16px/#0F7A4A enforced, 1 kolom mobile-first, Full width, Teks+warna+ikon, Dialog, Top50 pagination — Evidence `.omo/evidence/final/frontend-crew-a-f1.json`",
+      "session_id": "opencode:ses_f9f87f985ffeMMFCZJ4AsZBZrW",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-09-02T04:57:36.591Z",
+      "started_at": "2026-09-02T04:57:25.840Z",
+      "status": "completed",
+      "ended_at": "2026-09-02T04:57:36.591Z",
+      "elapsed_ms": 10751
+    },
+    "final-wave:f2": {
+      "task_key": "final-wave:f2",
+      "task_label": "F2",
+      "task_title": "Code quality review — `bun run build && bun test` 0 errors, `grep -r \"from.*dexie\" src/components src/features/dashboard src/features/promo src/features/settings` == 0, no TODO/FIXME/as any, iconoir used, repository pattern followed — Evidence `.omo/evidence/final/frontend-crew-a-f2.log`",
+      "session_id": "opencode:ses_f9f84f2d9ffe3seohrmndSu9SO",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-09-02T05:01:03.637Z",
+      "started_at": "2026-09-02T05:00:53.208Z",
+      "status": "completed",
+      "ended_at": "2026-09-02T05:01:03.637Z",
+      "elapsed_ms": 10429
     }
   },
   "agent": "atlas"
