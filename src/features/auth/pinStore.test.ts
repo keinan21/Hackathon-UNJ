@@ -24,7 +24,7 @@ describe("TASK-03 PIN auth", () => {
 
   test("API key roundtrip encrypt/decrypt succeeds", async () => {
     await setPin("1234");
-    const plain = "AIzaSy-test-gemini-key-123";
+    const plain = "test-gemini-key-123-FOR-TEST-ONLY";
     await setApiKey(plain, "1234");
     const got = await getApiKey("1234");
     expect(got).toBe(plain);
@@ -39,7 +39,7 @@ describe("TASK-03 PIN auth", () => {
 
   test("no plaintext key in storage / Dexie", async () => {
     await setPin("1234");
-    const plain = "AIzaSy-no-plaintext-999";
+    const plain = "no-plaintext-fake-key-999-FOR-TEST";
     await setApiKey(plain, "1234");
     // raw record should not contain plain
     const raw = getApiKeyRawRecord();
