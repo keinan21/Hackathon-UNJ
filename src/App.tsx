@@ -3,31 +3,47 @@ import { OfflineFallback } from "./components/OfflineFallback";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { HistoriDetailPage } from "./features/dashboard/HistoriDetailPage";
+import SettingsPage from "./features/settings/SettingsPage";
+import { Home, Box, Package, ShoppingBag, Settings } from "iconoir-react";
 
-function useHistoriRoute(): string | null {
-  const getId = () => {
-    const p = window.location.pathname;
-    const m = p.match(/^\/histori\/([^/]+)/);
-    return m ? m[1] : null;
-  };
-  const [historiId, setHistoriId] = useState<string | null>(() => (typeof window !== "undefined" ? getId() : null));
+function useRoute(): string {
+  const [path, setPath] = useState(() => (typeof window !== "undefined" ? window.location.pathname : "/"));
   useEffect(() => {
-    const onPop = () => setHistoriId(getId());
+    const getPath = () => window.location.pathname;
+    const onPop = () => setPath(getPath());
     window.addEventListener("popstate", onPop);
-    const origPush = window.history.pushState.bind(window.history);
-    const wrappedPush = (...args: Parameters<typeof window.history.pushState>) => {
-      const ret = (origPush as unknown as (...a: Parameters<typeof window.history.pushState>) => ReturnType<typeof window.history.pushState>)(...args);
-      window.dispatchEvent(new PopStateEvent("popstate"));
-      return ret;
+    const origPush = window.history.pushState.bind(window.history) as unknown as (...a: unknown[]) => void;
+    const origReplace = window.history.replaceState.bind(window.history) as unknown as (...a: unknown[]) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window.history.pushState as unknown as (...a: unknown[]) => void) = (...args: unknown[]) => {
+      (origPush as (...a: unknown[]) => void)(...args);
+      setPath(getPath());
+      window.dispatchEvent(new Event("popstate"));
     };
-    window.history.pushState = wrappedPush as typeof window.history.pushState;
-    return () => window.removeEventListener("popstate", onPop);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window.history.replaceState as unknown as (...a: unknown[]) => void) = (...args: unknown[]) => {
+      (origReplace as (...a: unknown[]) => void)(...args);
+      setPath(getPath());
+      window.dispatchEvent(new Event("popstate"));
+    };
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      (window.history.pushState as unknown as (...a: unknown[]) => void) = origPush as (...a: unknown[]) => void;
+      (window.history.replaceState as unknown as (...a: unknown[]) => void) = origReplace as (...a: unknown[]) => void;
+    };
   }, []);
-  return historiId;
+  return path;
+}
+
+function getHistoriId(path: string): string | null {
+  const m = path.match(/^\/histori\/([^/]+)/);
+  return m ? m[1] : null;
 }
 
 function AppShell() {
-  const historiId = useHistoriRoute();
+  const route = useRoute();
+  const historiId = getHistoriId(route);
+  const isSettings = route === "/settings";
 
   if (historiId) {
     return (
@@ -43,6 +59,7 @@ function AppShell() {
     );
   }
 
+  // Wrap dashboard and settings in same shell for bottom nav
   return (
     <div
       style={{
@@ -86,7 +103,7 @@ function AppShell() {
       </header>
 
       <main style={{ maxWidth: 480, margin: "0 auto", padding: 16, paddingBottom: 80 }}>
-        <DashboardPage />
+        {isSettings ? <SettingsPage /> : <DashboardPage />}
       </main>
 
       <nav
@@ -107,63 +124,116 @@ function AppShell() {
       >
         <button
           type="button"
-          aria-current="page"
+          aria-current={isSettings || historiId ? undefined : "page"}
+          aria-label="Dashboard"
+          data-testid="nav-dashboard"
+          onClick={() => window.history.pushState({}, "", "/")}
           style={{
             minHeight: 48,
-            padding: "8px 16px",
+            padding: "8px 10px",
             border: "none",
             background: "transparent",
-            color: "#0F7A4A",
-            fontSize: 14,
-            fontWeight: 600,
+            color: !isSettings && !historiId ? "#0F7A4A" : "#595959",
+            fontSize: 12,
+            fontWeight: !isSettings && !historiId ? 600 : 400,
             cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
           }}
         >
+          <Home width={20} height={20} aria-hidden="true" />
           Dashboard
         </button>
         <button
           type="button"
+          aria-label="SKU"
+          onClick={() => window.history.pushState({}, "", "/sku")}
           style={{
             minHeight: 48,
-            padding: "8px 16px",
+            padding: "8px 10px",
             border: "none",
             background: "transparent",
             color: "#595959",
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: 400,
             cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
           }}
         >
+          <Box width={20} height={20} aria-hidden="true" />
           SKU
         </button>
         <button
           type="button"
+          aria-label="Batch"
+          onClick={() => window.history.pushState({}, "", "/batch")}
           style={{
             minHeight: 48,
-            padding: "8px 16px",
+            padding: "8px 10px",
             border: "none",
             background: "transparent",
             color: "#595959",
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: 400,
             cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
           }}
         >
+          <Package width={20} height={20} aria-hidden="true" />
+          Batch
+        </button>
+        <button
+          type="button"
+          aria-label="Promo"
+          onClick={() => window.history.pushState({}, "", "/promo")}
+          style={{
+            minHeight: 48,
+            padding: "8px 10px",
+            border: "none",
+            background: "transparent",
+            color: "#595959",
+            fontSize: 12,
+            fontWeight: 400,
+            cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <ShoppingBag width={20} height={20} aria-hidden="true" />
           Promo
         </button>
         <button
           type="button"
+          aria-current={isSettings ? "page" : undefined}
+          aria-label="Pengaturan"
+          data-testid="nav-pengaturan"
+          onClick={() => window.history.pushState({}, "", "/settings")}
           style={{
             minHeight: 48,
-            padding: "8px 16px",
+            padding: "8px 10px",
             border: "none",
             background: "transparent",
-            color: "#595959",
-            fontSize: 14,
-            fontWeight: 400,
+            color: isSettings ? "#0F7A4A" : "#595959",
+            fontSize: 12,
+            fontWeight: isSettings ? 600 : 400,
             cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
           }}
         >
+          <Settings width={20} height={20} aria-hidden="true" />
           Pengaturan
         </button>
       </nav>
@@ -177,17 +247,12 @@ export default function App() {
   const [isOffline] = useState(() => typeof navigator !== "undefined" && !navigator.onLine);
   const [showFallback, setShowFallback] = useState(false);
 
-  // Show fallback only if explicitly offline AND no data simulation
-  // Shell must render even when Dexie empty — fallback is opt-in via ?offline param or real offline after cache
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("offline") === "1") {
       setShowFallback(true);
     }
   }, []);
-
-  // Listen online/offline but keep shell rendered — fallback is non-blocking
-  // Requirement: fallback page <2s, no white crash, shell renders even when Dexie empty
 
   if (showFallback && isOffline) {
     return (
