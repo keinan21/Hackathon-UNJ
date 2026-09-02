@@ -3,239 +3,113 @@ import { OfflineFallback } from "./components/OfflineFallback";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { HistoriDetailPage } from "./features/dashboard/HistoriDetailPage";
-import SettingsPage from "./features/settings/SettingsPage";
-import { Home, Box, Package, ShoppingBag, Settings } from "iconoir-react";
+import { PromoAktifList } from "./features/promo/PromoAktifList";
+import { SettingsPage } from "./features/settings/SettingsPage";
 
-function useRoute(): string {
-  const [path, setPath] = useState(() => (typeof window !== "undefined" ? window.location.pathname : "/"));
+type View = "dashboard" | "promo" | "settings" | "sku";
+
+function useHistoriRoute() {
+  const [historiId, setHistoriId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const m = window.location.pathname.match(/^\/histori\/([^/]+)/);
+    return m ? m[1] : null;
+  });
   useEffect(() => {
-    const getPath = () => window.location.pathname;
-    const onPop = () => setPath(getPath());
+    const onPop = () => {
+      const m = window.location.pathname.match(/^\/histori\/([^/]+)/);
+      setHistoriId(m ? m[1] : null);
+    };
     window.addEventListener("popstate", onPop);
-    const origPush = window.history.pushState.bind(window.history) as unknown as (...a: unknown[]) => void;
-    const origReplace = window.history.replaceState.bind(window.history) as unknown as (...a: unknown[]) => void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window.history.pushState as unknown as (...a: unknown[]) => void) = (...args: unknown[]) => {
-      (origPush as (...a: unknown[]) => void)(...args);
-      setPath(getPath());
-      window.dispatchEvent(new Event("popstate"));
-    };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window.history.replaceState as unknown as (...a: unknown[]) => void) = (...args: unknown[]) => {
-      (origReplace as (...a: unknown[]) => void)(...args);
-      setPath(getPath());
-      window.dispatchEvent(new Event("popstate"));
-    };
-    return () => {
-      window.removeEventListener("popstate", onPop);
-      (window.history.pushState as unknown as (...a: unknown[]) => void) = origPush as (...a: unknown[]) => void;
-      (window.history.replaceState as unknown as (...a: unknown[]) => void) = origReplace as (...a: unknown[]) => void;
-    };
+    const orig = window.history.pushState.bind(window.history);
+    // wrap pushState to trigger pop
+    (window.history.pushState as unknown as (d:any,u:string,url?:string)=>void) = ((d:any,u:string,url?:string)=>{
+      orig(d,u,url);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }) as any;
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
-  return path;
-}
-
-function getHistoriId(path: string): string | null {
-  const m = path.match(/^\/histori\/([^/]+)/);
-  return m ? m[1] : null;
+  return historiId;
 }
 
 function AppShell() {
-  const route = useRoute();
-  const historiId = getHistoriId(route);
-  const isSettings = route === "/settings";
+  const historiId = useHistoriRoute();
+  const [view, setView] = useState<View>(() => {
+    if (typeof window === "undefined") return "dashboard";
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("view") === "settings") return "settings";
+    if (p.get("view") === "promo") return "promo";
+    if (p.get("view") === "sku") return "sku";
+    return "dashboard";
+  });
+
+  const seedMode = (() => {
+    if (typeof window === "undefined") return "demo" as const;
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("seed") === "many" || p.get("prototype") === "many") return "many" as const;
+    if (p.get("seed") === "empty") return "empty" as const;
+    if (p.get("seed") === "expiryNull") return "expiryNull" as const;
+    return "demo" as const;
+  })();
+
+  // expose view for e2e counting
+  useEffect(() => {
+    (window as unknown as { __APP_VIEW__: string }).__APP_VIEW__ = view;
+  }, [view]);
 
   if (historiId) {
     return (
       <div style={{ minHeight: "100vh", background: "#F5F5F0", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
-        <header
-          style={{ background: "#0F7A4A", color: "#FFFFFF", padding: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}
-        >
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, lineHeight: 1.25, color: "#FFFFFF" }}>Inventaris Tebus Murah</h1>
+        <header style={{ background: "#0F7A4A", color: "#FFFFFF", padding: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#FFFFFF" }}>Inventaris Tebus Murah</h1>
           <span style={{ fontSize: 12, background: "rgba(255,255,255,0.2)", padding: "4px 8px", borderRadius: 8, color: "#FFFFFF" }}>PWA</span>
         </header>
-        <HistoriDetailPage id={historiId} />
+        <main style={{ maxWidth: 480, margin: "0 auto", padding: 16, paddingBottom: 80 }}>
+          <HistoriDetailPage id={historiId} />
+        </main>
+        <InstallPrompt />
       </div>
     );
   }
 
-  // Wrap dashboard and settings in same shell for bottom nav
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#F5F5F0",
-        fontFamily: "Inter, system-ui, -apple-system, sans-serif",
-      }}
-    >
-      <header
-        style={{
-          background: "#0F7A4A",
-          color: "#FFFFFF",
-          padding: "16px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 20,
-            fontWeight: 700,
-            lineHeight: 1.25,
-            color: "#FFFFFF",
-          }}
-        >
-          Inventaris Tebus Murah
-        </h1>
-        <span
-          style={{
-            fontSize: 12,
-            background: "rgba(255,255,255,0.2)",
-            padding: "4px 8px",
-            borderRadius: 8,
-            color: "#FFFFFF",
-          }}
-        >
-          PWA
-        </span>
+    <div style={{ minHeight: "100vh", background: "#F5F5F0", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
+      <header style={{ background: "#0F7A4A", color: "#FFFFFF", padding: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, lineHeight: 1.25, color: "#FFFFFF" }}>Inventaris Tebus Murah</h1>
+        <span style={{ fontSize: 12, background: "rgba(255,255,255,0.2)", padding: "4px 8px", borderRadius: 8, color: "#FFFFFF" }}>PWA</span>
       </header>
 
       <main style={{ maxWidth: 480, margin: "0 auto", padding: 16, paddingBottom: 80 }}>
-        {isSettings ? <SettingsPage /> : <DashboardPage />}
+        {view === "dashboard" && <DashboardPage seedMode={seedMode} />}
+        {view === "promo" && <PromoAktifList />}
+        {view === "settings" && <SettingsPage />}
+        {view === "sku" && (
+          <div data-testid="sku-page" className="w-full max-w-[480px] mx-auto px-4">
+            <h2 className="text-[20px] font-bold text-[#1A1A1A] mb-3" style={{ fontSize: "20px" }}>SKU</h2>
+            <p className="text-base text-[#595959]" style={{ fontSize: "16px" }}>Daftar SKU — mock untuk navigasi 3-tap.</p>
+            <button type="button" className="btn btn-primary w-full min-h-[48px] mt-3 text-base font-semibold" style={{ minHeight: "48px", fontSize: "16px" }} data-testid="sku-mock-btn">Lihat SKU</button>
+          </div>
+        )}
       </main>
 
-      <nav
-        aria-label="Navigasi utama"
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "#FFFFFF",
-          borderTop: "1px solid #D9D9D9",
-          display: "flex",
-          justifyContent: "space-around",
-          padding: "8px 0",
-          maxWidth: 480,
-          margin: "0 auto",
-        }}
-      >
-        <button
-          type="button"
-          aria-current={isSettings || historiId ? undefined : "page"}
-          aria-label="Dashboard"
-          data-testid="nav-dashboard"
-          onClick={() => window.history.pushState({}, "", "/")}
-          style={{
-            minHeight: 48,
-            padding: "8px 10px",
-            border: "none",
-            background: "transparent",
-            color: !isSettings && !historiId ? "#0F7A4A" : "#595959",
-            fontSize: 12,
-            fontWeight: !isSettings && !historiId ? 600 : 400,
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-          }}
-        >
-          <Home width={20} height={20} aria-hidden="true" />
-          Dashboard
-        </button>
-        <button
-          type="button"
-          aria-label="SKU"
-          onClick={() => window.history.pushState({}, "", "/sku")}
-          style={{
-            minHeight: 48,
-            padding: "8px 10px",
-            border: "none",
-            background: "transparent",
-            color: "#595959",
-            fontSize: 12,
-            fontWeight: 400,
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-          }}
-        >
-          <Box width={20} height={20} aria-hidden="true" />
-          SKU
-        </button>
-        <button
-          type="button"
-          aria-label="Batch"
-          onClick={() => window.history.pushState({}, "", "/batch")}
-          style={{
-            minHeight: 48,
-            padding: "8px 10px",
-            border: "none",
-            background: "transparent",
-            color: "#595959",
-            fontSize: 12,
-            fontWeight: 400,
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-          }}
-        >
-          <Package width={20} height={20} aria-hidden="true" />
-          Batch
-        </button>
-        <button
-          type="button"
-          aria-label="Promo"
-          onClick={() => window.history.pushState({}, "", "/promo")}
-          style={{
-            minHeight: 48,
-            padding: "8px 10px",
-            border: "none",
-            background: "transparent",
-            color: "#595959",
-            fontSize: 12,
-            fontWeight: 400,
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-          }}
-        >
-          <ShoppingBag width={20} height={20} aria-hidden="true" />
-          Promo
-        </button>
-        <button
-          type="button"
-          aria-current={isSettings ? "page" : undefined}
-          aria-label="Pengaturan"
-          data-testid="nav-pengaturan"
-          onClick={() => window.history.pushState({}, "", "/settings")}
-          style={{
-            minHeight: 48,
-            padding: "8px 10px",
-            border: "none",
-            background: "transparent",
-            color: isSettings ? "#0F7A4A" : "#595959",
-            fontSize: 12,
-            fontWeight: isSettings ? 600 : 400,
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-          }}
-        >
-          <Settings width={20} height={20} aria-hidden="true" />
-          Pengaturan
-        </button>
+      <nav aria-label="Navigasi utama" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#FFFFFF", borderTop: "1px solid #D9D9D9", display: "flex", justifyContent: "space-around", padding: "8px 0", maxWidth: 480, margin: "0 auto" }}>
+        {[
+          { id: "dashboard" as View, label: "Dashboard" },
+          { id: "sku" as View, label: "SKU" },
+          { id: "promo" as View, label: "Promo" },
+          { id: "settings" as View, label: "Pengaturan" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            aria-current={view === tab.id ? "page" : undefined}
+            aria-label={tab.label}
+            onClick={() => setView(tab.id)}
+            data-testid={`nav-${tab.id}`}
+            style={{ minHeight: 48, padding: "8px 16px", border: "none", background: "transparent", color: view === tab.id ? "#0F7A4A" : "#595959", fontSize: 14, fontWeight: view === tab.id ? 600 : 400, cursor: "pointer" }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </nav>
 
       <InstallPrompt />
@@ -249,21 +123,13 @@ export default function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("offline") === "1") {
-      setShowFallback(true);
-    }
+    if (params.get("offline") === "1") setShowFallback(true);
   }, []);
 
   if (showFallback && isOffline) {
     return (
       <div style={{ minHeight: "100vh", background: "#FFFFFF", fontFamily: "Inter, system-ui, sans-serif" }}>
-        <header
-          style={{
-            background: "#0F7A4A",
-            color: "#FFFFFF",
-            padding: 16,
-          }}
-        >
+        <header style={{ background: "#0F7A4A", color: "#FFFFFF", padding: 16 }}>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Inventaris Tebus Murah</h1>
         </header>
         <OfflineFallback />
