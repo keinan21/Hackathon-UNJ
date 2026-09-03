@@ -1,0 +1,6 @@
+TASK-07 evidence log
+bun test src: 117 pass 0 fail
+bun run build: exit 0, 1733 modules, dist/manifest.webmanifest + sw.js ok
+npx playwright test e2e/auth.spec.ts: 5 passed (setup, login, lockout, 48px, guard)
+typecheck: tsc --noEmit exit 0
+branch: feat/auth-login
