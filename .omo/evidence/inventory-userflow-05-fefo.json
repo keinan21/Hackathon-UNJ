@@ -1,0 +1,38 @@
+{
+  "task": "5. Helper computeKode + consumeFEFO + backfill",
+  "branch": "feat/fefo-kode",
+  "timestamp": "2026-09-03T00:00:00Z",
+  "files_created_modified": [
+    "src/db/kode.ts (baru, buildKodePrefix + computeNextKode + computeKode + regenerateKodesForKategori)",
+    "src/db/consume.ts (baru, consumeFEFO)",
+    "src/db/consume.test.ts (baru, 10 tests)",
+    "src/db/db.ts (update, import buildKodePrefix/computeNextKode dari kode.ts, fix createSKU max+1 bukan count)"
+  ],
+  "functionality": {
+    "computeKode": "computeKode(kategoriNama, org) → kode unik berikutnya (cek existing max+1, bukan count agar tidak tabrakan setelah hapus)",
+    "buildKodePrefix": "prefix = 3 huruf kapital nama kategori (DAI/SNA/BER), fallback SK/ASK",
+    "backfill": "SKU lama otomatis via upgrade v2 (sudah di main) + createSKU pakai computeNextKode",
+    "regenerateKodesForKategori": "rename kategori → regenerasi kode SKU se-kategori dalam SATU transaksi Dexie + cek unik, konflik → rollback + pesan Indonesia Kode SKU sudah dipakai",
+    "consumeFEFO": "potong batch expiry terdekat dulu, batch null dilewati FEFO dan hanya dipakai jika tidak ada batch expiry sama sekali (KEPUTUSAN FEFO), qty habis → set 0 jangan hapus, tulis 1 transaksis {jenis keluar, harga_jual_snapshot = sku.harga_normal, sold_at now}, return sisa + detail potongan per batch",
+    "keputusan_FEFO_null": "Jika ada batch expiry (expiry_date != null), batch null dilewati sepenuhnya meski stok expiry tidak cukup → reject Stok tidak cukup. Hanya jika tidak ada batch expiry sama sekali, fallback pakai batch null. Dicatat di evidence dan test case 5."
+  },
+  "verification": {
+    "bun_test_consume": "bun test src/db/consume.test.ts → 10 pass 0 fail (happy 5+10→0+8 + transaksi tercatat + null-batch dilewati, exact qty, over-stok reject tanpa perubahan, qty 0 reject, fallback null)",
+    "bun_test_src": "bun test src → 109 pass 0 fail 438 expect across 15 files",
+    "bun_run_build": "bun run build → exit 0, dist/manifest.webmanifest + dist/sw.js ada, 1731 modules transformed",
+    "evidence_path": ".omo/evidence/inventory-userflow-05-fefo.json"
+  },
+  "test_cases": [
+    "happy 2 batch 5+10 keluar 7 → 0+8 + transaksi tercatat harga 15000 jenis keluar",
+    "exact qty total 15 keluar 15 → 0+0",
+    "over-stok 20 reject Stok tidak cukup TANPA ubah batch dan tanpa transaksi",
+    "qty 0 dan -3 reject Qty harus lebih dari 0",
+    "batch null dilewati jika ada expiry (5 + 100 null, keluar 7 → reject, keluar 5 → hanya expiry habis null tetap 100)",
+    "fallback null jika tidak ada expiry: 20+10 null, keluar 15 → sisa 15",
+    "kode helper: buildKodePrefix DAI/SNA/BER/ASK/SK, computeNextKode max+1, createSKU DAI-001/002 lalu hapus 001 create lagi → DAI-003 (bukan 002), regenerate SUS-001/002 dalam transaksi"
+  ],
+  "notepad": ".omo/notepads/inventory-userflow-rewrite/learnings.md + issues.md appended",
+  "commit": "feat(db): FEFO consume + kode generator + backfill",
+  "must_not_violations": "Tidak ubah expiry engine/guardrail/crypto/auth/UI, tidak hapus baris batch habis, tidak tulis harga dari LLM, tidak skip build+full test, tidak sentuh docs/**",
+  "notes": "Watch task 4 kode wajib diisi saat create sudah tertutup via db.ts createSKU pakai computeNextKode max+1"
+}

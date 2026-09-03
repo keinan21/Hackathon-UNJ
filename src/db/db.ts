@@ -10,6 +10,7 @@
  */
 
 import Dexie, { type Table } from "dexie";
+import { buildKodePrefix, computeNextKode } from "./kode";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -189,13 +190,6 @@ export class InventoryDB extends Dexie {
   }
 }
 
-function buildKodePrefix(namaKategori: string): string {
-  const cleaned = namaKategori.replace(/[^a-zA-Z]/g, "").toUpperCase();
-  if (cleaned.length >= 3) return cleaned.slice(0, 3);
-  if (cleaned.length > 0) return (cleaned + "SK").slice(0, 3);
-  return "SK";
-}
-
 export const db = new InventoryDB();
 
 // ---------------------------------------------------------------------------
@@ -283,14 +277,7 @@ function validateTag(t: { nama: string }): void {
   if (!t.nama || t.nama.trim().length === 0) throw new ValidationError("Nama tag tidak boleh kosong");
 }
 
-function computeNextKode(existingKodes: string[], prefix: string): string {
-  let max = 0;
-  for (const k of existingKodes) {
-    const m = k.match(new RegExp(`^${prefix}-(\\d+)$`));
-    if (m) max = Math.max(max, parseInt(m[1], 10));
-  }
-  return `${prefix}-${String(max + 1).padStart(3, "0")}`;
-}
+export { buildKodePrefix, computeNextKode } from "./kode";
 
 // ---------------------------------------------------------------------------
 // DexieRepository impl
@@ -352,12 +339,7 @@ export class DexieRepository implements InventoryRepository {
         .and((x) => x.org_id === org && !!x.kode)
         .toArray();
       const existingKodes = existing.map((x) => x.kode as string).filter(Boolean);
-      if (existingKodes.length === 0) {
-        const count = await this.d.skus.where("kategori_id").equals(s.kategori_id).and((x) => x.org_id === org).count();
-        kode = `${prefix}-${String(count + 1).padStart(3, "0")}`;
-      } else {
-        kode = computeNextKode(existingKodes, prefix);
-      }
+      kode = computeNextKode(existingKodes, prefix);
     }
     const row: SKU = { ...s, kode, org_id: org };
     try {
