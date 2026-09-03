@@ -130,7 +130,8 @@ Trace: TASK-02, TASK-05, TASK-06, TASK-07, TASK-08
 - Tidak ada simpan expiry di SKU.
 - Tidak ada HPP auto dari supplier integrasi v1, input manual per Batch.
 - Tidak ada cloud sync untuk inventaris v1.
-- Tidak ada barcode scan camera v1.
+- Tidak ada OCR baca nota foto dan tidak ada QR code generation v1 (tetap Must NOT).
+- Barcode scan camera: **allowlist hanya `html5-qrcode` lazy di route `/scan`** untuk isi field `barcode` SKU dan cari SKU saat terima barang (ADR-003). Tidak preload di dashboard, permission hanya di `/scan`, fallback input manual jika denied. Kamera tidak dipakai untuk fitur lain.
 
 ---
 
@@ -138,6 +139,7 @@ Trace: TASK-02, TASK-05, TASK-06, TASK-07, TASK-08
 
 - [CONTEXT.md](../../CONTEXT.md:8-14) — Definisi verbatim SKU, Batch, Kategori, Expiry, Days to Expiry, Avg Daily Usage.
 - [ADR-001](../adr/0001-local-first-dexie-backup-drive.md) — Local-first Dexie, Repository pattern, single device.
+- [ADR-003](../adr/0003-telegram-notif.md) — Allowlist barcode scan `html5-qrcode` lazy di `/scan`, OCR tetap Must NOT.
 - Draft C2 Inventaris Core [.omo/drafts/ai-inventory-expiry-advisor.md](../../.omo/drafts/ai-inventory-expiry-advisor.md).
 
 ---

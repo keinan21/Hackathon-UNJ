@@ -1,10 +1,10 @@
-# Decisions — Inventaris AI Tebus Murah
+# Decisions , Inventaris AI Tebus Murah
 
-> Kumpulan keputusan arsitektur dan log grill Q1-Q13 yang mengunci scope, stack, dan perilaku sistem. Dokumen ini adalah sumber kebenaran untuk kenapa tiap trade off dipilih, bukan cuma apa yang dipilih. Eksekutor baca ini sebelum ubah satu baris kode.
+> Kumpulan keputusan arsitektur dan log grill Q1-Q15 yang mengunci scope, stack, dan perilaku sistem. Dokumen ini adalah sumber kebenaran untuk kenapa tiap trade off dipilih, bukan cuma apa yang dipilih. Eksekutor baca ini sebelum ubah satu baris kode.
 
-- **Versi:** 1.0
-- **Tanggal:** 2026-08-31
-- **Status:** Accepted
+- **Versi:** 1.1
+- **Tanggal:** 2026-09-03
+- **Status:** Accepted (ADR-003 amandemen Wave 0)
 - **Rujukan:** [CONTEXT.md](../CONTEXT.md), [FRD](../frd.md), [Design](../design.md), [Architecture](../architecture.md), [Plan](../.omo/plans/ai-inventory-expiry-advisor.md), [Draft](../.omo/drafts/ai-inventory-expiry-advisor.md)
 
 ---
@@ -13,7 +13,8 @@
 
 1. [ADR-001 Local-First Dexie + Backup Drive Opsional](#adr-001-local-first-dexie--backup-drive-opsional-pwa-offline)
 2. [ADR-002 LangChain + Gemini Hybrid Advisor](#adr-002-langchain--gemini-hybrid-advisor-untuk-tebus-murah)
-3. [Grill Log Q1-Q13 dengan Rationale](#grill-log-q1-q13-dengan-rationale)
+3. [ADR-003 Telegram Direct-HTTPS + Barcode Scan Allowlist](#adr-003-telegram-direct-https--barcode-camera-scan-allowlist)
+4. [Grill Log Q1-Q15 dengan Rationale](#grill-log-q1-q15-dengan-rationale)
 4. [Tradeoffs Komprehensif](#tradeoffs-komprehensif)
 5. [Timeline Keputusan](#timeline-keputusan)
 6. [Matriks Trace Keputusan ke FRD dan TASK](#matriks-trace-keputusan-ke-frd-dan-task)
@@ -74,11 +75,45 @@
 
 ---
 
-## Grill Log Q1-Q13 dengan Rationale
+## ADR-003 Telegram Direct-HTTPS + Barcode Camera Scan Allowlist
 
-Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan final, dan rationale kenapa opsi lain ditolak. Log ini jadi jangkar kalau ada yang usulkan scope creep.
+> Disalin verbatim dari [docs/adr/0003-telegram-notif.md](./adr/0003-telegram-notif.md) agar tidak drift.
 
-### Q1 Perishable fokus — mana yang dikelola dulu
+- **Status:** Accepted (2026-09-03, amandemen Wave 0 , allowlist Telegram real-send + barcode scan)
+- **Context:** Supervisor minta rekap stok kritis tiap 07:00 WIB dan cashflow 14 hari (omzet minus belanja) masuk Telegram, bukan cuma badge di HP. Sebelumnya FRD-03 cuma stub `waHook.log` dan AGENTS guardrail larang semua kamera/scan. Opsi yang dipertimbangkan: WA Business API via backend, Firebase Cloud Messaging, polling backend cron, dan Telegram direct-HTTPS tanpa backend. Constraint tetap local-first 100 persen offline jalan, single Supervisor, tanpa server wajib v1.
+- **Decision:** Pakai **Telegram Bot API direct-HTTPS via `fetch` ke `api.telegram.org`** tanpa backend, plus **barcode camera scan allowlist** terbatas:
+  1. **Direct HTTPS, tanpa backend:** `fetch POST https://api.telegram.org/bot<token>/sendMessage` dari browser. Tidak ada server, tidak ada Supabase, tidak ada Firebase. Token Bot simpan terenkripsi via `src/lib/crypto.ts` (PBKDF2 100k + AES-GCM-256, salt 16 byte, iv 12 byte, key tidak extractable, sama seperti PIN dan API key Gemini). Token tidak pernah plaintext di code, env, atau git.
+  2. **Antre offline IndexedDB:** Jika offline atau `fetch` gagal, masukkan ke tabel `telegramQueue` (Dexie) dengan dedup key `batchId+tanggal` (satu batch satu hari satu pesan). Retry 3 kali dengan jeda 5 detik, 30 detik, 5 menit. Jika masih gagal, diam dan biarkan badge/dashboard yang jadi fallback. Queue di-retry saat `navigator.onLine` atau app dibuka berikutnya.
+  3. **Trigger:** rekap harian 07:00 Asia/Jakarta (sama dengan scheduler notifikasi 07:00), plus on-demand saat batch kritis baru (days kurang sama dengan max threshold kategori). Isi pesan: list stok kritis (nama SKU, qty, H-minus, warna urgency) dan cashflow 14 hari. Bahasa Indonesia.
+  4. **Kamera allowlist HANYA untuk barcode scan:** `html5-qrcode` lazy-load hanya di route `/scan`, tidak preload di dashboard. Dipakai untuk isi `barcode` SKU dan cari SKU saat terima barang. OCR (baca nota foto) dan QR code generation tetap dilarang v1. Kamera tidak dipakai untuk fitur lain.
+- **Consequences:**
+  - (+) Zero backend cost, tetap local-first. Semua operasional harian (SKU, Batch, promo, approve, badge) 100 persen offline tanpa Telegram. Internet hanya untuk kirim notif, gagal pun tidak block apapun.
+  - (+) Supervisor dapat rekap di Telegram tanpa buka HP toko. Retry 3x dengan dedup cegah spam dan jaga kuota.
+  - (+) Barcode scan percepat input tanpa ubah model data. Lazy-load jaga bundle tetap kecil.
+  - (-) Butuh internet saat kirim. Offline lama berarti Telegram tidak kekirim, tapi badge dan dashboard tetap tampilkan yang sama, jadi tidak ada data loss, hanya delay notif.
+  - (-) Token Telegram adalah secret tambahan yang harus dienkripsi. Mitigasi: reuse `crypto.ts` yang sudah ada, tidak bikin sistem crypto baru.
+  - (-) Izin kamera perlu permission. Mitigasi: hanya minta saat buka `/scan`, fallback ke input manual jika denied, tidak throw.
+- **Alternatives considered:**
+  - WA Business API via backend: ditolak, butuh server, cost per pesan, setup verifikasi bisnis, langgar no-backend v1.
+  - Firebase Cloud Messaging + backend cron: ditolak, butuh Firebase project, service account, dan server untuk trigger 07:00, overkill untuk 1 toko.
+  - Polling backend cron + Supabase: ditolak, butuh Supabase dan RLS sejak hari pertama, tidak penuhi tidak depends cloud.
+  - Telegram via backend proxy: ditolak untuk v1, proxy butuh server. Direct-HTTPS lebih sederhana dan cukup aman karena token terenkripsi di device, bukan di server.
+  - OCR nota otomatis (foto struk jadi Batch): ditolak v1, akurasi rendah untuk tulisan tangan supplier, butuh tesseract 2MB plus. Tetap Must NOT.
+- **Reversible?** Ya. Ganti `fetch` Telegram ke backend proxy tanpa ubah trigger atau queue interface. Ganti `html5-qrcode` ke library scan lain tanpa ubah field `barcode` SKU. Hapus Telegram pun tidak ubah engine expiry karena notif hanya consumer dari ranking urgent.
+- **Tidak langgar local-first (rationale):** Local-first artinya operasional inti jalan tanpa internet (ADR-001). Telegram adalah channel notifikasi outbound tambahan, bukan storage. Data tetap di Dexie, hitungan expiry tetap lokal. Jika internet mati berhari-hari, toko tetap jalan, badge tetap muncul, transaksi tetap catat. Telegram hanya memperluas jangkauan notif yang sebelumnya cuma push browser 07:00, sekarang tambah chat yang bisa dibaca dari HP lain. Jadi ini allowlist pengecualian yang konsisten, bukan pengkhianatan prinsip.
+
+**Implikasi ke FRD dan TASK:**
+
+- Mengunci FRD-03 notifikasi dari stub `waHook.log` menjadi allowlist Telegram real-send direct-HTTPS, dan FRD-02 barcode scan dari Must NOT menjadi allowlist `html5-qrcode` lazy di `/scan`.
+- Mengunci TASK-10 scheduler tambah `telegramQueue` dan retry 3x, TASK-06 SKU tambah scan barcode, TASK-11 badge tetap fallback utama saat Telegram gagal. Tidak ada TASK baru, hanya amandemen scope dalam Wave 0 docs-only.
+
+---
+
+## Grill Log Q1-Q15 dengan Rationale
+
+Grill 2026-08-31 menghasilkan 13 keputusan terkunci, ditambah Q14-Q15 amandemen 2026-09-03 untuk Telegram dan barcode scan. Tiap Q punya opsi, pilihan final, dan rationale kenapa opsi lain ditolak. Log ini jadi jangkar kalau ada yang usulkan scope creep.
+
+### Q1 Perishable fokus , mana yang dikelola dulu
 
 - **Pertanyaan:** Fokus ke barang perishable dengan expiry atau semua barang termasuk non-perishable.
 - **Pilihan:**
@@ -90,7 +125,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** CONTEXT Expiry dan Days to Expiry, FRD-02 Requirements Batch nullable, TASK-07 Batch CRUD.
 - **Reversible:** Ya, non-perishable bisa ditambah expiry nanti tanpa migrasi skema.
 
-### Q2 Single toko — scope toko
+### Q2 Single toko , scope toko
 
 - **Pertanyaan:** Satu toko atau langsung multi-toko multi-gudang.
 - **Pilihan:**
@@ -102,7 +137,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** Architecture org_id sharding, FRD Prinsip Umum single device, TASK-02 org_id indexed.
 - **Reversible:** Ya, tambah `org_id` baru tanpa rewrite karena kolom sudah ada.
 
-### Q3 Threshold notifikasi — generik atau per kategori
+### Q3 Threshold notifikasi , generik atau per kategori
 
 - **Pertanyaan:** Threshold H- untuk notifikasi expiry diset generik atau beda per kategori.
 - **Pilihan:**
@@ -114,7 +149,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** CONTEXT Kategori threshold_h_minus dan Threshold, FRD-02 Kategori model, FRD-03 notifikasi scheduler per kategori, TASK-05 seed threshold editable, TASK-10 scheduler.
 - **Reversible:** Ya, ubah array threshold kapan saja via Settings tanpa migrasi.
 
-### Q4 Hybrid plus tebus murah — gaya saran AI
+### Q4 Hybrid plus tebus murah , gaya saran AI
 
 - **Pertanyaan:** Mau saran biasa atau saran tebus murah bundling ala Indomaret.
 - **Pilihan:**
@@ -126,7 +161,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** ADR-002, CONTEXT Tebus Murah dan Promo Aktif, FRD-04 Requirements pairing dan advisor, TASK-12 pairing rule, TASK-13 hybrid advisor.
 - **Reversible:** Ya, AdvisorPort bisa ganti strategi tanpa ubah Batch model.
 
-### Q5 Kategori threshold awal — nilai seed
+### Q5 Kategori threshold awal , nilai seed
 
 - **Pertanyaan:** Nilai awal threshold untuk seeding kategori.
 - **Pilihan:**
@@ -138,7 +173,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** Draft assumptions kategori threshold awal, plan TASK-05, FRD-02 seed.
 - **Reversible:** Ya, supervisor edit threshold kapan saja di Settings.
 
-### Q6 LangChain vs ADK — stack AI
+### Q6 LangChain vs ADK , stack AI
 
 - **Pertanyaan:** Pakai LangChain atau Agent Dev Kit untuk advisor.
 - **Pilihan:**
@@ -150,7 +185,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** ADR-002 alternatives, FRD-04 LangChain Gemini, TASK-13 AdvisorPort.
 - **Reversible:** Ya, ganti adapter LangChain ke ADK.
 
-### Q7 Tebus murah guardrail dan flow — 1-tap atau multi-step
+### Q7 Tebus murah guardrail dan flow , 1-tap atau multi-step
 
 - **Pertanyaan:** Guardrail harga dan flow approve promo.
 - **Pilihan:**
@@ -163,7 +198,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** CONTEXT Tebus Murah guardrail, FRD-04 Requirements guardrail dan approve, plan C-03 M-09, TASK-14 proposed, TASK-15 approve lifecycle, TASK-16 guardrail tests.
 - **Reversible:** Guardrail floor bisa jadi configurable ceiling `harga_normal*0.5` nanti, tapi floor tetap wajib.
 
-### Q8 Backup strategi — local only atau plus Drive
+### Q8 Backup strategi , local only atau plus Drive
 
 - **Pertanyaan:** Backup data local saja atau plus cloud opsional.
 - **Pilihan:**
@@ -175,7 +210,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** ADR-001 Decision Backup Restore via JSON plus Drive opsional, FRD-06 Backup Restore, plan M-06, TASK-18 backupService.
 - **Reversible:** Ya, tambah Supabase sync via Repository tanpa ubah data lokal.
 
-### Q9 Batch plus avg — sumber Avg Daily Usage
+### Q9 Batch plus avg , sumber Avg Daily Usage
 
 - **Pertanyaan:** Hitung Avg Daily Usage dari mana.
 - **Pilihan:**
@@ -187,7 +222,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** CONTEXT Avg Daily Usage, FRD-02 avg model, FRD-03 urgencyScore, plan TASK-08, Architecture performance last 14 days.
 - **Reversible:** Ya, window 14 hari bisa jadi 30 hari via config nanti.
 
-### Q10 DB offline AI online cache — mode konektivitas
+### Q10 DB offline AI online cache , mode konektivitas
 
 - **Pertanyaan:** DB dan AI harus offline atau online.
 - **Pilihan:**
@@ -199,7 +234,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** ADR-002 trigger daily plus on-demand cache Dexie, FRD-04 cache TTL 24 jam, TASK-13 hybrid advisor.
 - **Reversible:** Bisa pindah ke model on-device jika quality naik, via AdvisorPort.
 
-### Q11 Single device — auth model
+### Q11 Single device , auth model
 
 - **Pertanyaan:** Berapa HP dan role yang didukung v1.
 - **Pilihan:**
@@ -211,7 +246,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** CONTEXT Supervisor single device PIN, FRD-01 single device single supervisor, FRD-06 PIN hash, TASK-03 pinStore.
 - **Reversible:** Bisa tambah Supabase Auth email nanti tanpa hapus PIN lokal, dua layer.
 
-### Q12 Promo list — bentuk tampil promo
+### Q12 Promo list , bentuk tampil promo
 
 - **Pertanyaan:** Promo tebus murah tampil sebagai apa.
 - **Pilihan:**
@@ -223,7 +258,7 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Trace:** CONTEXT Tebus Murah dan Promo Aktif, FRD-04 lifecycle, FRD-05 dashboard promo aktif, plan scope OUT POS dan QR, TASK-14, TASK-15, TASK-17.
 - **Reversible:** POS dan QR bisa tambah fase 2 tanpa ubah promo model.
 
-### Q13 Stack — Vite plus Dexie TDD
+### Q13 Stack , Vite plus Dexie TDD
 
 - **Pertanyaan:** Stack tooling untuk PWA local-first.
 - **Pilihan:**
@@ -234,6 +269,30 @@ Grill 2026-08-31 menghasilkan 13 keputusan terkunci. Tiap Q punya opsi, pilihan 
 - **Rationale:** Vite React Dexie adalah kombinasi yang paling ringan, paling matang untuk PWA offline, zero cost, dan sesuai ADR-001. Next.js butuh backend dan tidak pure local. OPFS SQLite bundle besar dan overkill untuk 500 SKU. TDD dengan Vitest plus Playwright plus bun adalah yang ada di plan verification strategy: Vitest untuk engine, Playwright untuk PWA offline, bun untuk install dan build. Husky dan lint opsional v1 biar tidak lambat.
 - **Trace:** Plan verification strategy, Architecture stack v1, TASK-01 scaffold.
 - **Reversible:** Bisa migrasi ke Next atau OPFS nanti, tapi Repository jaga agar tidak lock ke Vite.
+
+### Q14 Telegram notifikasi , WA stub vs Telegram direct-HTTPS
+
+- **Pertanyaan:** Rekap 07:00 dan cashflow 14 hari dikirim via apa.
+- **Pilihan:**
+  - A Tetap stub `waHook.log`, kirim beneran butuh backend
+  - B WA Business API via backend (server + cost per pesan)
+  - C Telegram Bot direct-HTTPS tanpa backend, token enkripsi, antre retry 3x
+- **Keputusan:** **C (ADR-003)**
+- **Rationale:** Supervisor sudah pakai Telegram dan minta rekap 07:00 plus cashflow. WA Business butuh server, verifikasi bisnis, dan cost, langgar no-backend v1. Telegram Bot cukup `fetch` ke `api.telegram.org` dari browser, zero server. Token dienkripsi PBKDF2+AES-GCM via `src/lib/crypto.ts` yang sudah ada, antre offline di `telegramQueue` dedup `batchId+tanggal` retry 5 detik, 30 detik, 5 menit. Tidak langgar local-first karena semua operasional tetap 100 persen offline, Telegram hanya channel outbound, gagal pun fallback ke badge. Opsi A ditolak karena tidak kirim beneran. Opsi B ditolak karena butuh backend.
+- **Trace:** ADR-003, FRD-03 notifikasi scheduler allowlist Telegram, TASK-10 telegramQueue.
+- **Reversible:** Ya, ganti ke backend proxy tanpa ubah trigger atau queue. Hapus Telegram tidak ubah engine.
+
+### Q15 Barcode scan , kamera untuk apa
+
+- **Pertanyaan:** Kamera HP dipakai untuk scan apa.
+- **Pilihan:**
+  - A Tidak ada kamera v1 (Must NOT total)
+  - B Kamera untuk OCR baca nota foto jadi Batch
+  - C Kamera allowlist hanya untuk barcode scan SKU via `html5-qrcode` lazy di `/scan`
+- **Keputusan:** **C (ADR-003)**
+- **Rationale:** Input barcode manual lambat saat terima barang. Scan barcode percepat tanpa ubah model, field `barcode` sudah ada di SKU. `html5-qrcode` lazy hanya di route `/scan` jaga bundle, permission hanya diminta di sana, fallback manual jika denied. OCR ditolak v1 karena akurasi rendah untuk tulisan tangan supplier dan butuh tesseract 2MB plus. QR generation juga tetap dilarang. Opsi A terlalu keras, opsi B overkill.
+- **Trace:** ADR-003, FRD-02 Must NOT amandemen allowlist scan, `src/features/scan/**` (future).
+- **Reversible:** Ya, ganti library scan lain tanpa ubah field `barcode`. Hapus scan kembali ke input manual.
 
 ---
 
@@ -314,6 +373,18 @@ PIN di-hash PBKDF2 100k, tidak plaintext, key turunan untuk AES-GCM backup dan A
 - LangChain plus Gemini via API vs WebLLM: WebLLM tambah 500MB model download, tidak realistis untuk kuota terbatas. API on-demand plus cache 24 jam hemat kuota.
 - PWA Workbox via vite-plugin-pwa matang dan teruji, tidak perlu custom SW.
 
+### 8. WA Business via backend vs Telegram direct-HTTPS vs OCR vs Barcode scan
+
+| Pola | Kelebihan | Kekurangan | Keputusan |
+|------|-----------|------------|-----------|
+| WA Business via backend | Familiar WA | Butuh server, cost per pesan, verifikasi bisnis, langgar no-backend | Ditolak |
+| Telegram via backend proxy | Aman token di server | Butuh server untuk proxy | Ditolak v1, opsi future |
+| **Telegram direct-HTTPS (allowlist)** | Zero backend, token enkripsi lokal, retry antre, dedup | Butuh internet saat kirim, offline delay | **Dipilih (ADR-003)** |
+| OCR foto nota jadi Batch | Auto input | Akurasi rendah tulisan tangan, bundle 2MB tesseract | Tetap Must NOT |
+| **Barcode scan `html5-qrcode` lazy di `/scan`** | Cepat input barcode, lazy jaga bundle | Perlu permission kamera | **Allowlist (ADR-003)** |
+
+Telegram direct-HTTPS adalah satu-satunya allowlist yang tidak butuh backend dan tetap local-first. Barcode scan adalah satu-satunya kamera yang diizinkan, OCR dan QR tetap dilarang.
+
 ---
 
 ## Timeline Keputusan
@@ -340,8 +411,12 @@ PIN di-hash PBKDF2 100k, tidak plaintext, key turunan untuk AES-GCM backup dan A
 | 2026-08-31 | Design UMKM 3-tap Accepted 637 lines | Accepted | `docs/design.md:1-637` |
 | 2026-08-31 | Architecture scalable pragmatis Accepted 525 lines | Accepted | `docs/architecture.md:1-525` |
 | 2026-08-31 | Decisions log plus TASK agentic 24 tasks Accepted | Accepted | `docs/decisions.md` plus `TASK.md` |
+| 2026-09-03 | ADR-003 Telegram direct-HTTPS + barcode scan allowlist Accepted | Accepted | `docs/adr/0003-telegram-notif.md` |
+| 2026-09-03 | Grill Q14 Telegram C direct-HTTPS retry 3x dedup | Accepted | `docs/decisions.md#q14` |
+| 2026-09-03 | Grill Q15 Barcode C allowlist html5-qrcode lazy /scan | Accepted | `docs/decisions.md#q15` |
+| 2026-09-03 | Amandemen FRD-02 Must NOT allowlist scan, FRD-03 WA→Telegram, AGENTS guardrails | Accepted | `docs/frd/frd-02-inventaris.md:130` `docs/frd/frd-03-expiry.md` `AGENTS.md` |
 
-**Urutan grill round:** Q1 Q2 Q3 Q4 Q6 Q8 Q10 Q11 Q13 adalah round grill utama, Q5 Q7 Q9 Q12 adalah artikulasi plan workshop iterasi lanjutan. Semua terkunci sebelum Wave 0 docs ditulis.
+**Urutan grill round:** Q1 Q2 Q3 Q4 Q6 Q8 Q10 Q11 Q13 adalah round grill utama, Q5 Q7 Q9 Q12 adalah artikulasi plan workshop iterasi lanjutan, Q14 Q15 adalah amandemen Wave 0 2026-09-03. Semua terkunci sebelum Wave 0 docs ditulis.
 
 ---
 
@@ -364,20 +439,23 @@ PIN di-hash PBKDF2 100k, tidak plaintext, key turunan untuk AES-GCM backup dan A
 | Q11 Single device PIN | FRD-01, FRD-06 | TASK-03 | PIN hash bukan plaintext |
 | Q12 Promo list lifecycle | FRD-04, FRD-05 | TASK-11, TASK-14, TASK-15, TASK-17 | proposed active expired consumed |
 | Q13 Vite Dexie TDD | Semua FRD | TASK-01, TASK-20 | bun Vitest Playwright |
+| Q14 Telegram direct-HTTPS allowlist | FRD-03 | TASK-10 scheduler telegramQueue | fetch api.telegram.org, retry 3x 5s/30s/5m, dedup batchId+tanggal |
+| Q15 Barcode scan allowlist | FRD-02 | TASK-06 SKU barcode scan | html5-qrcode lazy /scan, OCR tetap Must NOT |
 
 ---
 
 ## Referensi
 
-- [CONTEXT.md](../CONTEXT.md) — Glosarium SKU, Batch, Kategori, Expiry, UrgencyScore, Tebus Murah, guardrail HPP*0.85.
-- [ADR-001 local-first Dexie](./adr/0001-local-first-dexie-backup-drive.md) — Vite React Dexie pure local, Repository reversible, backup Drive.
-- [ADR-002 hybrid advisor](./adr/0002-langchain-gemini-hybrid-advisor.md) — Hybrid rule plus LLM, cache Dexie, AdvisorPort.
-- [FRD 6 feature](../frd.md) — FRD-01 PWA Shell, FRD-02 Inventaris, FRD-03 Expiry Engine, FRD-04 Advisor Tebus Murah, FRD-05 Dashboard, FRD-06 Backup.
-- [Design UMKM 3-tap](../design.md) — User journey, wireframe low-fi, token 48px 16px, aksesibilitas AA.
-- [Architecture scalable pragmatis](../architecture.md) — C4 context container, Repository, sync-ready org_id, tradeoff table, security PBKDF2 AES-GCM, failure modes.
-- [Draft ai-inventory-expiry-advisor](../.omo/drafts/ai-inventory-expiry-advisor.md) — Topology C1-C6, grill Q1-Q13 locked.
-- [Plan ai-inventory-expiry-advisor](../.omo/plans/ai-inventory-expiry-advisor.md) — 24 todos Wave 0-4, dependency matrix, verification strategy.
+- [CONTEXT.md](../CONTEXT.md) , Glosarium SKU, Batch, Kategori, Expiry, UrgencyScore, Tebus Murah, guardrail HPP*0.85.
+- [ADR-001 local-first Dexie](./adr/0001-local-first-dexie-backup-drive.md) , Vite React Dexie pure local, Repository reversible, backup Drive.
+- [ADR-002 hybrid advisor](./adr/0002-langchain-gemini-hybrid-advisor.md) , Hybrid rule plus LLM, cache Dexie, AdvisorPort.
+- [ADR-003 Telegram + barcode scan](./adr/0003-telegram-notif.md) , Telegram direct-HTTPS tanpa backend, token PBKDF2+AES-GCM, queue retry 3x dedup, html5-qrcode lazy /scan, OCR tetap Must NOT.
+- [FRD 6 feature](../frd.md) , FRD-01 PWA Shell, FRD-02 Inventaris, FRD-03 Expiry Engine, FRD-04 Advisor Tebus Murah, FRD-05 Dashboard, FRD-06 Backup.
+- [Design UMKM 3-tap](../design.md) , User journey, wireframe low-fi, token 48px 16px, aksesibilitas AA.
+- [Architecture scalable pragmatis](../architecture.md) , C4 context container, Repository, sync-ready org_id, tradeoff table, security PBKDF2 AES-GCM, failure modes.
+- [Draft ai-inventory-expiry-advisor](../.omo/drafts/ai-inventory-expiry-advisor.md) , Topology C1-C6, grill Q1-Q15 locked (Q14 Q15 amandemen 2026-09-03).
+- [Plan ai-inventory-expiry-advisor](../.omo/plans/ai-inventory-expiry-advisor.md) , 24 todos Wave 0-4, dependency matrix, verification strategy.
 
 ---
 
-*Akhir decisions. Semua ADR plus Q1-Q13 terkunci Accepted 2026-08-31. Kalau mau ubah satu keputusan, tulis ADR baru, jangan ubah log ini.*
+*Akhir decisions. Semua ADR plus Q1-Q15 terkunci Accepted 2026-09-03 (Q14 Q15 amandemen ADR-003). Kalau mau ubah satu keputusan, tulis ADR baru, jangan ubah log ini.*

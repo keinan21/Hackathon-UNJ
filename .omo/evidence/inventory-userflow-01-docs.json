@@ -1,0 +1,56 @@
+{
+  "task": "ADR-003 Telegram + amandemen Must-NOT kamera/scan",
+  "branch": "feat/adr-003-telegram-scan",
+  "base": "main (fe5891e feat(real-data): reset ke data beneran)",
+  "date": "2026-09-03",
+  "status": "Accepted - docs-only Wave 0",
+  "files_created": ["docs/adr/0003-telegram-notif.md"],
+  "files_modified": [
+    "docs/decisions.md",
+    "docs/architecture.md",
+    "docs/frd/frd-02-inventaris.md",
+    "docs/frd/frd-03-expiry.md",
+    "AGENTS.md",
+    ".omo/notepads/inventory-userflow-rewrite/decisions.md",
+    ".omo/notepads/inventory-userflow-rewrite/learnings.md"
+  ],
+  "adr_003": {
+    "status": "Accepted (2026-09-03, amandemen Wave 0 — allowlist Telegram real-send + barcode scan)",
+    "context": "Butuh Telegram rekap 07:00 + cashflow 14d, sebelumnya stub waHook.log",
+    "decision": "Telegram Bot direct-HTTPS fetch api.telegram.org tanpa backend, token PBKDF2+AES-GCM via src/lib/crypto.ts, antre telegramQueue dedup batchId+tanggal retry 3x 5s/30s/5m, trigger 07:00 + on-demand batch kritis, kamera allowlist hanya html5-qrcode lazy di /scan",
+    "consequences": "Zero backend, tetap local-first 100% offline jalan, retry dedup cegah spam, lazy jaga bundle, offline fallback badge, token reuse crypto.ts",
+    "alternatives": "WA Business via backend ditolak (cost/server), FCM ditolak, Supabase ditolak, OCR tetap Must NOT",
+    "reversible": "Ganti ke backend proxy tanpa ubah trigger/queue, hapus Telegram tidak ubah engine",
+    "no_backend_leak": true,
+    "no_plaintext_token": true
+  },
+  "amandemen": {
+    "docs/decisions.md": "tambah ADR-003 verbatim + Q14 Telegram + Q15 Barcode scan + tradeoff #8 + timeline 3 baris 2026-09-03 + trace 2 baris + referensi ADR-003",
+    "docs/architecture.md": "stack + telegram + html5-qrcode, C4 Context tambah Telegram System_Ext, C4 Container tambah TelegramService + BarcodeScanner + telegramQueue, alur + telegramQueue tabel, Keputusan trace 2 baris, Apa yang Tidak Dibangun amandemen allowlist",
+    "docs/frd/frd-02-inventaris.md:130": "Must NOT barcode scan -> allowlist html5-qrcode lazy di /scan, OCR/QR tetap Must NOT",
+    "docs/frd/frd-03-expiry.md": "Requirements + Must NOT WA-send -> Telegram allowlist direct-HTTPS, WA tetap stub Must NOT, tambah references ADR-003",
+    "AGENTS.md": "local-first allowlist, Crew D larangan allowlist, Must telegramQueue + html5-qrcode lazy, Must NOT backend/OCR/QR allowlist saja + token plaintext larang, Referensi ADR-003"
+  },
+  "verification": {
+    "grep_ADR003_decisions": "PASS - grep -q \"ADR-003\" docs/decisions.md exit 0 (12 hits)",
+    "grep_telegram_architecture": "PASS - grep -q \"telegram\" docs/architecture.md exit 0 (15 hits)",
+    "grep_supabase_firebase_src": "PASS - grep -r \"supabase|firebase\" src -> 0",
+    "grep_ocr_qrcode_src": "PASS - grep -r \"supabase|firebase|ocr|qrcode\" src -> manual check 0 (allowlist only in docs)",
+    "bun_test_src": "PASS - bun test src -> 97 pass 0 fail (bun test tanpa filter: 97 pass 7 fail e2e false positive, vitest config include src only)",
+    "no_src_modified": "PASS - docs-only, tidak ubah src/**",
+    "no_plaintext_token_check": "PASS - no 123456:AA token in repo"
+  },
+  "notepads_appended": {
+    "decisions_md": "append 2 baris ADR-003 allowlist rationale, never overwrite",
+    "learnings_md": "append 5 baris pattern + Must-NOT amandemen + token + scan + verification"
+  },
+  "commit": "docs(adr): allowlist Telegram real-send + barcode camera scan",
+  "pr_instructions": "PR dari feat/adr-003-telegram-scan ke main, 1 reviewer, CI hijau (bun test src, build), squash merge, tidak merge langsung. Branch sudah dibuat dari main terbaru via git pull --rebase origin main. Evidence disync ke git.",
+  "next_steps": [
+    "git add docs/adr/0003-telegram-notif.md docs/decisions.md docs/architecture.md docs/frd/frd-02-inventaris.md docs/frd/frd-03-expiry.md AGENTS.md .omo/notepads/inventory-userflow-rewrite/decisions.md .omo/notepads/inventory-userflow-rewrite/learnings.md .omo/evidence/inventory-userflow-01-docs.json",
+    "git commit -m \"docs(adr): allowlist Telegram real-send + barcode camera scan\"",
+    "git push -u origin feat/adr-003-telegram-scan",
+    "Buka PR via gh pr create --title \"docs(adr): allowlist Telegram real-send + barcode camera scan\" --body refer docs/adr/0003-telegram-notif.md",
+    "Tunggu CI hijau + 1 reviewer approve, squash merge, hapus branch"
+  ]
+}

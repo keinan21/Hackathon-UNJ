@@ -49,7 +49,9 @@ Sistem hitung sendiri mana stok yang paling mepet kadaluarsa, urutkan paling urg
 - Notifikasi scheduler: cek harian jam 07:00 Asia/Jakarta via `setInterval` dan saat app dibuka. Bandingkan `days_to_expiry` dengan `threshold_h_minus` per Kategori. Jika cocok, tampilkan push notification dan update badge.
 - Threshold per Kategori editable, default `[7,3,1]` generik. Evaluasi per Batch pakai threshold kategori dari SKU induknya.
 - Badge: tampil di dashboard, hitung per SKU jumlah qty batch yang masuk threshold, warna merah jika H kurang sama dengan 1, oranye H kurang sama dengan 3, kuning H kurang sama dengan 7.
-- WA hook hanya stub `waHook.log`, tidak kirim WA sungguhan di v1. Eskalasi notifikasi tidak ada v1.
+- Notifikasi push browser 07:00 tetap jalan. **Telegram allowlist:** rekap stok kritis + cashflow 14 hari via `fetch https://api.telegram.org/bot<token>/sendMessage` direct-HTTPS tanpa backend, token terenkripsi PBKDF2+AES-GCM via `src/lib/crypto.ts`, antre offline `telegramQueue` dedup `batchId+tanggal` retry 3x 5s/30s/5m (ADR-003). Gagal kirim tidak block operasional, fallback badge.
+- WA Business API tetap stub `waHook.log` (Must NOT kirim WA sungguhan). Yang real-send hanya Telegram allowlist di atas.
+- Eskalasi notifikasi tidak ada v1.
 - LLM dilarang hitung `days_to_expiry` dan `urgencyScore`. Semua dari rule lokal.
 
 ---
@@ -134,9 +136,11 @@ Trace: TASK-08, TASK-09, TASK-10, TASK-11
 ## Must NOT Have
 
 - Tidak ada hitungan urgency atau days oleh LLM.
-- Tidak ada WA Business API send, hanya log.
+- Tidak ada WA Business API send, hanya stub log (Must NOT). Yang allowlist real-send hanya Telegram direct-HTTPS (ADR-003).
 - Tidak ada eskalasi atau snooze notifikasi v1.
 - Tidak ada simpan TZ UTC, harus Asia/Jakarta.
+- Tidak ada backend untuk notifikasi. Telegram pakai fetch langsung, tanpa server.
+- Tidak ada OCR. Telegram hanya kirim rekap, bukan baca foto.
 
 ---
 
@@ -145,6 +149,7 @@ Trace: TASK-08, TASK-09, TASK-10, TASK-11
 - [CONTEXT.md](../../CONTEXT.md:12-15) — Expiry, Days to Expiry, Avg Daily Usage, UrgencyScore verbatim.
 - [CONTEXT.md](../../CONTEXT.md:26) — LLM hanya wording dan pairing, angka dari DB.
 - [ADR-002](../adr/0002-langchain-gemini-hybrid-advisor.md) — Rule hitung urgency tanpa LLM, hemat token.
+- [ADR-003](../adr/0003-telegram-notif.md) — Telegram direct-HTTPS tanpa backend, token PBKDF2+AES-GCM, queue retry 3x dedup, tetap local-first.
 - Draft C3 Expiry Engine [.omo/drafts/ai-inventory-expiry-advisor.md](../../.omo/drafts/ai-inventory-expiry-advisor.md).
 
 ---
