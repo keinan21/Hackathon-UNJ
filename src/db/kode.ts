@@ -13,6 +13,37 @@
 import type { InventoryDB } from "./db";
 
 // ---------------------------------------------------------------------------
+// Curated prefixes — 11 kategori kelontong terkunci 2026-09-03
+// Nama persis → prefix. Seed-only untuk informasi; kode tidak disimpan di DB.
+// Fallback ke buildKodePrefix derivasi untuk kategori buatan user.
+// ---------------------------------------------------------------------------
+
+export const CURATED_PREFIXES: Record<string, string> = {
+  Sembako: "SEM",
+  "Bumbu Dapur": "BUM",
+  "Makanan Kering": "MKR",
+  "Makanan Basah": "MBS",
+  "Makanan Frozen": "MFZ",
+  "Minuman Kaleng": "MKL",
+  "Minuman Botol": "MBT",
+  "Obat Bebas": "OBT",
+  "Perawatan Diri": "PRW",
+  Rokok: "RKK",
+  Misc: "MSC",
+};
+
+export function getCuratedPrefix(namaKategori: string): string | undefined {
+  const trimmed = namaKategori.trim();
+  return CURATED_PREFIXES[trimmed];
+}
+
+export function getPrefixForKategori(namaKategori: string): string {
+  const curated = getCuratedPrefix(namaKategori);
+  if (curated) return curated;
+  return buildKodePrefix(namaKategori);
+}
+
+// ---------------------------------------------------------------------------
 // Pure helpers (no DB)
 // ---------------------------------------------------------------------------
 
@@ -47,7 +78,7 @@ export async function computeKode(
   orgId: string,
   db: InventoryDB
 ): Promise<string> {
-  const prefix = buildKodePrefix(kategoriNama);
+  const prefix = getPrefixForKategori(kategoriNama);
   const existing = await db.skus
     .where("org_id")
     .equals(orgId)
@@ -74,7 +105,7 @@ export async function regenerateKodesForKategori(
   // import lazy to avoid circular at top-level (ValidationError defined in db.ts)
   const { ValidationError } = await import("./db");
   if (!newNama || newNama.trim().length === 0) throw new ValidationError("Nama kategori tidak boleh kosong");
-  const prefix = buildKodePrefix(newNama);
+  const prefix = getPrefixForKategori(newNama);
 
   await db.transaction("rw", db.skus, db.kategoris, async () => {
     const kategori = await db.kategoris.get(kategoriId);

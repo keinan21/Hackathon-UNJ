@@ -66,7 +66,8 @@ test.describe("Katalog real + search + filter kategori/tag", () => {
     await btn.click();
     await expect(page).toHaveURL(/\/sku\/baru/);
     await expect(page.getByTestId("sku-baru-page")).toBeVisible();
-    await expect(page.getByText("segera hadir")).toBeVisible();
+    await expect(page.getByTestId("preview-kode")).toBeVisible();
+    await expect(page.getByTestId("input-nama")).toBeVisible();
     await page.getByTestId("sku-baru-back").click();
     await expect(page).toHaveURL("/");
     await page.getByTestId("nav-sku").click();
@@ -255,7 +256,8 @@ test.describe("Katalog real + search + filter kategori/tag", () => {
     await expect(tambahBtn).toHaveCSS("font-size", "16px");
     await tambahBtn.click();
     await expect(page).toHaveURL(/\/sku\/baru/);
-    await expect(page.getByText("segera hadir")).toBeVisible();
+    await expect(page.getByTestId("sku-baru-page")).toBeVisible();
+    await expect(page.getByTestId("preview-kode")).toBeVisible();
   });
 
   test("search kosong → tampil semua, tidak ada dispatch kosong katalog:tambah-sku", async ({ page }) => {

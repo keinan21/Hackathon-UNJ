@@ -17,10 +17,18 @@ type SeedRepository = {
 /** Default threshold H- generik, truth editable (FRD-02) */
 export const DEFAULT_THRESHOLD_H_MINUS: number[] = [7, 3, 1];
 
-const DEFAULT_KATEGORIS: Array<{ nama: string; threshold_h_minus: number[] }> = [
-  { nama: "Dairy", threshold_h_minus: [...DEFAULT_THRESHOLD_H_MINUS] },
-  { nama: "Snack", threshold_h_minus: [...DEFAULT_THRESHOLD_H_MINUS] },
-  { nama: "Beras", threshold_h_minus: [...DEFAULT_THRESHOLD_H_MINUS] },
+export const DEFAULT_KATEGORIS: Array<{ nama: string; threshold_h_minus: number[] }> = [
+  { nama: "Sembako", threshold_h_minus: [60, 30, 14] },
+  { nama: "Bumbu Dapur", threshold_h_minus: [30, 14, 7] },
+  { nama: "Makanan Kering", threshold_h_minus: [30, 14, 7] },
+  { nama: "Makanan Basah", threshold_h_minus: [7, 3, 1] },
+  { nama: "Makanan Frozen", threshold_h_minus: [14, 7, 3] },
+  { nama: "Minuman Kaleng", threshold_h_minus: [60, 30, 14] },
+  { nama: "Minuman Botol", threshold_h_minus: [30, 14, 7] },
+  { nama: "Obat Bebas", threshold_h_minus: [90, 30, 14] },
+  { nama: "Perawatan Diri", threshold_h_minus: [90, 30, 14] },
+  { nama: "Rokok", threshold_h_minus: [180, 90, 30] },
+  { nama: "Misc", threshold_h_minus: [14, 7, 3] },
 ];
 
 let seedLock: Promise<void> = Promise.resolve();

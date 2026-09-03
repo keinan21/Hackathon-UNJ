@@ -40,23 +40,23 @@ describe("seedDefaultKategoris", () => {
   test("seed creates 3 kategori each [7,3,1]", async () => {
     await seedDefaultKategoris(repo);
     const list = await repo.listKategoris();
-    expect(list).toHaveLength(3);
+    expect(list).toHaveLength(11);
 
     const names = list.map((k) => k.nama).sort();
-    expect(names).toEqual(["Beras", "Dairy", "Snack"]);
+    expect(names).toEqual(["Bumbu Dapur", "Makanan Basah", "Makanan Frozen", "Makanan Kering", "Minuman Botol", "Minuman Kaleng", "Misc", "Obat Bebas", "Perawatan Diri", "Rokok", "Sembako"]);
 
     for (const k of list) {
-      expect(k.threshold_h_minus).toEqual([7, 3, 1]);
-      // org_id default sync-ready sharding
       expect(k.org_id).toBe("toko-01");
     }
+    expect(list.find((k) => k.nama === "Sembako")?.threshold_h_minus).toEqual([60, 30, 14]);
+    expect(list.find((k) => k.nama === "Makanan Basah")?.threshold_h_minus).toEqual([7, 3, 1]);
   });
 
   test("idempotent: seed twice does not duplicate", async () => {
     await seedDefaultKategoris(repo);
     await seedDefaultKategoris(repo);
     const list = await repo.listKategoris();
-    expect(list).toHaveLength(3);
+    expect(list).toHaveLength(11);
   });
 
   test("seeds string-id real repository with default org", async () => {
@@ -110,29 +110,29 @@ describe("seedDefaultKategoris", () => {
   test("edit to [14,7,3] succeeds (editable threshold)", async () => {
     await seedDefaultKategoris(repo);
     const list = await repo.listKategoris();
-    const dairy = list.find((k) => k.nama === "Dairy")!;
-    expect(dairy).toBeDefined();
+    const cat = list.find((k) => k.nama === "Makanan Basah")!;
+    expect(cat).toBeDefined();
 
-    const updated = await repo.updateKategoriThreshold(dairy.id!, [14, 7, 3]);
+    const updated = await repo.updateKategoriThreshold(cat.id!, [14, 7, 3]);
     expect(updated.threshold_h_minus).toEqual([14, 7, 3]);
 
-    const got = await repo.getKategori(dairy.id!);
+    const got = await repo.getKategori(cat.id!);
     expect(got?.threshold_h_minus).toEqual([14, 7, 3]);
   });
 
   test("edit to [3,3,1] rejects duplicate", async () => {
     await seedDefaultKategoris(repo);
     const list = await repo.listKategoris();
-    const snack = list.find((k) => k.nama === "Snack")!;
-    await expect(repo.updateKategoriThreshold(snack.id!, [3, 3, 1])).rejects.toThrow(ValidationError);
-    await expect(repo.updateKategoriThreshold(snack.id!, [3, 3, 1])).rejects.toThrow("tidak boleh sama");
+    const cat = list.find((k) => k.nama === "Makanan Kering")!;
+    await expect(repo.updateKategoriThreshold(cat.id!, [3, 3, 1])).rejects.toThrow(ValidationError);
+    await expect(repo.updateKategoriThreshold(cat.id!, [3, 3, 1])).rejects.toThrow("tidak boleh sama");
   });
 
   test("edit to [] rejects (tidak boleh kosong)", async () => {
     await seedDefaultKategoris(repo);
     const list = await repo.listKategoris();
-    const beras = list.find((k) => k.nama === "Beras")!;
-    await expect(repo.updateKategoriThreshold(beras.id!, [])).rejects.toThrow(ValidationError);
-    await expect(repo.updateKategoriThreshold(beras.id!, [])).rejects.toThrow("tidak boleh kosong");
+    const cat = list.find((k) => k.nama === "Sembako")!;
+    await expect(repo.updateKategoriThreshold(cat.id!, [])).rejects.toThrow(ValidationError);
+    await expect(repo.updateKategoriThreshold(cat.id!, [])).rejects.toThrow("tidak boleh kosong");
   });
 });
