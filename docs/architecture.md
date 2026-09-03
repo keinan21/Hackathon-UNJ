@@ -6,7 +6,7 @@
 - **Tanggal:** 2026-08-31
 - **Status:** Accepted
 - **Prinsip:** Local-first, offline 100 persen operasional harian, angka dari DB bukan dari LLM
-- **Stack v1:** Vite + React + TypeScript + Dexie (IndexedDB) + vite-plugin-pwa + LangChain + Gemini 2.5 Flash (API, online on-demand)
+- **Stack v1:** Vite + React + TypeScript + Dexie (IndexedDB) + vite-plugin-pwa + LangChain + Gemini 2.5 Flash (API, online on-demand) + Telegram Bot API (direct-HTTPS fetch, allowlist) + html5-qrcode (lazy di /scan, allowlist)
 - **Rujukan:** [CONTEXT.md](../CONTEXT.md), [ADR-001](./adr/0001-local-first-dexie-backup-drive.md), [ADR-002](./adr/0002-langchain-gemini-hybrid-advisor.md), [FRD](../docs/frd.md)
 
 ---
@@ -51,23 +51,26 @@ C4Context
     Person(supervisor, "Supervisor", "Pemilik toko, 1 HP Android, non-tech")
     System(inventaris, "Inventaris AI Tebus Murah (PWA)", "PWA offline, kelola SKU/Batch, expiry engine, saran tebus murah")
     System_Ext(gemini, "Gemini 2.5 Flash API", "LLM untuk pairing dan wording promo, via LangChain")
+    System_Ext(telegram, "Telegram Bot API", "Rekap 07:00 + cashflow 14d, direct-HTTPS, allowlist")
     System_Ext(drive, "Google Drive (opsional)", "Backup manual file .json.enc, bukan sync otomatis")
     System_Ext(browser, "Browser + OS", "Chrome Android, Service Worker, Push Notification")
 
     Rel(supervisor, inventaris, "Kelola stok, approve promo, backup via PIN")
     Rel(inventaris, gemini, "Panggil top-N urgent saja, angka dari DB", "HTTPS, API key encrypted")
+    Rel(inventaris, telegram, "Kirim rekap stok kritis + cashflow, retry 3x dedup", "HTTPS fetch api.telegram.org, token encrypted")
     Rel(inventaris, drive, "Upload manual file backup jika tersedia")
     Rel(inventaris, browser, "Install PWA, cache shell, push H-7/H-3/H-1")
     Rel(browser, supervisor, "Notifikasi 07:00 WIB, badge dashboard")
+    Rel(telegram, supervisor, "Chat rekap 07:00 WIB di Telegram")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
 
 **Batas konteks yang penting:**
 
-- Di dalam sistem: semua logic inventaris, expiry engine, pairing rule, cache advisor, enkripsi backup.
-- Di luar sistem: Gemini API (online, on-demand), Google Drive (manual), browser sebagai runtime.
-- Tidak ada backend sendiri v1. Tidak ada server yang harus di-maintain.
+- Di dalam sistem: semua logic inventaris, expiry engine, pairing rule, cache advisor, enkripsi backup, antre Telegram, scan barcode.
+- Di luar sistem: Gemini API (online, on-demand), Telegram Bot API (direct-HTTPS, allowlist), Google Drive (manual), browser sebagai runtime.
+- Tidak ada backend sendiri v1. Tidak ada server yang harus di-maintain. Telegram adalah outbound fetch langsung dari browser, bukan backend.
 
 ---
 
@@ -87,19 +90,24 @@ C4Container
         Container(engine, "Expiry Engine", "TypeScript pure", "daysToExpiry Asia/Jakarta, urgencyScore, ranking, threshold per Kategori")
         Container(pairing, "Pairing Engine", "TypeScript pure", "Co-occurrence dari transaksi + fallback kategori")
         Container(advisor, "AdvisorService", "LangChain + Gemini 2.5 Flash", "Hybrid: top-N dari engine, LLM hanya wording pairing, guardrail HPP*0.85, cache 24 jam")
-        Container(scheduler, "Scheduler + SW", "Service Worker + setInterval", "Daily 07:00 cek threshold, 07:05 trigger advisor, push + badge")
-        Container(crypto, "Crypto Module", "Web Crypto API", "PBKDF2 100k + AES-GCM-256 untuk backup dan API key")
-        ContainerDb(dexie, "Dexie (IndexedDB)", "IndexedDB", "skus, batches, kategoris, transaksis, promos, advisorCache, settings. Indexed by org_id, sku_id, expiry_date")
+        Container(scheduler, "Scheduler + SW", "Service Worker + setInterval", "Daily 07:00 cek threshold, 07:05 trigger advisor, push + badge, rekap Telegram")
+        Container(telegram, "TelegramService", "TypeScript, fetch api.telegram.org", "Direct-HTTPS tanpa backend, token encrypted via crypto, queue retry 3x 5s/30s/5m dedup batchId+tanggal")
+        Container(scanner, "BarcodeScanner", "html5-qrcode lazy di /scan", "Scan barcode SKU, hanya minta kamera di /scan, fallback input manual")
+        Container(crypto, "Crypto Module", "Web Crypto API", "PBKDF2 100k + AES-GCM-256 untuk backup, API key, dan token Telegram")
+        ContainerDb(dexie, "Dexie (IndexedDB)", "IndexedDB", "skus, batches, kategoris, transaksis, promos, advisorCache, telegramQueue, settings. Indexed by org_id, sku_id, expiry_date")
     }
 
     System_Ext(gemini, "Gemini API", "LLM pairing")
+    System_Ext(telegramExt, "Telegram Bot API", "Rekap 07:00 + cashflow")
     System_Ext(drive, "Google Drive", "Backup opsional")
     Container_Ext(browser, "Browser Storage", "Cache API + Notification API")
 
     Rel(supervisor, ui, "Tap, input, approve")
+    Rel(supervisor, scanner, "Scan barcode di /scan")
     Rel(ui, repo, "CRUD via interface")
     Rel(ui, engine, "Minta ranking urgent")
     Rel(ui, advisor, "Minta saran tebus murah")
+    Rel(ui, scanner, "Buka /scan, lazy load html5-qrcode")
     Rel(engine, repo, "Baca batches, skus, kategoris, transaksis")
     Rel(pairing, repo, "Baca transaksis untuk co-occurrence")
     Rel(advisor, pairing, "Dapat pasangan SKU")
@@ -108,8 +116,12 @@ C4Container
     Rel(advisor, gemini, "Panggil LLM top-N saja", "HTTPS")
     Rel(advisor, crypto, "Guardrail cek harga sebelum simpan")
     Rel(scheduler, engine, "Cek threshold harian")
+    Rel(scheduler, telegram, "Trigger rekap 07:00 + on-demand batch kritis")
+    Rel(telegram, crypto, "Decrypt token saat kirim")
+    Rel(telegram, repo, "Baca queue telegramQueue, tulis antre jika offline")
+    Rel(telegram, telegramExt, "fetch POST sendMessage", "HTTPS")
     Rel(scheduler, browser, "Push notification, badge update")
-    Rel(crypto, dexie, "Encrypt backup .json.enc, decrypt restore")
+    Rel(crypto, dexie, "Encrypt backup .json.enc, decrypt restore, encrypt token Telegram")
     Rel(repo, dexie, "Dexie liveQuery, indexed access")
     Rel(ui, drive, "Download .json.enc, upload manual")
 
@@ -122,8 +134,10 @@ C4Container
 UI -> InventoryRepository -> Dexie
 Engine -> InventoryRepository -> Dexie
 AdvisorService -> Pairing + Engine -> InventoryRepository -> Dexie + (Gemini jika online)
-Scheduler -> Engine -> InventoryRepository -> Dexie -> Notification API
-Crypto -> PBKDF2(PIN) -> AES-GCM -> file .json.enc
+Scheduler -> Engine -> InventoryRepository -> Dexie -> Notification API + TelegramService
+TelegramService -> Crypto (decrypt token) -> fetch api.telegram.org -> Telegram, antre telegramQueue jika offline retry 3x 5s/30s/5m dedup batchId+tanggal
+BarcodeScanner -> html5-qrcode lazy di /scan -> isi barcode SKU, fallback manual jika permission denied
+Crypto -> PBKDF2(PIN) -> AES-GCM -> file .json.enc + token Telegram + API key Gemini
 ```
 
 Tidak ada jalur yang bypass Repository. Kalau ada code yang import Dexie langsung di komponen React, itu bug arsitektur.
@@ -142,7 +156,8 @@ Tidak ada jalur yang bypass Repository. Kalau ada code yang import Dexie langsun
 | `transaksis` | `id` | `org_id`, `sku_id`, `sold_at` | Sumber avgDailyUsage dan co-occurrence |
 | `promos` | `id` | `org_id`, `batch_id`, `status` | `proposed -> active -> expired/consumed` |
 | `advisorCache` | `id` | `org_id`, `batch_id`, `created_at` | TTL 24 jam, key `batch_id + created_at` |
-| `settings` | `key` | `org_id` | Simpan threshold, lastBackupAt, PIN hash |
+| `telegramQueue` | `id` | `org_id`, `dedupKey`, `created_at` | Antre Telegram offline, dedup `batchId+tanggal`, retry 3x 5s/30s/5m |
+| `settings` | `key` | `org_id` | Simpan threshold, lastBackupAt, PIN hash, token Telegram terenkripsi |
 
 Semua tabel punya `org_id` dengan default `toko-01`. Ini bukan premature optimization. Ini satu kolom yang bikin migration ke multi-toko tidak perlu rewrite.
 
@@ -164,6 +179,7 @@ db.version(1).stores({
   transaksis: 'id, org_id, sku_id, sold_at',
   promos: 'id, org_id, batch_id, status',
   advisorCache: 'id, org_id, batch_id, created_at',
+  telegramQueue: 'id, org_id, dedupKey, created_at',
   settings: 'key, org_id',
 });
 ```
@@ -495,6 +511,8 @@ Bukan teori, tapi yang benar-benar bisa kejadian di warung.
 | LangChain + Gemini hybrid, rule hitung angka | ADR-002 | Advisor hemat token, guardrail di code, cache 24 jam |
 | AdvisorPort interface | ADR-002 | Bisa swap Gemini ke model lain tanpa ubah engine |
 | org_id sharding sejak v1 | FRD-02 | Scalability 1 ke 10 tanpa migrasi skema |
+| Telegram direct-HTTPS + queue retry | ADR-003 | Outbound fetch tanpa backend, token encrypted, antre 3x dedup, tetap local-first |
+| Barcode scan html5-qrcode lazy /scan | ADR-003 | Kamera allowlist hanya di /scan, OCR tetap Must NOT |
 
 ---
 
@@ -506,9 +524,11 @@ Biar pragmatis, ini daftar yang sengaja tidak ada dan kenapa.
 - **Multi-HP sync:** Tidak ada. Sesuai FRD, single device. Sync disiapkan tapi tidak di-build.
 - **Multi-DC atau CRDT:** Tidak ada. Last-write-wins cukup untuk inventaris, bukan collaborative editor.
 - **OPFS SQLite:** Tidak ada. Dexie cukup, OPFS overkill untuk 500 SKU.
-- **WA Business API kirim:** Hanya stub log. Kirim beneran butuh server dan cost.
+- **WA Business API kirim:** Tetap stub log (Must NOT). Yang allowlist hanya **Telegram direct-HTTPS** via `fetch api.telegram.org` tanpa backend (ADR-003). WA butuh server dan cost, tidak dipakai.
 - **Chart kompleks dan export PDF dashboard:** Tidak ada. Dashboard cukup list dan card.
-- **Barcode scan camera:** Tidak ada. Input manual dulu, scan bisa tambah nanti tanpa ubah arsitektur.
+- **Barcode scan camera:** Allowlist terbatas: **hanya `html5-qrcode` lazy di route `/scan`** untuk isi barcode SKU (ADR-003). OCR baca nota foto dan QR generation tetap Must NOT. Kamera tidak dipakai untuk fitur lain, permission hanya di `/scan`, fallback input manual jika denied.
+- **OCR / QR code generation:** Tetap Must NOT v1. Tidak ada tesseract, tidak ada `qrcode` lib. Barcode scan bukan OCR.
+- **Backend proxy untuk Telegram:** Tidak ada v1. Direct-HTTPS cukup, token enkripsi lokal via `src/lib/crypto.ts`.
 
 ---
 
@@ -517,6 +537,7 @@ Biar pragmatis, ini daftar yang sengaja tidak ada dan kenapa.
 - [CONTEXT.md](../CONTEXT.md) — SKU, Batch, Kategori, Expiry, UrgencyScore, Tebus Murah, guardrail HPP*0.85
 - [ADR-001](./adr/0001-local-first-dexie-backup-drive.md) — Local-first Dexie, Repository reversible, backup Drive
 - [ADR-002](./adr/0002-langchain-gemini-hybrid-advisor.md) — Hybrid rule + LLM, cache Dexie, AdvisorPort
+- [ADR-003](./adr/0003-telegram-notif.md) — Telegram direct-HTTPS tanpa backend, queue retry 3x dedup, html5-qrcode lazy /scan
 - [FRD](../docs/frd.md) — 6 feature FRD-01 sampai FRD-06, KPI waste -50 persen
 - [Design](../docs/design.md) — Wireframe low-fi, 3-tap journey, token 48px/16px
 

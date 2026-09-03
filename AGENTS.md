@@ -69,7 +69,7 @@ Empat kata ini jadi leading word tiap keputusan. Hafal urutannya.
 
 - **Trigger tiap branch:** sebelum pakai fetch atau API eksternal, tanya apakah bisa selesai dengan Dexie via `InventoryRepository`.
 - Data di IndexedDB via Dexie, `org_id` default `toko-01` sejak v1 untuk sharding siap 1 ke 10 toko.
-- Tidak ada backend wajib v1. Tidak ada Supabase, Firebase, OCR, QR di Wave 0 sampai Wave 4.
+- Tidak ada backend wajib v1. Tidak ada Supabase, Firebase di Wave 0 sampai Wave 4. **Allowlist pengecualian (ADR-003):** Telegram Bot direct-HTTPS `fetch api.telegram.org` tanpa backend (token enkripsi PBKDF2+AES-GCM via `src/lib/crypto.ts`, antre retry 3x 5s/30s/5m dedup `batchId+tanggal`), dan kamera hanya untuk barcode scan `html5-qrcode` lazy di `/scan`. OCR baca nota dan QR generation tetap Must NOT.
 - Angka dari DB, bukan dari LLM. LLM hanya wording dan pairing.
 
 ### per-feature — Satu TASK satu FRD, jangan global
@@ -122,7 +122,7 @@ test -f docs/frd.md && test -f docs/design.md && test -f docs/architecture.md &&
 | **Crew A — Frontend** | Frontend | 1 orang | TASK-04, TASK-11, TASK-15, TASK-17, TASK-19, TASK-20 + Design | `src/features/dashboard/**`, `src/features/promo/**`, `src/features/settings/**`, `src/components/**`, `e2e/**`, `docs/design.md`, `public/icons/**`, `vite.config.ts` PWA manifest | Dilarang ubah `src/db/**`, `src/engine/**`, `src/advisor/**` tanpa pair dengan Crew B atau C. Dilarang hitung UrgencyScore atau harga_tebus di komponen, angka harus dari DB atau engine. |
 | **Crew B — Core** | Core Inventaris dan Engine | 1 orang | TASK-02, TASK-05, TASK-06, TASK-07, TASK-08, TASK-09, TASK-10 | `src/db/**`, `src/engine/**`, `src/features/sku/**`, `src/features/batch/**`, `src/sw/notif.ts`, `TASK.md` inventaris | Dilarang simpan expiry di SKU. Dilarang biarkan LLM hitung days_to_expiry atau urgencyScore. Dilarang hardcode threshold non-editable, harus via `seed.ts` editable. |
 | **Crew C — Advisor** | Advisor Tebus Murah | 1 orang | TASK-12, TASK-13, TASK-14, TASK-16 | `src/advisor/**`, `src/features/promo/**` logic pairing dan guardrail, `src/lib/validation.ts` | Dilarang biarkan LLM ngarang angka harga atau HPP. Dilarang lewati guardrail `harga_tebus >= HPP * 0.85`. Dilarang auto-activate promo, harus proposed dulu. |
-| **Crew D — Platform** | Platform PWA dan Security | 1 orang | TASK-01, TASK-03, TASK-18 + F1 sampai F4 cross-cutting | `src/features/auth/**`, `src/features/backup/**`, `src/lib/crypto.ts`, `vite.config.ts` scaffold, `package.json` deps, `public/**`, `docs/architecture.md`, `docs/decisions.md` | Dilarang tambah backend server, Supabase, OCR, QR, WA send v1. Dilarang simpan PIN atau API key plain text. Dilarang multi-role, hanya single Supervisor. |
+| **Crew D — Platform** | Platform PWA dan Security | 1 orang | TASK-01, TASK-03, TASK-18 + F1 sampai F4 cross-cutting | `src/features/auth/**`, `src/features/backup/**`, `src/lib/crypto.ts`, `vite.config.ts` scaffold, `package.json` deps, `public/**`, `docs/architecture.md`, `docs/decisions.md` | Dilarang tambah backend server, Supabase, OCR, QR generation, WA send v1. Allowlist pengecualian ADR-003: Telegram direct-HTTPS tanpa backend dan `html5-qrcode` lazy di `/scan` saja. Dilarang simpan PIN, API key, atau token Telegram plain text. Dilarang multi-role, hanya single Supervisor. |
 
 Catatan pembagian:
 
@@ -310,6 +310,8 @@ git branch -d feat/TASK-02-dexie-schema
 - Must enforce `harga_tebus >= HPP * 0.85` sebelum LLM call, angka dari DB.
 - Must tulis tombol min 48px, font min 16px, bahasa Indonesia di semua UI.
 - Must cache advisor di `advisorCache` Dexie TTL 24 jam, trigger daily 07:05 plus on-demand after batch insert urgent.
+- Must enkripsi token Telegram via PBKDF2 100k + AES-GCM di `src/lib/crypto.ts`, antre di `telegramQueue` Dexie retry 3x 5s/30s/5m dedup `batchId+tanggal`, fetch `api.telegram.org` direct-HTTPS tanpa backend.
+- Must lazy-load `html5-qrcode` hanya di route `/scan` untuk barcode SKU, fallback input manual jika permission denied. OCR dan QR generation tetap dilarang.
 - Must 1 worktree per TASK, 1 reviewer per PR, conventional commits.
 - Must simpan Evidence di `.omo/evidence/task-yy-*` dan sync ke git.
 
@@ -318,11 +320,12 @@ git branch -d feat/TASK-02-dexie-schema
 - Must NOT simpan expiry di SKU. Expiry milik Batch. `expiry_date = null` untuk non-perishable, skip engine.
 - Must NOT biarkan LLM hitung angka harga, HPP, urgency, atau days_to_expiry. LLM hanya wording dan pairing.
 - Must NOT hardcode threshold non-editable. Seed default `[7,3,1]` editable via `updateKategoriThreshold`.
-- Must NOT tambah backend, Supabase, Firebase, OCR, QR, WA send, POS cart, multi-role di v1.
+- Must NOT tambah backend, Supabase, Firebase, OCR, QR generation, WA send, POS cart, multi-role di v1. Allowlist: Telegram `api.telegram.org` fetch dan `html5-qrcode` lazy di `/scan` (ADR-003) saja.
 - Must NOT push langsung ke main. Must NOT merge tanpa CI hijau dan 1 reviewer.
 - Must NOT kerjakan 2 TASK di 1 worktree.
 - Must NOT tulis kode `src/**` di mode docs-only sebelum Gate hijau.
 - Must NOT buat file di luar yang di-assign crew tanpa pair.
+- Must NOT simpan token Telegram, PIN, atau API key plain text di code atau git.
 - Must NOT tambah placeholder TODO di docs. Tulis lengkap atau kosongkan dengan alasan jelas.
 
 ---
@@ -389,11 +392,12 @@ Jika butuh angka, buka frd-0x per-feature. Jika butuh rationale, buka `docs/deci
 - `docs/frd/frd-06-backup.md` — F6 Backup Restore, trace TASK-03,18
 - `docs/design.md` — UX UMKM 3-tap, journey, wireframe, token 48px 16px
 - `docs/architecture.md` — C4, Repository, org_id sharding, tradeoff, security
-- `docs/decisions.md` — ADR-001, ADR-002, Q1-Q13
+- `docs/decisions.md` — ADR-001, ADR-002, ADR-003, Q1-Q15
 - `TASK.md` — 24 tasks hands-off, dependency, QA, Evidence, commit
 - `.omo/plans/ai-inventory-expiry-advisor.md` — Plan 24 Todos verbatim
 - `docs/adr/0001-local-first-dexie-backup-drive.md` — ADR local-first
 - `docs/adr/0002-langchain-gemini-hybrid-advisor.md` — ADR hybrid advisor
+- `docs/adr/0003-telegram-notif.md` — ADR Telegram direct-HTTPS + barcode scan allowlist
 
 ---
 

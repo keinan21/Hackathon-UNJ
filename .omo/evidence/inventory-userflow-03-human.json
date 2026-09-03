@@ -1,0 +1,55 @@
+{
+  "task": "3. HUMAN.md + spesifikasi secret Telegram — Quote EXACT: buat HUMAN.md mandiri lengkap berisi langkah owner: buat bot via BotFather, isi token + chat ID (ditempel worker saat implementasi Wave 5, lalu token dienkripsi ke settings, HUMAN.md tidak menyimpan token asli)",
+  "branch": "feat/human-telegram-setup",
+  "base": "main (34bc91b chore plan + 384a368 docs adr allowlist)",
+  "date": "2026-09-03",
+  "status": "Done - docs-only HUMAN.md",
+  "files_created": ["HUMAN.md"],
+  "files_modified": [
+    ".omo/notepads/inventory-userflow-rewrite/decisions.md",
+    ".omo/notepads/inventory-userflow-rewrite/learnings.md",
+    ".omo/evidence/inventory-userflow-03-human.json"
+  ],
+  "files_not_modified": ["src/**", "docs/frd/**", "CONTEXT.md", "AGENTS.md"],
+  "human_md": {
+    "path": "HUMAN.md",
+    "language": "Bahasa Indonesia sederhana owner non-teknis",
+    "steps": [
+      "1) Buka Telegram → chat @BotFather → /newbot → nama → username berakhir bot → dapat token, simpan sebagai <TOKEN_BOT_KAMU>, jangan share",
+      "2) Dapat Chat ID via @userinfobot (Id:) atau via https://api.telegram.org/bot<TOKEN_BOT_KAMU>/getUpdates cari chat.id, catat sebagai <CHAT_ID_KAMU>",
+      "3) Tempel token + chat ID saat worker Wave 5 ingatkan di chat → buka aplikasi → Setting → kolom Notifikasi Telegram → tempel → Simpan",
+      "4) Token disimpan terenkripsi PBKDF2 100k + AES-GCM via src/lib/crypto.ts (salt 16 byte, iv 12 byte, key tidak extractable) ke settings Dexie, tidak pernah plaintext di git"
+    ],
+    "warnings": "JANGAN share token, JANGAN commit ke git, pakai /revoke di @BotFather jika bocor, HUMAN.md tidak simpan token asli",
+    "placeholder": "<TOKEN_BOT_KAMU> dan <CHAT_ID_KAMU>, tidak pakai pola [0-9]{8,10}:AA agar grep 0",
+    "schedule": "Rekap 07:00 WIB + on-demand batch kritis, antre telegramQueue dedup batchId+tanggal retry 3x 5s/30s/5m, fallback badge dashboard",
+    "self_contained": true
+  },
+  "crypto_reference": {
+    "file": "src/lib/crypto.ts",
+    "api": "deriveKey(pin, salt), generateSalt 16 byte, generateIv 12 byte, encryptString/decryptString AES-GCM-256, ITERATIONS 100_000, HASH SHA-256",
+    "usage": "Token Telegram dienkripsi sama seperti PIN dan API key Gemini, key tidak disimpan, hanya ciphertext di settings"
+  },
+  "verification": {
+    "test_f_human": "PASS - test -f HUMAN.md exit 0",
+    "grep_token_pattern": "PASS - grep -E \"[0-9]{8,10}:AA\" HUMAN.md -> exit 1, 0 hits (tidak ada token asli, placeholder <TOKEN_BOT_KAMU> aman)",
+    "grep_placeholder_check": "PASS - grep -q \"<TOKEN_BOT_KAMU>\" HUMAN.md exit 0, grep -q \"BotFather\" exit 0, grep -q \"PBKDF2\" exit 0",
+    "bun_test_src": "PASS - bun test src -> 97 pass 0 fail 370 expect, 13 files (bun test tanpa filter 97 pass 7 fail e2e false positive, vitest include src only)",
+    "no_src_modified": "PASS - git diff --name-only | grep src -> 0",
+    "no_plaintext_token_in_repo": "PASS - grep -r \"[0-9]{8,10}:AA\" HUMAN.md -> 0, no real token in git",
+    "evidence_exists": "PASS - test -f .omo/evidence/inventory-userflow-03-human.json exit 0"
+  },
+  "notepads_appended": {
+    "decisions_md": "append 1 baris HUMAN.md Telegram setup 4 langkah + enkripsi + dedup + branch, never overwrite",
+    "learnings_md": "append 1 baris placeholder grep 0 + BotFather /newbot + chat ID + crypto salt16 iv12 + revoke + evidence"
+  },
+  "commit": "docs(human): Telegram bot setup steps, no plaintext token",
+  "pr_instructions": "PR dari feat/human-telegram-setup ke main, 1 reviewer, CI hijau (bun test src, build), squash merge, tidak merge langsung. Branch dibuat dari main terbaru via git pull --rebase origin main. Evidence disync ke git.",
+  "next_steps": [
+    "git add HUMAN.md .omo/notepads/inventory-userflow-rewrite/decisions.md .omo/notepads/inventory-userflow-rewrite/learnings.md .omo/evidence/inventory-userflow-03-human.json",
+    "git commit -m \"docs(human): Telegram bot setup steps, no plaintext token\"",
+    "git push -u origin feat/human-telegram-setup",
+    "Buka PR via gh pr create --title \"docs(human): Telegram bot setup steps, no plaintext token\" --body refer HUMAN.md mandiri lengkap",
+    "Tunggu CI hijau + 1 reviewer approve, squash merge, hapus branch"
+  ]
+}
