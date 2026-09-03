@@ -5,6 +5,7 @@ export interface SKU {
   hpp: number;
   harga_normal: number;
   barcode?: string;
+  kode?: string;
   org_id: string; // sync-ready sharding, v1 single org toko-01
 }
 
@@ -31,8 +32,33 @@ export interface Transaksi {
   qty_sold: number;
   sold_at: string; // ISO
   org_id: string;
-  // optional grouping for co-occurrence: transactions sharing same sold_at are considered same basket
-  // if needed, use exact sold_at match
+  jenis?: "masuk" | "keluar" | "opname" | string;
+  harga_jual_snapshot?: number;
+  pengirim?: string | null;
+  penerima?: string | null;
+  catatan?: string | null;
+}
+
+export interface Tag {
+  id: string;
+  nama: string;
+  org_id: string;
+}
+
+export interface SkuTag {
+  id: string;
+  sku_id: string;
+  tag_id: string;
+  org_id: string;
+}
+
+export interface HppHistory {
+  id: string;
+  sku_id: string;
+  hpp_lama: number;
+  hpp_baru: number;
+  created_at: string;
+  org_id: string;
 }
 
 export interface Promo {

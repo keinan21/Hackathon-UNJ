@@ -1,5 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import type { SKU, Batch, Kategori, Transaksi, Promo, AdvisorCacheEntry } from "./types";
+import type { SKU, Batch, Kategori, Transaksi, Promo, AdvisorCacheEntry, Tag, SkuTag, HppHistory } from "./types";
 import type { InventoryRepository } from "./repository";
 
 /**
@@ -14,6 +14,9 @@ export class InventarisDexie extends Dexie {
   transaksis!: Table<Transaksi, string>;
   promos!: Table<Promo, string>;
   advisorCache!: Table<AdvisorCacheEntry, [string, string]>; // key [org_id+batch_id]
+  tags!: Table<Tag, string>;
+  sku_tags!: Table<SkuTag, string>;
+  hpp_history!: Table<HppHistory, string>;
 
   constructor(name = "inventaris-tebus-murah-v2") {
     super(name);
@@ -25,10 +28,16 @@ export class InventarisDexie extends Dexie {
       promos: "id, org_id, status, batch_id",
       advisorCache: "[org_id+batch_id], org_id, batch_id, created_at",
     });
-    // v2: tambah compound index untuk query where("[org_id+sku_id]") — fix SchemaError
     this.version(2).stores({
       batches: "id, org_id, sku_id, expiry_date, [org_id+sku_id]",
       transaksis: "id, org_id, sku_id, sold_at, [org_id+sku_id]",
+    });
+    this.version(3).stores({
+      skus: "id, org_id, kategori_id, kode, &[org_id+kode]",
+      transaksis: "id, org_id, sku_id, sold_at, [org_id+sku_id], jenis, harga_jual_snapshot",
+      tags: "id, org_id, nama, &[org_id+nama]",
+      sku_tags: "id, org_id, sku_id, tag_id, &[sku_id+tag_id], [org_id+sku_id]",
+      hpp_history: "id, org_id, sku_id, created_at, [org_id+sku_id]",
     });
   }
 }
@@ -132,13 +141,12 @@ export class DexieInventoryRepository implements InventoryRepository {
     await this.db.advisorCache.where("org_id").equals(orgId).delete();
   }
 
-  // Reset semua data org toko-01 (untuk tombol Reset Data)
   async clearAll(orgId = "toko-01") {
     await this.db.transaction(
       "rw",
-      [this.db.skus, this.db.kategoris, this.db.batches, this.db.transaksis, this.db.promos, this.db.advisorCache],
+      [this.db.skus, this.db.kategoris, this.db.batches, this.db.transaksis, this.db.promos, this.db.advisorCache, this.db.tags, this.db.sku_tags, this.db.hpp_history],
       async () => {
-        for (const t of [this.db.skus, this.db.kategoris, this.db.batches, this.db.transaksis, this.db.promos, this.db.advisorCache] as Table<any, any>[]) {
+        for (const t of [this.db.skus, this.db.kategoris, this.db.batches, this.db.transaksis, this.db.promos, this.db.advisorCache, this.db.tags, this.db.sku_tags, this.db.hpp_history] as Table<any, any>[]) {
           await t.where("org_id").equals(orgId).delete();
         }
       },
