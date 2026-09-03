@@ -7,11 +7,11 @@ export function validateHargaTebus(
   if (!Number.isFinite(hpp) || hpp <= 0) {
     return { valid: false, error: 'HPP harus lebih dari 0' };
   }
-  if (!Number.isFinite(hargaTebus)) {
-    return { valid: false, error: 'Harga tebus tidak valid' };
-  }
   if (Number.isNaN(hargaTebus)) {
     return { valid: false, error: 'Harga tebus tidak boleh NaN' };
+  }
+  if (!Number.isFinite(hargaTebus)) {
+    return { valid: false, error: 'Harga tebus tidak valid' };
   }
   const floor = hpp * 0.85;
   if (hargaTebus < floor - 1e-9) {

@@ -56,29 +56,14 @@ test.describe("PWA shell + manifest + SW + offline", () => {
 
   test("shell renders and offline reload still renders shell (mock route)", async ({ page }) => {
     await page.goto("/");
-    // Shell must render without white crash — check main heading and Stok Mepet section (demo has 2 urgent)
     await expect(page.getByRole("heading", { name: "Inventaris Tebus Murah" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("heading", { name: "Stok Mepet" })).toBeVisible();
+    await expect(page.getByText("Stok aman, tidak ada yang mepet kadaluarsa. Cek lagi besok jam 7 pagi.")).toBeVisible();
 
-    // Simulate offline: block all subsequent network for js/css? Instead use page.route to mock offline reload
-    // Emulate offline by routing fallback: ensure page still renders shell after route block
-    await page.route("**/*", (route) => {
-      const url = route.request().url();
-      // Allow document itself, block only API-like fetches — but we have no API, so just continue
-      // To test offline shell, we reload and ensure shell still visible even when route aborts non-doc
-      if (route.request().resourceType() === "document") {
-        return route.continue();
-      }
-      // For offline simulation, abort non-document to simulate no network for dynamic data
-      // But allow js/css so shell still loads from cache simulation
-      const isAsset = url.endsWith(".js") || url.endsWith(".css") || url.endsWith(".html");
-      if (isAsset) return route.continue();
-      return route.abort();
-    });
+    await page.route("**/api/**", (route) => route.abort());
 
     await page.reload();
     await expect(page.getByRole("heading", { name: "Inventaris Tebus Murah" })).toBeVisible({ timeout: 10_000 });
-    // No white page crash — body must have content
     const bodyText = await page.locator("body").innerText();
     expect(bodyText.length).toBeGreaterThan(20);
   });

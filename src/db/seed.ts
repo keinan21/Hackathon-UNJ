@@ -9,7 +9,10 @@
  * Idempotent: cek listKategoris dulu, jika nama sudah ada skip.
  */
 
-import type { InventoryRepository } from "./db";
+type SeedRepository = {
+  listKategoris(orgId?: string): Promise<Array<{ nama: string }>>;
+  createKategori(k: { nama: string; threshold_h_minus: number[] }): Promise<unknown>;
+};
 
 /** Default threshold H- generik, truth editable (FRD-02) */
 export const DEFAULT_THRESHOLD_H_MINUS: number[] = [7, 3, 1];
@@ -25,8 +28,8 @@ const DEFAULT_KATEGORIS: Array<{ nama: string; threshold_h_minus: number[] }> = 
  * Idempotent: query listKategoris, skip nama yang sudah ada.
  * Pakai createKategori (org_id default toko-01, sync-ready sharding).
  */
-export async function seedDefaultKategoris(repo: InventoryRepository): Promise<void> {
-  const existing = await repo.listKategoris();
+export async function seedDefaultKategoris(repo: SeedRepository): Promise<void> {
+  const existing = await repo.listKategoris("toko-01");
   const existingNames = new Set(existing.map((k) => k.nama));
 
   for (const k of DEFAULT_KATEGORIS) {

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Promo approve dialog 2-tap Formal warung", () => {
   test("happy: proposed → Setujui → Dialog Yakin → toast tampil Dashboard", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     await expect(page.getByRole("heading", { name: "Promo Tebus Murah" })).toBeVisible();
     // Find Setujui Tebus Murah button (first proposed card)
     const approveBtn = page.getByRole("button", { name: /Setujui Tebus Murah|Setujui/ }).first();
@@ -53,7 +53,7 @@ test.describe("Promo approve dialog 2-tap Formal warung", () => {
   });
 
   test("guardrail fail di bawah floor disabled dan alert", async ({ page }) => {
-    await page.goto("/?promo=guardrailFail");
+    await page.goto("/?seed=demo&promo=guardrailFail");
     const btn = page.getByRole("button", { name: /Setujui/ }).first();
     await expect(btn).toBeVisible();
     await btn.click();
@@ -81,7 +81,7 @@ test.describe("Promo approve dialog 2-tap Formal warung", () => {
   });
 
   test("escape closes dialog and focus trap", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     await page.getByRole("button", { name: /Setujui/ }).first().click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
@@ -90,7 +90,7 @@ test.describe("Promo approve dialog 2-tap Formal warung", () => {
   });
 
   test("a11y dialog 48px full width bahasa formal", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     await page.getByRole("button", { name: /Setujui/ }).first().click();
     const yakin = page.getByTestId("dialog-confirm-yakin");
     await expect(yakin).toHaveCSS("min-height", "48px");

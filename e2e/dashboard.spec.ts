@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Dashboard 3 seksi + histori + promo", () => {
   test("dashboard shows 3 sections Stok Mepet + Promo Tebus Murah + Histori Saran", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     await expect(page.getByRole("heading", { name: "Stok Mepet" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Promo Tebus Murah" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Histori Saran" })).toBeVisible();
@@ -15,7 +15,7 @@ test.describe("Dashboard 3 seksi + histori + promo", () => {
     // Histori last 5
     const historiItems = page.locator('[data-testid^="histori-hist-"]');
     await expect(historiItems).toHaveCount(5);
-    await expect(page.getByText("Menampilkan 5 terbaru dari 10 saran")).toBeVisible();
+    await expect(page.getByText("Menampilkan 5 terbaru dari 5 saran")).toBeVisible();
 
     // Font size >=16px on dashboard cards
     const cardText = page.locator('[data-testid="section-histori"] li').first();
@@ -33,7 +33,7 @@ test.describe("Dashboard 3 seksi + histori + promo", () => {
   });
 
   test("histori detail navigation pushState and back", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     const firstHist = page.locator('[data-testid="histori-hist-1"]').first();
     await expect(firstHist).toBeVisible();
     await firstHist.click();
@@ -71,7 +71,7 @@ test.describe("Dashboard 3 seksi + histori + promo", () => {
 
   test("dashboard responsive 375 no h-scroll and max-w 480", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 800 });
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     await expect(page.getByRole("heading", { name: "Stok Mepet" })).toBeVisible();
     const hasHScroll = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     expect(hasHScroll).toBe(false);

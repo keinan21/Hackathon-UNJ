@@ -22,6 +22,7 @@ if (!g.indexedDB) {
 }
 
 const { InventoryDB, DexieRepository, ValidationError } = await import("./db");
+const { InventarisDexie, DexieInventoryRepository } = await import("./dexieRepository");
 const { seedDefaultKategoris } = await import("./seed");
 
 type Repo = import("./db").InventoryRepository;
@@ -56,6 +57,54 @@ describe("seedDefaultKategoris", () => {
     await seedDefaultKategoris(repo);
     const list = await repo.listKategoris();
     expect(list).toHaveLength(3);
+  });
+
+  test("seeds string-id real repository with default org", async () => {
+    const realDb = new InventarisDexie(`test-real-seed-${crypto.randomUUID()}`);
+    const realRepo = new DexieInventoryRepository(realDb);
+
+    await seedDefaultKategoris(realRepo);
+    const kategori = (await realRepo.listKategoris("toko-01"))[0];
+    await realRepo.createSku({
+      id: "sku-1",
+      nama: "Susu",
+      kategori_id: kategori.id,
+      hpp: 1000,
+      harga_normal: 1200,
+      org_id: "toko-01",
+    });
+    await realRepo.createBatch({
+      id: "batch-1",
+      sku_id: "sku-1",
+      qty: 1,
+      expiry_date: "2026-09-05",
+      received_at: "2026-09-03T00:00:00.000Z",
+      hpp_snapshot: 1000,
+      org_id: "toko-01",
+    });
+
+    expect(await realRepo.listBatchesBySku("sku-1", "toko-01")).toHaveLength(1);
+    await realRepo.setAdvisorCache({
+      id: "cache-1",
+      org_id: "toko-01",
+      batch_id: "batch-1",
+      suggestion: {
+        batch_id: "batch-1",
+        aksi: "tebus_murah",
+        alasan: "H-3",
+        pasangan_tebus_murah: null,
+        harga_tebus: 900,
+        estimasi_margin: 0,
+        confidence: "Tinggi",
+        created_at: "2026-09-03T00:00:00.000Z",
+      },
+      created_at: "2026-09-03T00:00:00.000Z",
+    });
+    expect((await realRepo.getAdvisorCache("batch-1", "toko-01"))?.id).toBe("cache-1");
+    await realRepo.clearAll();
+    expect(await realRepo.listKategoris("toko-01")).toHaveLength(0);
+    expect(await realRepo.listBatchesBySku("sku-1", "toko-01")).toHaveLength(0);
+    await realDb.delete();
   });
 
   test("edit to [14,7,3] succeeds (editable threshold)", async () => {

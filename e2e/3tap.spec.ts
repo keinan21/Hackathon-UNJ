@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("3-tap max flow", () => {
   test("promo approve flow ≤3 taps: Dashboard -> Lihat Saran -> Setujui -> Yakin", async ({ page }) => {
     let tapCount = 0;
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     await expect(page.getByRole("heading", { name: "Stok Mepet" })).toBeVisible();
     const setujui = page.getByRole("button", { name: /Setujui/ }).first();
     await expect(setujui).toBeVisible();
@@ -18,7 +18,7 @@ test.describe("3-tap max flow", () => {
   });
 
   test("3-tap KPI evaluated via JS", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     const taps = await page.evaluate(() => {
       // simulate counting: buka (0) -> lihat urgent (1) -> tap approve (2) -> yakin (3)
       // This is static KPI: flow buka→lihat→approve ≤3 per design
@@ -29,7 +29,7 @@ test.describe("3-tap max flow", () => {
   });
 
   test("settings edit ≤3 taps: Pengaturan nav -> edit -> Simpan", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     let count = 0;
     const pengaturanNav = page.getByTestId("nav-settings");
     await expect(pengaturanNav).toBeVisible();
@@ -47,7 +47,7 @@ test.describe("3-tap max flow", () => {
   });
 
   test("navigation buttons 48px and bahasa Indonesia", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     for (const nav of ["nav-dashboard", "nav-sku", "nav-promo", "nav-settings"]) {
       const btn = page.getByTestId(nav);
       await expect(btn).toBeVisible();
@@ -58,7 +58,7 @@ test.describe("3-tap max flow", () => {
   });
 
   test("all primary buttons 48px w-full text-base", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     const promoBtn = page.getByRole("button", { name: /Setujui/ }).first();
     await expect(promoBtn).toHaveCSS("min-height", "48px");
     await expect(promoBtn).toHaveClass(/w-full/);

@@ -104,15 +104,6 @@ export async function deriveKey(pin: string, salt: Uint8Array): Promise<CryptoKe
 
 /** Derive 32 byte hash untuk simpan verifikasi PIN (PBKDF2 bits) */
 export async function derivePinHash(pin: string, salt: Uint8Array): Promise<Uint8Array> {
-  // Try Node/Bun pbkdf2Sync fallback first (Bun's WebCrypto deriveBits has bug with PBKDF2)
-  try {
-    const nodeCrypto = (await import("node:crypto").catch(() => null)) as unknown as { pbkdf2Sync?: (...args: unknown[]) => Uint8Array } | null;
-    if (nodeCrypto?.pbkdf2Sync) {
-      const out = (nodeCrypto.pbkdf2Sync as (p: string, s: Uint8Array, iter: number, len: number, hash: string) => Uint8Array)(pin, salt, ITERATIONS, 32, "sha256");
-      return out instanceof Uint8Array ? out : new Uint8Array(out);
-    }
-  } catch {}
-  // Fallback to WebCrypto subtle
   const enc = new TextEncoder();
   const subtle = getSubtle();
   const baseKey = await subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveBits"]);

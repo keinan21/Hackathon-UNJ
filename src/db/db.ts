@@ -95,7 +95,7 @@ export class InventoryDB extends Dexie {
   batches!: Table<Batch, number>;
   transaksis!: Table<Transaksi, number>;
   promos!: Table<Promo, number>;
-  advisorCache!: Table<AdvisorCache, string>;
+  advisorCache!: Table<AdvisorCache, [string, string]>;
 
   constructor(name = "inventaris-tebus-murah") {
     super(name);
@@ -108,7 +108,7 @@ export class InventoryDB extends Dexie {
       batches: "++id, sku_id, expiry_date, org_id, [org_id+sku_id]",
       transaksis: "++id, sku_id, sold_at, org_id",
       promos: "++id, status, batch_id, org_id",
-      advisorCache: "key, org_id",
+      advisorCache: "[key+org_id], key, org_id",
     });
   }
 }
@@ -336,6 +336,6 @@ export class DexieRepository implements InventoryRepository {
 
   async getAdvisorCache(key: string, org_id?: string): Promise<AdvisorCache | undefined> {
     const org = assertOrgId(org_id);
-    return this.d.advisorCache.get({ key, org_id: org } as unknown as string);
+    return this.d.advisorCache.get([key, org]);
   }
 }
