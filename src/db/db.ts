@@ -37,6 +37,8 @@ export interface SKU {
   /** >= hpp (warning jika di bawah, bukan reject — FRD-02) */
   harga_normal: number;
   barcode?: string;
+  /** kode unik per org, prefix 3 huruf kapital kategori + nomor urut (mis. DAI-001) */
+  kode?: string;
   org_id: string; // sync-ready sharding
 }
 
@@ -61,6 +63,34 @@ export interface Transaksi {
   sku_id: number;
   qty_sold: number;
   sold_at: string; // ISO datetime
+  org_id: string; // sync-ready sharding
+  /** jenis transaksi, default "keluar" untuk data lama */
+  jenis?: "masuk" | "keluar" | "opname" | string;
+  harga_jual_snapshot?: number;
+  pengirim?: string | null;
+  penerima?: string | null;
+  catatan?: string | null;
+}
+
+export interface Tag {
+  id?: number;
+  nama: string;
+  org_id: string; // sync-ready sharding
+}
+
+export interface SkuTag {
+  id?: number;
+  sku_id: number;
+  tag_id: number;
+  org_id: string; // sync-ready sharding
+}
+
+export interface HppHistory {
+  id?: number;
+  sku_id: number;
+  hpp_lama: number;
+  hpp_baru: number;
+  created_at: string; // ISO datetime
   org_id: string; // sync-ready sharding
 }
 
@@ -96,21 +126,74 @@ export class InventoryDB extends Dexie {
   transaksis!: Table<Transaksi, number>;
   promos!: Table<Promo, number>;
   advisorCache!: Table<AdvisorCache, [string, string]>;
+  tags!: Table<Tag, number>;
+  sku_tags!: Table<SkuTag, number>;
+  hpp_history!: Table<HppHistory, number>;
 
   constructor(name = "inventaris-tebus-murah") {
     super(name);
     this.version(1).stores({
-      // Primary key ++id; index sisanya. SKU TIDAK punya expiry (FRD-02 guardrail).
       skus: "++id, nama, kategori_id, barcode, org_id",
       kategoris: "++id, nama, org_id",
-      // expiry_date nullable: Dexie tidak index null → batch non-perishable
-      // otomatis tidak muncul di query by expiry_date (skip engine, CONTEXT.md).
       batches: "++id, sku_id, expiry_date, org_id, [org_id+sku_id]",
       transaksis: "++id, sku_id, sold_at, org_id",
       promos: "++id, status, batch_id, org_id",
       advisorCache: "[key+org_id], key, org_id",
     });
+    this.version(2)
+      .stores({
+        skus: "++id, nama, kategori_id, barcode, org_id, kode, &[org_id+kode]",
+        kategoris: "++id, nama, org_id",
+        batches: "++id, sku_id, expiry_date, org_id, [org_id+sku_id]",
+        transaksis: "++id, sku_id, sold_at, org_id, jenis, harga_jual_snapshot",
+        promos: "++id, status, batch_id, org_id",
+        advisorCache: "[key+org_id], key, org_id",
+        tags: "++id, nama, org_id, &[org_id+nama]",
+        sku_tags: "++id, sku_id, tag_id, org_id, &[sku_id+tag_id], [org_id+sku_id]",
+        hpp_history: "++id, sku_id, org_id, created_at, [org_id+sku_id]",
+      })
+      .upgrade(async (trans) => {
+        const kategoris: Kategori[] = await trans.table("kategoris").toCollection().toArray();
+        const kategoriMap = new Map<number, string>();
+        for (const k of kategoris) {
+          if (k.id !== undefined) kategoriMap.set(k.id, k.nama);
+        }
+        const skus: SKU[] = await trans.table("skus").toCollection().toArray();
+        const groups = new Map<string, SKU[]>();
+        for (const s of skus) {
+          const key = `${s.org_id}::${s.kategori_id}`;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key)!.push(s);
+        }
+        for (const [, group] of groups) {
+          group.sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+          const first = group[0];
+          const namaKategori = kategoriMap.get(first.kategori_id) ?? "SK";
+          const prefix = buildKodePrefix(namaKategori);
+          const existingCodes = new Set(
+            group.filter((s) => !!s.kode).map((s) => s.kode as string),
+          );
+          let seq = 1;
+          for (const sku of group) {
+            if (sku.kode && sku.kode.trim().length > 0) continue;
+            let kode: string;
+            do {
+              kode = `${prefix}-${String(seq).padStart(3, "0")}`;
+              seq++;
+            } while (existingCodes.has(kode));
+            existingCodes.add(kode);
+            await trans.table("skus").update(sku.id as number, { kode });
+          }
+        }
+      });
   }
+}
+
+function buildKodePrefix(namaKategori: string): string {
+  const cleaned = namaKategori.replace(/[^a-zA-Z]/g, "").toUpperCase();
+  if (cleaned.length >= 3) return cleaned.slice(0, 3);
+  if (cleaned.length > 0) return (cleaned + "SK").slice(0, 3);
+  return "SK";
 }
 
 export const db = new InventoryDB();
@@ -134,6 +217,7 @@ export interface InventoryRepository {
   createSKU(s: Omit<SKU, "id" | "org_id"> & { org_id?: string }): Promise<SKU>;
   getSKU(id: number): Promise<SKU | undefined>;
   listSKUsByKategori(kategori_id: number, org_id?: string): Promise<SKU[]>;
+  getSKUByKode(kode: string, org_id?: string): Promise<SKU | undefined>;
 
   // Batch
   createBatch(b: Omit<Batch, "id" | "received_at" | "org_id"> & { received_at?: string; org_id?: string }): Promise<Batch>;
@@ -145,6 +229,17 @@ export interface InventoryRepository {
   // Transaksi
   createTransaksi(t: Omit<Transaksi, "id" | "org_id"> & { org_id?: string }): Promise<Transaksi>;
   listTransaksisBySKU(sku_id: number, since: string, org_id?: string): Promise<Transaksi[]>;
+
+  // Tags
+  createTag(t: Omit<Tag, "id" | "org_id"> & { org_id?: string }): Promise<Tag>;
+  listTags(org_id?: string): Promise<Tag[]>;
+  addTagToSKU(sku_id: number, tag_id: number, org_id?: string): Promise<SkuTag>;
+  listTagsBySKU(sku_id: number, org_id?: string): Promise<Tag[]>;
+  removeTagFromSKU(sku_id: number, tag_id: number, org_id?: string): Promise<void>;
+
+  // HPP History
+  createHppHistory(h: Omit<HppHistory, "id" | "created_at" | "org_id"> & { created_at?: string; org_id?: string }): Promise<HppHistory>;
+  listHppHistoryBySKU(sku_id: number, org_id?: string): Promise<HppHistory[]>;
 
   // Promo
   createPromo(p: Omit<Promo, "id" | "created_at" | "updated_at" | "org_id"> & { org_id?: string }): Promise<Promo>;
@@ -182,6 +277,19 @@ function validateBatch(b: { sku_id: number; qty: number }): void {
   if (!Number.isInteger(b.sku_id) || b.sku_id <= 0)
     throw new ValidationError("sku_id wajib dan harus angka valid");
   if (!(b.qty > 0)) throw new ValidationError("Qty harus lebih dari 0");
+}
+
+function validateTag(t: { nama: string }): void {
+  if (!t.nama || t.nama.trim().length === 0) throw new ValidationError("Nama tag tidak boleh kosong");
+}
+
+function computeNextKode(existingKodes: string[], prefix: string): string {
+  let max = 0;
+  for (const k of existingKodes) {
+    const m = k.match(new RegExp(`^${prefix}-(\\d+)$`));
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `${prefix}-${String(max + 1).padStart(3, "0")}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -231,8 +339,37 @@ export class DexieRepository implements InventoryRepository {
   async createSKU(s: Omit<SKU, "id" | "org_id"> & { org_id?: string }): Promise<SKU> {
     validateSKU(s);
     const org = assertOrgId(s.org_id);
-    const id = await this.d.skus.add({ ...s, org_id: org });
-    return { ...s, org_id: org, id };
+    let kode = (s as SKU).kode?.trim();
+    if (kode) {
+      const exists = await this.d.skus.where("[org_id+kode]").equals([org, kode]).first();
+      if (exists) throw new ValidationError("Kode SKU sudah dipakai");
+    } else {
+      const kategori = await this.d.kategoris.get(s.kategori_id);
+      const prefix = buildKodePrefix(kategori?.nama ?? "SK");
+      const existing = await this.d.skus
+        .where("kategori_id")
+        .equals(s.kategori_id)
+        .and((x) => x.org_id === org && !!x.kode)
+        .toArray();
+      const existingKodes = existing.map((x) => x.kode as string).filter(Boolean);
+      if (existingKodes.length === 0) {
+        const count = await this.d.skus.where("kategori_id").equals(s.kategori_id).and((x) => x.org_id === org).count();
+        kode = `${prefix}-${String(count + 1).padStart(3, "0")}`;
+      } else {
+        kode = computeNextKode(existingKodes, prefix);
+      }
+    }
+    const row: SKU = { ...s, kode, org_id: org };
+    try {
+      const id = await this.d.skus.add(row);
+      return { ...row, id };
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("ConstraintError") || msg.includes("kode")) {
+        throw new ValidationError("Kode SKU sudah dipakai");
+      }
+      throw e;
+    }
   }
 
   async getSKU(id: number): Promise<SKU | undefined> {
@@ -242,6 +379,11 @@ export class DexieRepository implements InventoryRepository {
   async listSKUsByKategori(kategori_id: number, org_id?: string): Promise<SKU[]> {
     const org = assertOrgId(org_id);
     return this.d.skus.where("kategori_id").equals(kategori_id).and((s) => s.org_id === org).toArray();
+  }
+
+  async getSKUByKode(kode: string, org_id?: string): Promise<SKU | undefined> {
+    const org = assertOrgId(org_id);
+    return this.d.skus.where("[org_id+kode]").equals([org, kode]).first();
   }
 
   // Batch ------------------------------------------------------------------
@@ -287,8 +429,17 @@ export class DexieRepository implements InventoryRepository {
 
   async createTransaksi(t: Omit<Transaksi, "id" | "org_id"> & { org_id?: string }): Promise<Transaksi> {
     const org = assertOrgId(t.org_id);
-    const id = await this.d.transaksis.add({ ...t, org_id: org });
-    return { ...t, org_id: org, id };
+    const withDefaults: Transaksi = {
+      ...t,
+      org_id: org,
+      jenis: (t as Transaksi).jenis ?? "keluar",
+      harga_jual_snapshot: (t as Transaksi).harga_jual_snapshot ?? 0,
+      pengirim: (t as Transaksi).pengirim ?? null,
+      penerima: (t as Transaksi).penerima ?? null,
+      catatan: (t as Transaksi).catatan ?? null,
+    };
+    const id = await this.d.transaksis.add(withDefaults);
+    return { ...withDefaults, id };
   }
 
   async listTransaksisBySKU(sku_id: number, since: string, org_id?: string): Promise<Transaksi[]> {
@@ -298,6 +449,66 @@ export class DexieRepository implements InventoryRepository {
       .equals(sku_id)
       .and((x) => x.org_id === org && x.sold_at >= since)
       .sortBy("sold_at");
+  }
+
+  // Tags -----------------------------------------------------------------
+
+  async createTag(t: Omit<Tag, "id" | "org_id"> & { org_id?: string }): Promise<Tag> {
+    validateTag(t);
+    const org = assertOrgId(t.org_id);
+    const exists = await this.d.tags.where("[org_id+nama]").equals([org, t.nama.trim()]).first();
+    if (exists) throw new ValidationError("Nama tag sudah dipakai");
+    const row: Tag = { nama: t.nama.trim(), org_id: org };
+    const id = await this.d.tags.add(row);
+    return { ...row, id };
+  }
+
+  async listTags(org_id?: string): Promise<Tag[]> {
+    const org = assertOrgId(org_id);
+    return this.d.tags.where("org_id").equals(org).toArray();
+  }
+
+  async addTagToSKU(sku_id: number, tag_id: number, org_id?: string): Promise<SkuTag> {
+    const org = assertOrgId(org_id);
+    const sku = await this.d.skus.get(sku_id);
+    if (!sku) throw new ValidationError(`SKU ${sku_id} tidak ditemukan`);
+    const tag = await this.d.tags.get(tag_id);
+    if (!tag) throw new ValidationError(`Tag ${tag_id} tidak ditemukan`);
+    const exists = await this.d.sku_tags.where("[sku_id+tag_id]").equals([sku_id, tag_id]).first();
+    if (exists) return exists;
+    const row: SkuTag = { sku_id, tag_id, org_id: org };
+    const id = await this.d.sku_tags.add(row);
+    return { ...row, id };
+  }
+
+  async listTagsBySKU(sku_id: number, org_id?: string): Promise<Tag[]> {
+    const org = assertOrgId(org_id);
+    const links = await this.d.sku_tags.where("sku_id").equals(sku_id).and((x) => x.org_id === org).toArray();
+    const tagIds = links.map((l) => l.tag_id);
+    if (tagIds.length === 0) return [];
+    const tags = await this.d.tags.bulkGet(tagIds);
+    return tags.filter(Boolean) as Tag[];
+  }
+
+  async removeTagFromSKU(sku_id: number, tag_id: number, org_id?: string): Promise<void> {
+    const org = assertOrgId(org_id);
+    const link = await this.d.sku_tags.where("[sku_id+tag_id]").equals([sku_id, tag_id]).and((x) => x.org_id === org).first();
+    if (link?.id) await this.d.sku_tags.delete(link.id);
+  }
+
+  // HPP History ----------------------------------------------------------
+
+  async createHppHistory(h: Omit<HppHistory, "id" | "created_at" | "org_id"> & { created_at?: string; org_id?: string }): Promise<HppHistory> {
+    const org = assertOrgId(h.org_id);
+    const created_at = h.created_at ?? new Date().toISOString();
+    const row: HppHistory = { ...h, created_at, org_id: org };
+    const id = await this.d.hpp_history.add(row);
+    return { ...row, id };
+  }
+
+  async listHppHistoryBySKU(sku_id: number, org_id?: string): Promise<HppHistory[]> {
+    const org = assertOrgId(org_id);
+    return this.d.hpp_history.where("sku_id").equals(sku_id).and((x) => x.org_id === org).sortBy("created_at");
   }
 
   // Promo ------------------------------------------------------------------

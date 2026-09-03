@@ -1,0 +1,35 @@
+{
+  "task": "4. Migrasi Dexie v2: kode + tags + transaksi extended",
+  "branch": "feat/db-v2-schema",
+  "commit": "feat(db): Dexie v2 kode tags transaksi hpp_history",
+  "files_modified": ["src/db/db.ts", "src/db/types.ts", "src/db/dexieRepository.ts", "src/db/migration.test.ts"],
+  "dexie_version": 2,
+  "stores": {
+    "v1": "skus: ++id, nama, kategori_id, barcode, org_id; kategoris: ++id, nama, org_id; batches; transaksis; promos; advisorCache",
+    "v2": "skus: ++id, nama, kategori_id, barcode, org_id, kode, &[org_id+kode]; tags: ++id, nama, org_id, &[org_id+nama]; sku_tags: ++id, sku_id, tag_id, org_id, &[sku_id+tag_id], [org_id+sku_id]; transaksis: ++id, sku_id, sold_at, org_id, jenis, harga_jual_snapshot; hpp_history: ++id, sku_id, org_id, created_at, [org_id+sku_id]"
+  },
+  "upgrade_backfill": "prefix 3 huruf kapital nama kategori (fallback SK), nomor urut per kategori per org 001..; existing kode skipped; reorder aman via id sort; buildKodePrefix()",
+  "validasi": {
+    "kode_unik_per_org": "ValidationError 'Kode SKU sudah dipakai' via unique index &[org_id+kode] + check where([org_id+kode]) + ConstraintError catch",
+    "tag_unik": "'Nama tag sudah dipakai'",
+    "sku_create_auto_kode": "jika kode tidak diisi → generate dari kategori prefix + max existing +1 atau count+1"
+  },
+  "transaksis_defaults": {
+    "keputusan": "data lama tanpa kolom baru tetap valid karena kolom nullable/optional; saat createTransaksi isi default jika undefined",
+    "jenis": "default 'keluar'",
+    "harga_jual_snapshot": "default 0 (jika bisa ambil sku.harga_normal else 0, untuk test expect 0)",
+    "pengirim": "null",
+    "penerima": "null",
+    "catatan": "null"
+  },
+  "types_update": "SKU.kode?: string, Transaksi.jenis/harga_jual_snapshot/pengirim/penerima/catatan optional, Tag/SkuTag/HppHistory baru; src/db/types.ts + dexieRepository string ids sync",
+  "verification": {
+    "bun_test_migration": "2 pass 21 expect",
+    "bun_test_src": "99 pass 391 expect (14 files)",
+    "bun_run_build": "exit 0 vite 1730 modules",
+    "build_artifacts": "dist/manifest.webmanifest + dist/sw.js"
+  },
+  "evidence_tests": "fake-indexeddb LegacyDB v1 seed 2 kategori 3 SKU no kode + 1 transaksi lama → open InventoryDB v2 → assert DAI-001/DAI-002/SNA-001 + transaksi lama readable + duplikat DAI-001 reject Indonesia + tag/hpp_history/sku_tags flow",
+  "gotcha": "Dexie MissingAPIError jika import Dexie sebelum set global indexedDB — must set globalThis.indexedDB before dynamic import Dexie and InventoryDB; unique index &[org_id+kode] akan fail jika backfill tidak jalan, jadi upgrade must lengkap sebelum index enforcement",
+  "timestamp": "2026-09-03 Asia/Jakarta"
+}
