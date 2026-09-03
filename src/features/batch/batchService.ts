@@ -24,6 +24,7 @@
 
 import { db, DexieRepository, ValidationError, DEFAULT_ORG_ID } from "../../db/db";
 import type { Batch } from "../../db/db";
+import { applyHargaBeli } from "../../db/hpp";
 
 // Singleton repo — local-first, single device, org_id toko-01.
 // Fake-indexeddb injection di test harus terjadi SEBELUM dynamic import
@@ -41,6 +42,8 @@ export interface CreateBatchInput {
   expiry_date?: string | null;
   /** copy dari SKU.hpp jika tidak dikirim */
   hpp_snapshot?: number;
+  /** harga beli terakhir — jika diisi, timpa SKU.hpp via applyHargaBeli + hpp_snapshot = harga_beli */
+  harga_beli?: number;
   org_id?: string;
 }
 
@@ -66,6 +69,9 @@ function validateBatchInput(data: CreateBatchInput): void {
   if (data.hpp_snapshot !== undefined && !(data.hpp_snapshot > 0)) {
     throw new ValidationError("hpp_snapshot harus lebih dari 0 jika diisi");
   }
+  if (data.harga_beli !== undefined && !(data.harga_beli > 0)) {
+    throw new ValidationError("Harga beli harus lebih dari 0");
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -83,11 +89,17 @@ function validateBatchInput(data: CreateBatchInput): void {
 export async function createBatch(data: CreateBatchInput): Promise<Batch> {
   validateBatchInput(data);
 
-  // Normalisasi expiry_date: undefined → null (non-perishable)
   const expiry_date: string | null = data.expiry_date ?? null;
+  const org_id = data.org_id ?? DEFAULT_ORG_ID;
 
-  // Resolve hpp_snapshot: copy dari SKU.hpp jika tidak dikirim
-  let hpp_snapshot = data.hpp_snapshot;
+  let hpp_snapshot: number | undefined = data.hpp_snapshot;
+
+  if (data.harga_beli !== undefined) {
+    const hargaBeli = data.harga_beli;
+    await applyHargaBeli(data.sku_id, hargaBeli, org_id);
+    hpp_snapshot = hargaBeli;
+  }
+
   if (hpp_snapshot === undefined) {
     const sku = await defaultRepo.getSKU(data.sku_id);
     if (!sku) {
@@ -95,8 +107,6 @@ export async function createBatch(data: CreateBatchInput): Promise<Batch> {
     }
     hpp_snapshot = sku.hpp;
   }
-
-  const org_id = data.org_id ?? DEFAULT_ORG_ID;
 
   return defaultRepo.createBatch({
     sku_id: data.sku_id,

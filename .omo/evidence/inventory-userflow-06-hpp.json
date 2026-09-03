@@ -1,0 +1,31 @@
+{
+  "task": "06 — HPP timpa + riwayat + validasi harga_normal",
+  "branch": "feat/hpp-overwrite",
+  "timestamp": "2026-09-03T00:00:00+07:00",
+  "files": ["src/db/hpp.ts", "src/db/hpp.test.ts", "src/features/batch/batchService.ts"],
+  "tests": {
+    "hpp": "bun test src/db/hpp.test.ts → 8 pass",
+    "full": "bun test src → 117 pass (16 files)",
+    "build": "bun run build → exit 0, sw.js + manifest.webmanifest ada"
+  },
+  "cases": [
+    "timpa 10000→12000 + arsip hpp_history benar",
+    "warning saat harga_normal 11000 < hpp baru 12000 → 'Harga normal di bawah HPP baru'",
+    "tidak warning jika harga_normal >= hpp baru",
+    "harga_beli 0 reject 'Harga beli harus lebih dari 0'",
+    "negatif reject 'Harga beli harus lebih dari 0'",
+    "hpp_snapshot batch = harga_beli (bukan sku.hpp lama)",
+    "batch tanpa harga_beli → hpp_snapshot = sku.hpp lama, tidak timpa",
+    "guardrail promo tetap pakai hpp_snapshot batch (validateHargaTebus HPP*0.85)"
+  ],
+  "guardrails": {
+    "validation_ts_unchanged": true,
+    "hpp_snapshot_is_harga_beli": true,
+    "warning_bukan_reject": true
+  },
+  "commands": [
+    "bun test src/db/hpp.test.ts",
+    "bun test src",
+    "bun run build"
+  ]
+}
