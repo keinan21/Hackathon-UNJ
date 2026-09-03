@@ -11,3 +11,4 @@
 - Token Telegram tidak pernah plaintext, reuse crypto.ts deriveKey/generateSalt/generateIv, antre Dexie telegramQueue dedup batchId+tanggal
 - html5-qrcode lazy di /scan saja, OCR tetap Must NOT, fallback manual jika permission denied, bundle tetap kecil
 - Verification: grep -q ADR-003 decisions, grep -q telegram architecture, grep supabase 0, bun test src 97 pass
+- 2026-09-03: HUMAN.md — Bahasa Indonesia sederhana owner non-teknis, hindari pola [0-9]{8,10}:AA pakai <TOKEN_BOT_KAMU> agar grep 0, langkah BotFather /newbot username berakhir bot, chat ID @userinfobot atau getUpdates, tempel Wave 5 Setting terenkripsi crypto.ts salt16 iv12, peringatan JANGAN commit token, revoke via /revoke, evidence inventory-userflow-03-human.json
