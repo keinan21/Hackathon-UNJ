@@ -15,6 +15,23 @@ export function SkuForm() {
   const [hargaJual, setHargaJual] = useState<string>("");
   const [barcode, setBarcode] = useState<string>("");
   const [tags, setTags] = useState<string>("");
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{ barcode: string }>;
+      const val = ce.detail?.barcode;
+      if (typeof val === "string" && val.trim()) setBarcode(val.trim());
+    };
+    window.addEventListener("barcode-scanned", handler as EventListener);
+    try {
+      const sess = sessionStorage.getItem("scan-barcode");
+      if (sess && sess.trim()) {
+        setBarcode(sess.trim());
+        sessionStorage.removeItem("scan-barcode");
+      }
+    } catch {}
+    return () => window.removeEventListener("barcode-scanned", handler as EventListener);
+  }, []);
   const [previewKode, setPreviewKode] = useState<string>("-");
   const [error, setError] = useState<string>("");
   const [warningHarga, setWarningHarga] = useState<string>("");
@@ -259,16 +276,30 @@ export function SkuForm() {
           <label htmlFor="sku-barcode" className="block text-[14px] font-medium text-[#1A1A1A] mb-1" style={{ fontSize: "14px" }}>
             Barcode (opsional)
           </label>
-          <input
-            id="sku-barcode"
-            data-testid="input-barcode"
-            type="text"
-            value={barcode}
-            onChange={(e) => setBarcode(e.target.value)}
-            placeholder="Contoh: 8991234567890"
-            className="w-full border border-[#D9D9D9] rounded-[12px] px-3"
-            style={{ minHeight: "48px", fontSize: "16px" }}
-          />
+          <div className="flex gap-2">
+            <input
+              id="sku-barcode"
+              data-testid="input-barcode"
+              type="text"
+              value={barcode}
+              onChange={(e) => setBarcode(e.target.value)}
+              placeholder="Contoh: 8991234567890"
+              className="flex-1 border border-[#D9D9D9] rounded-[12px] px-3"
+              style={{ minHeight: "48px", fontSize: "16px" }}
+            />
+            <button
+              type="button"
+              data-testid="btn-scan-barcode"
+              onClick={() => {
+                window.history.pushState({}, "", "/scan");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              }}
+              className="rounded-[12px] font-semibold border border-[#0F7A4A] text-[#0F7A4A] bg-white shrink-0"
+              style={{ minHeight: "48px", minWidth: "96px", fontSize: "16px", padding: "0 16px" }}
+            >
+              Scan
+            </button>
+          </div>
         </div>
 
         <div>
