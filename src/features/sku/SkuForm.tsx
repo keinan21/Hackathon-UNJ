@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { realRepo, dexieV2 } from "../../db/dexieRepository";
-import type { Kategori } from "../../db/types";
+import type { Kategori, SKU, Tag, SkuTag } from "../../db/types";
 import { getPrefixForKategori, computeNextKode } from "../../db/kode";
+
+function isSkuWithKode(s: SKU): s is SKU & { kode: string } {
+  return typeof s.kode === "string" && s.kode.length > 0;
+}
 
 export function SkuForm() {
   const [kategoris, setKategoris] = useState<Kategori[]>([]);
@@ -40,8 +44,9 @@ export function SkuForm() {
       try {
         const skus = await dexieV2.skus.where("org_id").equals("toko-01").toArray();
         const existingKodes = skus
-          .filter((s) => s.kategori_id === kategoriId && !!s.kode && (s.kode as string).startsWith(`${prefix}-`))
-          .map((s) => s.kode as string);
+          .filter(isSkuWithKode)
+          .filter((s) => s.kategori_id === kategoriId && s.kode.startsWith(`${prefix}-`))
+          .map((s) => s.kode);
         const next = computeNextKode(existingKodes, prefix);
         setPreviewKode(next);
       } catch {
@@ -102,37 +107,39 @@ export function SkuForm() {
       const prefix = getPrefixForKategori(kategoriNama);
       const allSkus = await dexieV2.skus.where("org_id").equals("toko-01").toArray();
       const existingKodes = allSkus
-        .filter((s) => s.kategori_id === kategoriId && !!s.kode && (s.kode as string).startsWith(`${prefix}-`))
-        .map((s) => s.kode as string);
+        .filter(isSkuWithKode)
+        .filter((s) => s.kategori_id === kategoriId && s.kode.startsWith(`${prefix}-`))
+        .map((s) => s.kode);
       const kode = computeNextKode(existingKodes, prefix);
 
       const id = crypto.randomUUID();
-      const sku = {
+      const sku: SKU = {
         id,
         nama: nama.trim(),
         kategori_id: kategoriId,
         hpp: hppNum,
         harga_normal: hargaNum,
-        barcode: barcodeTrim || undefined,
         kode,
         org_id: "toko-01",
+        ...(barcodeTrim ? { barcode: barcodeTrim } : {}),
       };
-      await realRepo.createSku(sku as any);
+      await realRepo.createSku(sku);
 
       const tagNames = tags.split(",").map((t) => t.trim()).filter(Boolean);
       for (const tagNama of tagNames) {
-        let tag = await dexieV2.tags.where("[org_id+nama]").equals(["toko-01", tagNama]).first().catch(() => undefined);
+        let tag: Tag | undefined = await dexieV2.tags.where("[org_id+nama]").equals(["toko-01", tagNama]).first().catch(() => undefined);
         if (!tag) {
           const tagId = crypto.randomUUID();
-          const newTag = { id: tagId, nama: tagNama, org_id: "toko-01" };
-          await dexieV2.tags.put(newTag as any);
-          tag = newTag as any;
+          const newTag: Tag = { id: tagId, nama: tagNama, org_id: "toko-01" };
+          await dexieV2.tags.put(newTag);
+          tag = newTag;
         }
-        const tagIdForLink = tag!.id;
+        const tagIdForLink = tag.id;
         const linkId = crypto.randomUUID();
         const exists = await dexieV2.sku_tags.where("[sku_id+tag_id]").equals([id, tagIdForLink]).first().catch(() => undefined);
         if (!exists) {
-          await dexieV2.sku_tags.put({ id: linkId, sku_id: id, tag_id: tagIdForLink, org_id: "toko-01" } as any);
+          const link: SkuTag = { id: linkId, sku_id: id, tag_id: tagIdForLink, org_id: "toko-01" };
+          await dexieV2.sku_tags.put(link);
         }
       }
 
