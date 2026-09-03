@@ -1,0 +1,13 @@
+{
+  "task": "07-auth",
+  "branch": "feat/auth-login",
+  "files": ["src/features/auth/LoginPage.tsx", "src/features/auth/session.ts", "src/App.tsx", "e2e/auth.spec.ts"],
+  "verification": {
+    "bun_test_src": "117 pass 0 fail",
+    "bun_run_build": "exit 0, 1733 modules, dist/manifest.webmanifest + sw.js ok",
+    "playwright_auth": "5 passed",
+    "typecheck": "tsc --noEmit exit 0"
+  },
+  "decisions": "nama_toko disimpan via localStorage profil_toko_v1 + best-effort Dexie settings key profil_toko (TODO migrasi task 24), session via sessionStorage auth-logged-in-v1, lockout in-memory 5x30s, reuse pinStore setPin/verifyPin hash PBKDF2, header tampil nama_toko",
+  "timestamp": "2026-09-03T22:52:00+07:00"
+}

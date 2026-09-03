@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { OfflineFallback } from "./components/OfflineFallback";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
@@ -6,6 +6,8 @@ import { HistoriDetailPage } from "./features/dashboard/HistoriDetailPage";
 import { PromoAktifList } from "./features/promo/PromoAktifList";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { SkuBatchManager } from "./features/sku/SkuBatchManager";
+import { LoginPage, getProfilToko } from "./features/auth/LoginPage";
+import { isLoggedIn } from "./features/auth/session";
 
 type View = "dashboard" | "promo" | "settings" | "sku";
 
@@ -58,11 +60,21 @@ function AppShell() {
     (window as unknown as { __APP_VIEW__: string }).__APP_VIEW__ = view;
   }, [view]);
 
+  const namaToko = (() => {
+    try {
+      return getProfilToko();
+    } catch {
+      return "";
+    }
+  })();
+
+  const headerTitle = namaToko ? namaToko : "Inventaris Tebus Murah";
+
   if (historiId) {
     return (
       <div style={{ minHeight: "100vh", background: "#F5F5F0", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
         <header style={{ background: "#0F7A4A", color: "#FFFFFF", padding: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#FFFFFF" }}>Inventaris Tebus Murah</h1>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#FFFFFF" }}>{headerTitle}</h1>
           <span style={{ fontSize: 12, background: "rgba(255,255,255,0.2)", padding: "4px 8px", borderRadius: 8, color: "#FFFFFF" }}>PWA</span>
         </header>
         <main style={{ maxWidth: 480, margin: "0 auto", padding: 16, paddingBottom: 80 }}>
@@ -76,7 +88,7 @@ function AppShell() {
   return (
     <div style={{ minHeight: "100vh", background: "#F5F5F0", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
       <header style={{ background: "#0F7A4A", color: "#FFFFFF", padding: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, lineHeight: 1.25, color: "#FFFFFF" }}>Inventaris Tebus Murah</h1>
+        <h1 data-testid="header-title" style={{ margin: 0, fontSize: 20, fontWeight: 700, lineHeight: 1.25, color: "#FFFFFF" }}>{headerTitle}</h1>
         <span style={{ fontSize: 12, background: "rgba(255,255,255,0.2)", padding: "4px 8px", borderRadius: 8, color: "#FFFFFF" }}>PWA</span>
       </header>
 
@@ -113,6 +125,38 @@ function AppShell() {
   );
 }
 
+function AuthGuard() {
+  const [checked, setChecked] = useState(false);
+  const [authed, setAuthed] = useState(false);
+
+  const refresh = useCallback(() => {
+    setAuthed(isLoggedIn());
+    setChecked(true);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const handleSuccess = useCallback(() => {
+    refresh();
+  }, [refresh]);
+
+  if (!checked) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F5F0" }}>
+        <p style={{ fontSize: 16, color: "#595959" }}>Memuat...</p>
+      </div>
+    );
+  }
+
+  if (!authed) {
+    return <LoginPage onSuccess={handleSuccess} />;
+  }
+
+  return <AppShell />;
+}
+
 export default function App() {
   const [isOffline] = useState(() => typeof navigator !== "undefined" && !navigator.onLine);
   const [showFallback, setShowFallback] = useState(false);
@@ -133,5 +177,5 @@ export default function App() {
     );
   }
 
-  return <AppShell />;
+  return <AuthGuard />;
 }
