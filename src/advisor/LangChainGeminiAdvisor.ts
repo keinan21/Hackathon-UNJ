@@ -13,10 +13,10 @@ export interface LLMPort {
     pasanganSku: SKU | null;
     hpp: number;
     hargaNormal: number;
+    hargaTebus: number;
   }): Promise<{
     aksi: string;
     alasan: string;
-    harga_tebus: number;
     confidence: AdvisorSuggestion['confidence'];
   }>;
 }
@@ -24,14 +24,12 @@ export interface LLMPort {
 // Mock LLM for tests - returns plausible suggestion at floor
 export class MockLLM implements LLMPort {
   constructor(private opts?: { forceHargaTebus?: number; shouldFail?: boolean }) {}
-  async generate(input: { sku: SKU; batch: Batch; daysToExpiry: number; pasanganSku: SKU | null; hpp: number; hargaNormal: number }) {
+  async generate(input: { sku: SKU; batch: Batch; daysToExpiry: number; pasanganSku: SKU | null; hpp: number; hargaNormal: number; hargaTebus: number }) {
     if (this.opts?.shouldFail) throw new Error('LLM offline');
-    const floor = input.hpp * 0.85;
-    const harga = this.opts?.forceHargaTebus ?? Math.max(floor, input.hpp * 0.9);
+    if (this.opts?.forceHargaTebus !== undefined && this.opts.forceHargaTebus !== input.hargaTebus) throw new Error('Harga tebus tidak boleh di bawah HPP x 0.85 atau ditentukan LLM');
     return {
       aksi: `Tebus murah ${input.sku.nama} dengan ${input.pasanganSku?.nama ?? 'pasangan laris'}`,
       alasan: `${input.sku.nama} mau kadaluarsa ${input.daysToExpiry} hari lagi, pasangkan dengan ${input.pasanganSku?.nama ?? 'SKU laris'} biar cepat habis tanpa rugi.`,
-      harga_tebus: harga,
       confidence: 'Tinggi' as const,
     };
   }
@@ -114,8 +112,11 @@ export class LangChainGeminiAdvisor implements AdvisorPort {
     let pasanganSku: SKU | null = null;
     if (pasanganId) pasanganSku = (await this.repo.getSku(pasanganId)) ?? null;
 
-    // LLM call - with offline handling
-    let llmResult: { aksi: string; alasan: string; harga_tebus: number; confidence: AdvisorSuggestion['confidence'] };
+    const hargaTebus = Math.ceil(hpp * 0.85);
+    const validation = validateHargaTebus(hpp, hargaTebus, hargaNormal);
+    if (!validation.valid) throw new Error(validation.error ?? 'Harga tebus tidak valid');
+
+    let llmResult: { aksi: string; alasan: string; confidence: AdvisorSuggestion['confidence'] };
     try {
       this.llmCallCount++;
       llmResult = await this.llm.generate({
@@ -125,27 +126,20 @@ export class LangChainGeminiAdvisor implements AdvisorPort {
         pasanganSku,
         hpp,
         hargaNormal,
+        hargaTebus,
       });
     } catch (e) {
-      // offline: return cached stale if exists, else throw
       if (cached) return cached.suggestion;
       throw e;
     }
 
-    // guardrail floor HPP*0.85 enforced BEFORE save - LLM dilarang ngarang angka
-    const validation = validateHargaTebus(hpp, llmResult.harga_tebus, hargaNormal);
-    if (!validation.valid) {
-      throw new Error(validation.error ?? 'Harga tebus tidak valid');
-    }
-    if (Number.isNaN(llmResult.harga_tebus)) throw new Error('Harga tebus tidak boleh NaN');
-
-    const estimasiMargin = llmResult.harga_tebus - hpp;
+    const estimasiMargin = hargaTebus - hpp;
     const suggestion: AdvisorSuggestion = {
       batch_id: batch.id,
       aksi: llmResult.aksi,
       alasan: llmResult.alasan,
       pasangan_tebus_murah: pasanganId,
-      harga_tebus: llmResult.harga_tebus,
+      harga_tebus: hargaTebus,
       estimasi_margin: estimasiMargin,
       confidence: llmResult.confidence,
       created_at: this.now().toISOString(),

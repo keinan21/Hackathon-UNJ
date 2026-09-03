@@ -1,6 +1,7 @@
 import type { InventoryRepository } from '../../db/repository';
 import type { Promo, AdvisorSuggestion } from '../../db/types';
 import { validateHargaTebus } from '../../lib/validation';
+import type { AdvisorPort } from '../../advisor/AdvisorPort';
 
 export interface CreatePromoInput {
   batch_id: string;
@@ -62,6 +63,14 @@ export class PromoService {
       harga_tebus: suggestion.harga_tebus,
       org_id: orgId,
     });
+  }
+
+  async createSuggestedPromo(batchId: string, advisor: AdvisorPort, orgId = 'toko-01'): Promise<Promo | null> {
+    const existing = await this.repo.listPromos(orgId);
+    const open = existing.find(promo => promo.batch_id === batchId && (promo.status === 'proposed' || promo.status === 'active'));
+    if (open) return open;
+    const suggestion = await advisor.suggestForBatch(batchId, orgId);
+    return suggestion ? this.createFromAdvisor(suggestion, orgId) : null;
   }
 
   async getProposedPromos(orgId: string): Promise<Promo[]> {

@@ -22,26 +22,25 @@ export class RealJustwokerLLM implements LLMPort {
     pasanganSku: { nama: string } | null;
     hpp: number;
     hargaNormal: number;
+    hargaTebus: number;
   }): Promise<{
     aksi: string;
     alasan: string;
-    harga_tebus: number;
     confidence: "Tinggi" | "Sedang" | "Rendah";
   }> {
     if (!this.apiKey) throw new Error("API key missing");
-    const floor = Math.round(input.hpp * 0.85);
-    const targetHarga = Math.max(floor, Math.round(input.hpp * 0.9));
+    const floor = Math.ceil(input.hpp * 0.85);
 
     const systemPrompt =
       "Kamu adalah Advisor Tebus Murah untuk UMKM warung. Tugas: buat bundling 'tebus murah' agar stok mau kadaluarsa cepat habis tanpa rugi. " +
-      "Aturan: harga_tebus HARUS >= HPP*0.85 (floor) dan <= harga_normal. Jawab HANYA JSON valid tanpa markdown, dengan key: aksi (string pendek 'Tebus murah {SKU} dengan {pasangan}'), alasan (1-2 kalimat bahasa warung Indonesia, jelaskan kenapa pasangan dipilih), harga_tebus (number integer Rupiah), confidence ('Tinggi'|'Sedang'|'Rendah').";
+      "Harga sudah ditentukan sistem. Jangan membuat atau mengubah angka. Jawab HANYA JSON valid tanpa markdown, dengan key: aksi (string pendek 'Tebus murah {SKU} dengan {pasangan}'), alasan (1-2 kalimat bahasa warung Indonesia, jelaskan kenapa pasangan dipilih), confidence ('Tinggi'|'Sedang'|'Rendah').";
 
     const userPrompt = [
       `SKU: ${input.sku.nama} (kategori ${input.sku.kategori_id})`,
       `Batch: ${input.batch.qty} pcs, kadaluarsa ${input.batch.expiry_date ?? "null"} (H-${input.daysToExpiry}), HPP snapshot Rp${input.hpp.toLocaleString("id-ID")}, harga normal Rp${input.hargaNormal.toLocaleString("id-ID")}`,
       `Pasangan yang disarankan: ${input.pasanganSku?.nama ?? "tidak ada, pilih yang laris"}`,
-      `Floor: Rp${floor.toLocaleString("id-ID")} (HPP×0.85), target aman: Rp${targetHarga.toLocaleString("id-ID")}`,
-      `Instruksi: harga_tebus pilih di antara floor dan harga_normal, bulatkan, jangan di bawah floor.`,
+      `Harga tebus dari DB: Rp${input.hargaTebus.toLocaleString("id-ID")}; floor tervalidasi: Rp${floor.toLocaleString("id-ID")}`,
+      `Instruksi: gunakan harga tersebut hanya dalam wording; jangan keluarkan field atau angka harga.`,
     ].join("\n");
 
     const res = await fetch(this.baseUrl, {
@@ -79,7 +78,7 @@ export class RealJustwokerLLM implements LLMPort {
     // Strip markdown fence if any
     content = content.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
 
-    let parsed: { aksi?: string; alasan?: string; harga_tebus?: number; confidence?: string };
+    let parsed: { aksi?: string; alasan?: string; confidence?: string; harga_tebus?: unknown };
     try {
       parsed = JSON.parse(content);
     } catch {
@@ -89,11 +88,7 @@ export class RealJustwokerLLM implements LLMPort {
       parsed = JSON.parse(m[0]);
     }
 
-    const harga = Number(parsed.harga_tebus);
-    if (!Number.isFinite(harga)) throw new Error("LLM harga_tebus NaN");
-
-    // Clamp to floor if LLM still below (guardrail will also throw, but we clamp for UX)
-    const clampedHarga = Math.max(harga, floor);
+    if (parsed.harga_tebus !== undefined) throw new Error("LLM tidak boleh menentukan harga tebus");
 
     const confidence = (parsed.confidence === "Tinggi" || parsed.confidence === "Sedang" || parsed.confidence === "Rendah"
       ? parsed.confidence
@@ -102,7 +97,6 @@ export class RealJustwokerLLM implements LLMPort {
     return {
       aksi: String(parsed.aksi ?? `Tebus murah ${input.sku.nama} dengan ${input.pasanganSku?.nama ?? "pasangan laris"}`),
       alasan: String(parsed.alasan ?? `${input.sku.nama} mau kadaluarsa H-${input.daysToExpiry}, pasangkan dengan ${input.pasanganSku?.nama ?? "SKU laris"} biar cepat habis.`),
-      harga_tebus: Math.round(clampedHarga),
       confidence,
     };
   }

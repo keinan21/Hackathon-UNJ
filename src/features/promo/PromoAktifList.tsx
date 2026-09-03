@@ -11,9 +11,10 @@ export type PromoAktifListProps = {
   forceOffline?: boolean;
   staleCache?: boolean;
   useRealData?: boolean;
+  seedMode?: "demo" | "many" | "empty" | "expiryNull";
 };
 
-export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRealData = true }: PromoAktifListProps) {
+export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRealData = true, seedMode }: PromoAktifListProps) {
   const injectedInitial = useMemo(() => {
     if (typeof window !== "undefined") {
       const w = window as unknown as { __PROMO_INITIAL__?: Promo[]; __OFFLINE_STALE__?: boolean };
@@ -24,6 +25,11 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
 
   const [promos, setPromos] = useState<Promo[]>(() => {
     if (injectedInitial) return injectedInitial;
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("promo") === "guardrailFail") {
+      const bad = createDemoPromos()[0];
+      return [{ ...bad, harga_tebus: 8400, keuntungan_tipis: 8400 - bad.harga_floor }];
+    }
+    if (seedMode === "demo" || seedMode === "many") return createDemoPromos();
     // For real data, start empty and fetch; for fake, use demo
     if (!useRealData) {
       if (typeof window !== "undefined") {
@@ -60,7 +66,7 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
 
   // Real data fetch
   useEffect(() => {
-    if (injectedInitial) {
+    if (injectedInitial || seedMode === "demo" || seedMode === "many") {
       setLoading(false);
       return;
     }
@@ -137,7 +143,7 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
     return () => {
       cancelled = true;
     };
-  }, [injectedInitial, useRealData]);
+  }, [injectedInitial, seedMode, useRealData]);
 
   const showOfflineBanner = useMemo(() => {
     if (staleCache) return true;
@@ -183,7 +189,7 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
 
   const handleConfirm = useCallback(async () => {
     if (!selected) return;
-    if (useRealData) {
+    if (useRealData && !seedMode) {
       // Real: update DB Promo status to active
       try {
         const dbPromo = await realRepo.getPromo(selected.id);

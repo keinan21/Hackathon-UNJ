@@ -29,6 +29,7 @@ export type UrgentListProps = {
   batchesOverride?: FakeUrgentBatch[];
   /** Force real Dexie mode (default true). If false, use FakeRepository dummy (legacy for e2e). */
   useRealData?: boolean;
+  onViewSuggestion?: (batchId: string) => void;
 };
 
 type RealUrgentBatch = {
@@ -46,7 +47,7 @@ type RealUrgentBatch = {
   urgencyScore: number;
 };
 
-export function UrgentList({ initialFilter, seedMode, batchesOverride, useRealData = true }: UrgentListProps) {
+export function UrgentList({ initialFilter, seedMode, batchesOverride, useRealData = true, onViewSuggestion }: UrgentListProps) {
   const [selected, dispatch] = useReducer(filterReducer, initialFilter ?? ["Semua"]);
   const [sortBy, setSortBy] = useState<"expiry" | "urgency">("expiry");
   const [visibleCount, setVisibleCount] = useState(50);
@@ -351,7 +352,7 @@ export function UrgentList({ initialFilter, seedMode, batchesOverride, useRealDa
                 </div>
                 <Badge daysToExpiry={b.daysToExpiry} qty={b.qty} expiryDate={b.expiry_date as string} showIcon />
               </div>
-              <button type="button" className="btn btn-primary w-full min-h-[48px] mt-3 text-base font-semibold" style={{ fontSize: "16px", minHeight: "48px" }} aria-label={`Lihat saran tebus untuk ${b.sku_name}`}>
+              <button type="button" onClick={() => onViewSuggestion?.(b.id)} className="btn btn-primary w-full min-h-[48px] mt-3 text-base font-semibold" style={{ fontSize: "16px", minHeight: "48px" }} aria-label={`Lihat saran tebus untuk ${b.sku_name}`}>
                 Lihat Saran Tebus
               </button>
             </li>

@@ -171,10 +171,12 @@ describe("Transaksi / Promo / AdvisorCache", () => {
     expect(await repo.listPromosByStatus("active")).toHaveLength(1);
   });
 
-  test("advisorCache roundtrip by key", async () => {
+  test("advisorCache roundtrip by key and org_id", async () => {
     await repo.setAdvisorCache("daily-2026-09-01", JSON.stringify({ a: 1 }));
+    await repo.setAdvisorCache("daily-2026-09-01", JSON.stringify({ a: 2 }), "toko-02");
     const got = await repo.getAdvisorCache("daily-2026-09-01");
     expect(got?.payload).toBe(JSON.stringify({ a: 1 }));
+    expect((await repo.getAdvisorCache("daily-2026-09-01", "toko-02"))?.payload).toBe(JSON.stringify({ a: 2 }));
     expect(await repo.getAdvisorCache("missing")).toBeUndefined();
   });
 });

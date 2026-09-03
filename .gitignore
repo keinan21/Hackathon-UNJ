@@ -2,6 +2,8 @@ EXASTI 2.0 - GUIDEBOOK.pdf
 .agents
 .claude
 node_modules/
+graphify-out/
+.playwright-mcp
 
 # Logs
 logs

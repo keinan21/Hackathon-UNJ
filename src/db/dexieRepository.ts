@@ -13,7 +13,7 @@ export class InventarisDexie extends Dexie {
   batches!: Table<Batch, string>;
   transaksis!: Table<Transaksi, string>;
   promos!: Table<Promo, string>;
-  advisorCache!: Table<AdvisorCacheEntry, string>; // key [org_id+batch_id]
+  advisorCache!: Table<AdvisorCacheEntry, [string, string]>; // key [org_id+batch_id]
 
   constructor(name = "inventaris-tebus-murah-v2") {
     super(name);
@@ -24,6 +24,11 @@ export class InventarisDexie extends Dexie {
       transaksis: "id, org_id, sku_id, sold_at",
       promos: "id, org_id, status, batch_id",
       advisorCache: "[org_id+batch_id], org_id, batch_id, created_at",
+    });
+    // v2: tambah compound index untuk query where("[org_id+sku_id]") — fix SchemaError
+    this.version(2).stores({
+      batches: "id, org_id, sku_id, expiry_date, [org_id+sku_id]",
+      transaksis: "id, org_id, sku_id, sold_at, [org_id+sku_id]",
     });
   }
 }
@@ -54,7 +59,7 @@ export class DexieInventoryRepository implements InventoryRepository {
     return this.db.kategoris.get(id);
   }
   async createKategori(k: Kategori) {
-    await this.db.kategoris.put(k);
+    await this.db.kategoris.put({ ...k, id: k.id ?? crypto.randomUUID(), org_id: k.org_id ?? "toko-01" });
   }
   async updateKategoriThreshold(id: string, threshold: number[]) {
     const k = await this.db.kategoris.get(id);
@@ -115,7 +120,7 @@ export class DexieInventoryRepository implements InventoryRepository {
   }
   // AdvisorCache
   async getAdvisorCache(batchId: string, orgId: string) {
-    return this.db.advisorCache.get([orgId, batchId] as unknown as string);
+    return this.db.advisorCache.get([orgId, batchId]);
   }
   async setAdvisorCache(entry: AdvisorCacheEntry) {
     await this.db.advisorCache.put(entry);

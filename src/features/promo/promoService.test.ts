@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { FakeInventoryRepository } from '../../db/fakeRepository';
 import { PromoService, prefillFromAdvisor } from './promoService';
+import { approvePromo, updatePromoLifecycle } from './approve';
+import { LangChainGeminiAdvisor, MockLLM } from '../../advisor/LangChainGeminiAdvisor';
 import type { SKU, Batch, Kategori } from '../../db/types';
 import type { AdvisorSuggestion } from '../../db/types';
 
@@ -90,5 +92,22 @@ describe('Tebus Murah template manual + AI assist flow (proposed)', () => {
     await service.createManualPromo({ batch_id: 'batch-1', sku_pasangan_id: 'sku-roti', harga_tebus: 9200 });
     const proposed = await service.getProposedPromos(org);
     expect(proposed.length).toBe(2);
+  });
+
+  it('real advisor suggestion creates one proposed promo then approves', async () => {
+    const advisor = new LangChainGeminiAdvisor(repo, new MockLLM(), { now: () => new Date('2026-09-02T07:05:00+07:00') });
+    const proposed = await service.createSuggestedPromo('batch-1', advisor, org);
+    expect(proposed?.status).toBe('proposed');
+    expect(proposed?.harga_tebus).toBe(8500);
+    expect(await service.createSuggestedPromo('batch-1', advisor, org)).toEqual(proposed);
+    const active = await approvePromo(repo, proposed!.id, new Date('2026-09-02T08:00:00+07:00'));
+    expect(active.status).toBe('active');
+  });
+
+  it('lifecycle changes active promo to expired or consumed', async () => {
+    const expired = await service.createManualPromo({ batch_id: 'batch-1', sku_pasangan_id: 'sku-roti', harga_tebus: 9000 });
+    await approvePromo(repo, expired.id);
+    const changed = await updatePromoLifecycle(repo, org, new Date('2026-09-06T07:00:00+07:00'));
+    expect(changed[0].status).toBe('expired');
   });
 });

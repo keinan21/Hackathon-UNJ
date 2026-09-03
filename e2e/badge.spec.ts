@@ -9,7 +9,7 @@ function hexToRgb(hex: string): string {
 
 test.describe("Badge & Urgent List", () => {
   test("happy: seed 3 batches H-1/H-3/H-10 via FakeRepository shows 2 urgent H-1 red+icon H-3 orange H-10 hidden", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     await expect(page.getByRole("heading", { name: "Stok Mepet" })).toBeVisible({ timeout: 10_000 });
 
     // Should show 2 urgent items
@@ -46,7 +46,7 @@ test.describe("Badge & Urgent List", () => {
   });
 
   test("badge count per SKU matches sum qty urgent", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     // aria-live count shows 2
     await expect(page.getByText("2 stok mepet")).toBeVisible();
     // per SKU sum: Susu 10, Yoghurt 8 visible in badgePerSku line
@@ -122,7 +122,7 @@ test.describe("Badge & Urgent List", () => {
   });
 
   test("a11y: aria-label, aria-pressed, aria-live, 48px tombol Full width, font 16px, iconoir", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     await expect(page.getByRole("heading", { name: "Stok Mepet" })).toBeVisible();
 
     // aria-label on badge checked in happy test, also check here
@@ -168,7 +168,7 @@ test.describe("Badge & Urgent List", () => {
   });
 
   test("sort expiry terdekat asc primary + toggle urgencyScore optional", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?seed=demo");
     // Default sorted H-1 first
     const items = page.locator('[aria-label="Daftar stok mepet"] li');
     const firstText = await items.first().innerText();

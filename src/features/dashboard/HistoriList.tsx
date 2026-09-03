@@ -9,11 +9,13 @@ export type HistoriListProps = {
   limit?: number;
   historiOverride?: HistoriItem[];
   useRealData?: boolean;
+  seedMode?: "demo" | "many" | "empty" | "expiryNull";
 };
 
-export function HistoriList({ onSelect, limit = 5, historiOverride, useRealData = true }: HistoriListProps) {
+export function HistoriList({ onSelect, limit = 5, historiOverride, useRealData = true, seedMode }: HistoriListProps) {
   const [histori, setHistori] = useState<HistoriItem[]>(() => {
     if (historiOverride) return historiOverride;
+    if (seedMode === "demo" || seedMode === "many") return getHistoriTerbaru(limit);
     // For tests / legacy seed=empty, keep dummy behavior if not real
     if (!useRealData) {
       const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
@@ -22,10 +24,10 @@ export function HistoriList({ onSelect, limit = 5, historiOverride, useRealData 
     }
     return [];
   });
-  const [loading, setLoading] = useState(useRealData && !historiOverride);
+  const [loading, setLoading] = useState(useRealData && !historiOverride && seedMode !== "demo" && seedMode !== "many");
 
   useEffect(() => {
-    if (historiOverride) return;
+    if (historiOverride || seedMode === "demo" || seedMode === "many") return;
     if (!useRealData) return;
     let cancelled = false;
     (async () => {
@@ -78,7 +80,7 @@ export function HistoriList({ onSelect, limit = 5, historiOverride, useRealData 
     return () => {
       cancelled = true;
     };
-  }, [limit, historiOverride, useRealData]);
+  }, [limit, historiOverride, seedMode, useRealData]);
 
   const total = histori.length;
 
