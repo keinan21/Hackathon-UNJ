@@ -5,7 +5,7 @@ import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { HistoriDetailPage } from "./features/dashboard/HistoriDetailPage";
 import { PromoAktifList } from "./features/promo/PromoAktifList";
 import { SettingsPage } from "./features/settings/SettingsPage";
-import { SkuBatchManager } from "./features/sku/SkuBatchManager";
+import { KatalogPage } from "./features/sku/KatalogPage";
 import { LoginPage, getProfilToko } from "./features/auth/LoginPage";
 import { isLoggedIn } from "./features/auth/session";
 
@@ -34,8 +34,47 @@ function useHistoriRoute() {
   return historiId;
 }
 
+function SkuBaruPlaceholder() {
+  return (
+    <div data-testid="sku-baru-page" className="w-full max-w-[480px] mx-auto px-4">
+      <h2 className="text-[20px] font-bold text-[#1A1A1A]" style={{ fontSize: "20px" }}>
+        Tambah SKU
+      </h2>
+      <p className="text-base text-[#595959] mt-4" style={{ fontSize: "16px" }}>
+        Form tambah SKU segera hadir
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          window.history.pushState({}, "", "/");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }}
+        data-testid="sku-baru-back"
+        className="btn btn-outline mt-6 rounded-[12px] px-4 font-semibold border-[#0F7A4A] text-[#0F7A4A]"
+        style={{ minHeight: "48px", fontSize: "16px", backgroundColor: "#FFFFFF" }}
+      >
+        Kembali ke katalog
+      </button>
+    </div>
+  );
+}
+
+function useSkuBaruRoute() {
+  const [isSkuBaru, setIsSkuBaru] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.location.pathname === "/sku/baru";
+  });
+  useEffect(() => {
+    const onPop = () => setIsSkuBaru(window.location.pathname === "/sku/baru");
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  return isSkuBaru;
+}
+
 function AppShell() {
   const historiId = useHistoriRoute();
+  const isSkuBaru = useSkuBaruRoute();
   const [view, setView] = useState<View>(() => {
     if (typeof window === "undefined") return "dashboard";
     const p = new URLSearchParams(window.location.search);
@@ -59,6 +98,17 @@ function AppShell() {
   useEffect(() => {
     (window as unknown as { __APP_VIEW__: string }).__APP_VIEW__ = view;
   }, [view]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { realRepo: rr } = await import("./db/dexieRepository");
+        const { dexieV2: dv } = await import("./db/dexieRepository");
+        (window as unknown as Record<string, unknown>).__REAL_REPO__ = rr;
+        (window as unknown as Record<string, unknown>).__DEXIE_V2__ = dv;
+      } catch {}
+    })();
+  }, []);
 
   const namaToko = (() => {
     try {
@@ -85,6 +135,45 @@ function AppShell() {
     );
   }
 
+  if (isSkuBaru) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#F5F5F0", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
+        <header style={{ background: "#0F7A4A", color: "#FFFFFF", padding: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h1 data-testid="header-title" style={{ margin: 0, fontSize: 20, fontWeight: 700, lineHeight: 1.25, color: "#FFFFFF" }}>{headerTitle}</h1>
+          <span style={{ fontSize: 12, background: "rgba(255,255,255,0.2)", padding: "4px 8px", borderRadius: 8, color: "#FFFFFF" }}>PWA</span>
+        </header>
+        <main style={{ maxWidth: 480, margin: "0 auto", padding: 16, paddingBottom: 80 }}>
+          <SkuBaruPlaceholder />
+        </main>
+        <nav aria-label="Navigasi utama" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#FFFFFF", borderTop: "1px solid #D9D9D9", display: "flex", justifyContent: "space-around", padding: "8px 0", maxWidth: 480, margin: "0 auto" }}>
+          {[
+            { id: "dashboard" as View, label: "Dashboard" },
+            { id: "sku" as View, label: "SKU" },
+            { id: "promo" as View, label: "Promo" },
+            { id: "settings" as View, label: "Pengaturan" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              aria-current={view === tab.id ? "page" : undefined}
+              aria-label={tab.label}
+              onClick={() => {
+                window.history.pushState({}, "", "/");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+                setView(tab.id);
+              }}
+              data-testid={`nav-${tab.id}`}
+              style={{ minHeight: 48, padding: "8px 16px", border: "none", background: "transparent", color: view === tab.id ? "#0F7A4A" : "#595959", fontSize: 14, fontWeight: view === tab.id ? 600 : 400, cursor: "pointer" }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+        <InstallPrompt />
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: "100vh", background: "#F5F5F0", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
       <header style={{ background: "#0F7A4A", color: "#FFFFFF", padding: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -96,7 +185,7 @@ function AppShell() {
         {view === "dashboard" && <DashboardPage seedMode={seedMode} />}
         {view === "promo" && <PromoAktifList />}
         {view === "settings" && <SettingsPage />}
-        {view === "sku" && <SkuBatchManager />}
+        {view === "sku" && <KatalogPage />}
       </main>
 
       <nav aria-label="Navigasi utama" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#FFFFFF", borderTop: "1px solid #D9D9D9", display: "flex", justifyContent: "space-around", padding: "8px 0", maxWidth: 480, margin: "0 auto" }}>

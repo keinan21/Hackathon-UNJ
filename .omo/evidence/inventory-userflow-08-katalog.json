@@ -1,0 +1,22 @@
+{
+  "task": "8-katalog-real-fix",
+  "timestamp": "2026-09-03T23:11:00+07:00",
+  "branch": "feat/katalog-real",
+  "bug": "chips kategori ganda 6 rows (3 names x2) via seedDefaultKategoris race under React.StrictMode double-mount in UrgentList + SkuBatchManager",
+  "rootCause": "seedDefaultKategoris check-then-insert without serialization, fire-and-forget from component effects",
+  "fix": {
+    "seed": "module-level promise lock serialize concurrent seedDefaultKategoris calls (prev promise chaining), second sees first rows and skips, idempotent skip retained, no schema change",
+    "katalog": "defensive dedupeKategoris by org_id+nama (Map first-wins) before rendering chips and before badge lookup"
+  },
+  "tests": {
+    "new": "src/db/seed-race.test.ts: 3 parallel seed on empty fake-indexeddb -> exactly 3 rows + sequential idempotent",
+    "bun": "119 pass 0 fail 467 expect across 17 files",
+    "playwright": "e2e/katalog.spec.ts 5 passed",
+    "build": "exit 0 1729 modules"
+  },
+  "evidence": {
+    "png": ".omo/evidence/inventory-userflow-08-katalog.png 44K chips 5 (Semua+3 kategori+1 tag) cat chips 3 not 6",
+    "dbCheck": "page.evaluate __DEXIE_V2__.kategoris after 3 parallel seed -> 3 rows verified via seed-race.test"
+  },
+  "verification": "bun test src 119 pass, npx playwright test e2e/katalog.spec.ts 5 pass, bun run build exit 0, screenshot fresh single chips"
+}
