@@ -21,6 +21,15 @@ function getMaxThreshold(kategori: Kategori | undefined): number {
   return Math.max(...arr);
 }
 
+function dedupeKategoris(list: Kategori[]): Kategori[] {
+  const seen = new Map<string, Kategori>();
+  for (const k of list) {
+    const key = `${k.org_id}::${k.nama}`;
+    if (!seen.has(key)) seen.set(key, k);
+  }
+  return [...seen.values()];
+}
+
 export function KatalogPage() {
   const [kategoris, setKategoris] = useState<Kategori[]>([]);
   const [skus, setSkus] = useState<SKU[]>([]);
@@ -83,6 +92,8 @@ export function KatalogPage() {
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
+  const dedupedKategoris = dedupeKategoris(kategoris);
+
   const searchLower = debouncedSearch.trim().toLowerCase();
 
   const filtered = skus.filter((sku) => {
@@ -106,7 +117,7 @@ export function KatalogPage() {
   });
 
   const isKritisForSku = (sku: SKU): boolean => {
-    const kategori = kategoris.find((k) => k.id === sku.kategori_id);
+    const kategori = dedupedKategoris.find((k) => k.id === sku.kategori_id);
     const maxThreshold = getMaxThreshold(kategori);
     const batches = batchesBySku[sku.id] ?? [];
     for (const b of batches) {
@@ -183,7 +194,7 @@ export function KatalogPage() {
         >
           Semua
         </button>
-        {kategoris.map((k) => (
+        {dedupedKategoris.map((k) => (
           <button
             key={k.id}
             type="button"
@@ -275,7 +286,7 @@ export function KatalogPage() {
             const batches = batchesBySku[sku.id] ?? [];
             const tagsForSku = skuTagsMap[sku.id] ?? [];
             const isExpanded = expandedSku === sku.id;
-            const kategori = kategoris.find((k) => k.id === sku.kategori_id);
+            const kategori = dedupedKategoris.find((k) => k.id === sku.kategori_id);
             return (
               <li
                 key={sku.id}

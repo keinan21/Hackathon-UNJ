@@ -23,21 +23,35 @@ const DEFAULT_KATEGORIS: Array<{ nama: string; threshold_h_minus: number[] }> = 
   { nama: "Beras", threshold_h_minus: [...DEFAULT_THRESHOLD_H_MINUS] },
 ];
 
+let seedLock: Promise<void> = Promise.resolve();
+
 /**
  * Seed 3 kategori default jika belum ada.
  * Idempotent: query listKategoris, skip nama yang sudah ada.
  * Pakai createKategori (org_id default toko-01, sync-ready sharding).
+ * Serialize concurrent calls via module-level promise chain — second sees first's rows and skips (fixes React.StrictMode double-mount race).
  */
 export async function seedDefaultKategoris(repo: SeedRepository): Promise<void> {
-  const existing = await repo.listKategoris("toko-01");
-  const existingNames = new Set(existing.map((k) => k.nama));
+  const prev = seedLock;
+  let release!: () => void;
+  seedLock = new Promise<void>((res) => {
+    release = res;
+  });
+  await prev;
+  try {
+    const existing = await repo.listKategoris("toko-01");
+    const existingNames = new Set(existing.map((k) => k.nama));
 
-  for (const k of DEFAULT_KATEGORIS) {
-    if (!existingNames.has(k.nama)) {
-      await repo.createKategori({
-        nama: k.nama,
-        threshold_h_minus: [...k.threshold_h_minus],
-      });
+    for (const k of DEFAULT_KATEGORIS) {
+      if (!existingNames.has(k.nama)) {
+        await repo.createKategori({
+          nama: k.nama,
+          threshold_h_minus: [...k.threshold_h_minus],
+        });
+        existingNames.add(k.nama);
+      }
     }
+  } finally {
+    release();
   }
 }
