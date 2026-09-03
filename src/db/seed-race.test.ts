@@ -15,7 +15,7 @@ function uniqueName() {
 }
 
 describe("seedDefaultKategoris race deduplication", () => {
-  test("3 parallel seed on empty → exactly 3 rows, no duplicates", async () => {
+  test("3 parallel seed on empty → exactly 11 rows, no duplicates", async () => {
     const dbName = uniqueName();
     const db = new InventoryDB(dbName);
     await db.open();
@@ -28,10 +28,10 @@ describe("seedDefaultKategoris race deduplication", () => {
     ]);
 
     const rows = await repo.listKategoris("toko-01");
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(11);
     const names = rows.map((r) => r.nama).sort();
-    expect(names).toEqual(["Beras", "Dairy", "Snack"]);
-    expect(new Set(rows.map((r) => r.nama)).size).toBe(3);
+    expect(names).toEqual(["Bumbu Dapur", "Makanan Basah", "Makanan Frozen", "Makanan Kering", "Minuman Botol", "Minuman Kaleng", "Misc", "Obat Bebas", "Perawatan Diri", "Rokok", "Sembako"]);
+    expect(new Set(rows.map((r) => r.nama)).size).toBe(11);
 
     db.close();
   });
@@ -46,7 +46,7 @@ describe("seedDefaultKategoris race deduplication", () => {
     await seedDefaultKategoris(repo as unknown as Parameters<typeof seedDefaultKategoris>[0]);
 
     const rows = await repo.listKategoris("toko-01");
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(11);
 
     db.close();
   });

@@ -63,7 +63,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
   test("happy: mock today 2026-09-02, batch Dairy H-3 in threshold [7,3,1] triggers (1 notif)", async () => {
     await seedDefaultKategoris(repo);
     const kategoris = await repo.listKategoris();
-    const dairy = kategoris.find((k) => k.nama === "Dairy")!;
+    const dairy = kategoris.find((k) => k.nama === "Makanan Basah")!;
     expect(dairy.threshold_h_minus).toEqual([7, 3, 1]);
 
     const sku = await repo.createSKU({
@@ -117,7 +117,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
     expect(due).toHaveLength(1);
     expect(due[0].batch.expiry_date).toBe("2026-09-05");
     expect(due[0].sku.nama).toBe("Susu UHT 1L Indomilk");
-    expect(due[0].kategori.nama).toBe("Dairy");
+    expect(due[0].kategori.nama).toBe("Makanan Basah");
     expect(due[0].daysToExpiry).toBe(3);
     // urgency = qty*days / max(avg,1) — avg fallback 1 (5 distinct <14 → 1) → 10*3/1=30. Jika avg dihitung 2 tanpa fallback tetap finite
     expect(due[0].urgencyScore).toBeGreaterThan(0);
@@ -128,8 +128,9 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
 
   test("batch H-10 not trigger, expiry null not trigger (isolasi per kategori)", async () => {
     await seedDefaultKategoris(repo);
-    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Dairy")!;
-    const snack = (await repo.listKategoris()).find((k) => k.nama === "Snack")!;
+    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Makanan Basah")!;
+    const snack = (await repo.listKategoris()).find((k) => k.nama === "Makanan Kering")!;
+    await repo.updateKategoriThreshold(snack.id!, [7, 3, 1]);
 
     const skuDairy = await repo.createSKU({
       nama: "Yoghurt Cup 100ml",
@@ -165,7 +166,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
 
   test("expiry null not trigger — listBatchesExpiring sudah skip", async () => {
     await seedDefaultKategoris(repo);
-    const beras = (await repo.listKategoris()).find((k) => k.nama === "Beras")!;
+    const beras = (await repo.listKategoris()).find((k) => k.nama === "Misc")!;
     const sku = await repo.createSKU({
       nama: "Beras Pandan Wangi 5kg",
       kategori_id: beras.id!,
@@ -187,7 +188,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
 
   test("checkAndNotify permission denied → fallback badge only no throw", async () => {
     await seedDefaultKategoris(repo);
-    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Dairy")!;
+    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Makanan Basah")!;
     const sku = await repo.createSKU({
       nama: "Susu UHT 1L Indomilk",
       kategori_id: dairy.id!,
@@ -230,7 +231,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
 
   test("checkAndNotify permission granted → show push stub tidak throw, notified = badgeCount", async () => {
     await seedDefaultKategoris(repo);
-    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Dairy")!;
+    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Makanan Basah")!;
     const sku = await repo.createSKU({
       nama: "Susu UHT 1L Indomilk",
       kategori_id: dairy.id!,
@@ -262,7 +263,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
 
   test("checkAndNotify tanpa Notification support → fallback badge only, tidak throw", async () => {
     await seedDefaultKategoris(repo);
-    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Dairy")!;
+    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Makanan Basah")!;
     const sku = await repo.createSKU({
       nama: "Susu UHT 1L",
       kategori_id: dairy.id!,
@@ -288,7 +289,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
 
   test("WA hook stub MUST NOT implement WA send — hanya console.log, tidak ada fetch/whatsApp", async () => {
     await seedDefaultKategoris(repo);
-    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Dairy")!;
+    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Makanan Basah")!;
     const sku = await repo.createSKU({
       nama: "Susu UHT 1L",
       kategori_id: dairy.id!,
@@ -318,12 +319,10 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
 
   test("threshold per kategori — kategori berbeda threshold beda trigger", async () => {
     await seedDefaultKategoris(repo);
-    const kategoris = await repo.listKategoris();
-    const dairy = kategoris.find((k) => k.nama === "Dairy")!;
-    const snack = kategoris.find((k) => k.nama === "Snack")!;
-    // Ubah Dairy threshold jadi [14,7,3] (H-3 tetap trigger, H-10 tidak, H-14 trigger)
-    // Snack tetap [7,3,1]
-    await repo.updateKategoriThreshold(dairy.id!, [14, 7, 3]);
+    const dairyCat = await repo.createKategori({ nama: "AlphaDairy", threshold_h_minus: [14, 7, 3] });
+    const snackCat = await repo.createKategori({ nama: "BetaSnack", threshold_h_minus: [7, 3, 1] });
+    const dairy = dairyCat;
+    const snack = snackCat;
 
     const skuDairy = await repo.createSKU({
       nama: "Susu Dairy Custom",
@@ -355,7 +354,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
 
   test("urgencyScore dihitung qty*days/max(avg,1) — mock avg fallback 1", async () => {
     await seedDefaultKategoris(repo);
-    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Dairy")!;
+    const dairy = (await repo.listKategoris()).find((k) => k.nama === "Makanan Basah")!;
     const sku = await repo.createSKU({
       nama: "Susu UHT",
       kategori_id: dairy.id!,

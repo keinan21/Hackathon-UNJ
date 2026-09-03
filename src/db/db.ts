@@ -277,7 +277,7 @@ function validateTag(t: { nama: string }): void {
   if (!t.nama || t.nama.trim().length === 0) throw new ValidationError("Nama tag tidak boleh kosong");
 }
 
-export { buildKodePrefix, computeNextKode } from "./kode";
+export { buildKodePrefix, computeNextKode, getPrefixForKategori, CURATED_PREFIXES } from "./kode";
 
 // ---------------------------------------------------------------------------
 // DexieRepository impl
@@ -326,13 +326,19 @@ export class DexieRepository implements InventoryRepository {
   async createSKU(s: Omit<SKU, "id" | "org_id"> & { org_id?: string }): Promise<SKU> {
     validateSKU(s);
     const org = assertOrgId(s.org_id);
+    const barcode = (s as SKU).barcode?.trim();
+    if (barcode) {
+      const dup = await this.d.skus.where("org_id").equals(org).filter((x) => x.barcode === barcode).first();
+      if (dup) throw new ValidationError("Barcode sudah dipakai");
+    }
     let kode = (s as SKU).kode?.trim();
     if (kode) {
       const exists = await this.d.skus.where("[org_id+kode]").equals([org, kode]).first();
       if (exists) throw new ValidationError("Kode SKU sudah dipakai");
     } else {
       const kategori = await this.d.kategoris.get(s.kategori_id);
-      const prefix = buildKodePrefix(kategori?.nama ?? "SK");
+      const { getPrefixForKategori } = await import("./kode");
+      const prefix = getPrefixForKategori(kategori?.nama ?? "SK");
       const existing = await this.d.skus
         .where("kategori_id")
         .equals(s.kategori_id)
@@ -341,7 +347,8 @@ export class DexieRepository implements InventoryRepository {
       const existingKodes = existing.map((x) => x.kode as string).filter(Boolean);
       kode = computeNextKode(existingKodes, prefix);
     }
-    const row: SKU = { ...s, kode, org_id: org };
+    const normalizedBarcode = barcode && barcode.length > 0 ? barcode : undefined;
+    const row: SKU = { ...s, barcode: normalizedBarcode, kode, org_id: org };
     try {
       const id = await this.d.skus.add(row);
       return { ...row, id };

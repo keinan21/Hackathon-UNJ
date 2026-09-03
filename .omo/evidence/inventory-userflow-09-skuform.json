@@ -1,0 +1,28 @@
+{
+  "task": "09-skuform",
+  "branch": "feat/sku-form",
+  "seed": "11 kategori kelontong",
+  "prefix_curated": {
+    "Sembako": "SEM [60,30,14]",
+    "Bumbu Dapur": "BUM [30,14,7]",
+    "Makanan Kering": "MKR [30,14,7]",
+    "Makanan Basah": "MBS [7,3,1]",
+    "Makanan Frozen": "MFZ [14,7,3]",
+    "Minuman Kaleng": "MKL [60,30,14]",
+    "Minuman Botol": "MBT [30,14,7]",
+    "Obat Bebas": "OBT [90,30,14]",
+    "Perawatan Diri": "PRW [90,30,14]",
+    "Rokok": "RKK [180,90,30]",
+    "Misc": "MSC [14,7,3]"
+  },
+  "kode_helper": "CURATED_PREFIXES + getPrefixForKategori fallback buildKodePrefix, computeKode max+1, regenerateKodesForKategori konsisten",
+  "form": "SkuForm.tsx Bahasa Indonesia 48px/16px, preview-kode live, warning harga kuning, error Barcode sudah dipakai",
+  "verification": {
+    "bun_test_src": "119 pass",
+    "bun_build": "exit 0, 1730 modules",
+    "playwright_sku_create": "4 passed",
+    "playwright_katalog": "5 passed",
+    "evidence_png": ".omo/evidence/inventory-userflow-09-skuform.png 48K"
+  },
+  "notes": "DB lama Dairy tetap jalan (tidak migrasi), seed serialized via seedLock, barcode unik per org via filter"
+}

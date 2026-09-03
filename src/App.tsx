@@ -6,6 +6,7 @@ import { HistoriDetailPage } from "./features/dashboard/HistoriDetailPage";
 import { PromoAktifList } from "./features/promo/PromoAktifList";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { KatalogPage } from "./features/sku/KatalogPage";
+import { SkuForm } from "./features/sku/SkuForm";
 import { LoginPage, getProfilToko } from "./features/auth/LoginPage";
 import { isLoggedIn } from "./features/auth/session";
 
@@ -34,30 +35,7 @@ function useHistoriRoute() {
   return historiId;
 }
 
-function SkuBaruPlaceholder() {
-  return (
-    <div data-testid="sku-baru-page" className="w-full max-w-[480px] mx-auto px-4">
-      <h2 className="text-[20px] font-bold text-[#1A1A1A]" style={{ fontSize: "20px" }}>
-        Tambah SKU
-      </h2>
-      <p className="text-base text-[#595959] mt-4" style={{ fontSize: "16px" }}>
-        Form tambah SKU segera hadir
-      </p>
-      <button
-        type="button"
-        onClick={() => {
-          window.history.pushState({}, "", "/");
-          window.dispatchEvent(new PopStateEvent("popstate"));
-        }}
-        data-testid="sku-baru-back"
-        className="btn btn-outline mt-6 rounded-[12px] px-4 font-semibold border-[#0F7A4A] text-[#0F7A4A]"
-        style={{ minHeight: "48px", fontSize: "16px", backgroundColor: "#FFFFFF" }}
-      >
-        Kembali ke katalog
-      </button>
-    </div>
-  );
-}
+
 
 function useSkuBaruRoute() {
   const [isSkuBaru, setIsSkuBaru] = useState(() => {
@@ -143,7 +121,7 @@ function AppShell() {
           <span style={{ fontSize: 12, background: "rgba(255,255,255,0.2)", padding: "4px 8px", borderRadius: 8, color: "#FFFFFF" }}>PWA</span>
         </header>
         <main style={{ maxWidth: 480, margin: "0 auto", padding: 16, paddingBottom: 80 }}>
-          <SkuBaruPlaceholder />
+          <SkuForm />
         </main>
         <nav aria-label="Navigasi utama" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#FFFFFF", borderTop: "1px solid #D9D9D9", display: "flex", justifyContent: "space-around", padding: "8px 0", maxWidth: 480, margin: "0 auto" }}>
           {[

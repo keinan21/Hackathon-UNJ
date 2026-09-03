@@ -51,15 +51,33 @@ function validateSKUPayload(p: {
 // ---------------------------------------------------------------------------
 
 export async function createSKU(
-  data: Omit<SKU, "id" | "org_id"> & { org_id?: string; expiry_date?: unknown }
+  data: Omit<SKU, "id" | "org_id"> & { org_id?: string; expiry_date?: unknown; barcode?: string; tags?: string }
 ): Promise<SKU> {
   assertNoExpiry(data as unknown as Record<string, unknown>);
   validateSKUPayload(data as unknown as { nama: string; kategori_id: number; hpp: number; harga_normal: number });
-  // Forward org_id sync-ready sharding, tanpa cloud sync logic v1
+  const org = (data as { org_id?: string }).org_id ?? DEFAULT_ORG_ID;
+  const barcode = (data as { barcode?: string }).barcode?.trim();
+  if (barcode) {
+    const dup = await db.skus.where("org_id").equals(org).filter((x) => x.barcode === barcode).first();
+    if (dup) throw new ValidationError("Barcode sudah dipakai");
+  }
   const payload = data as Omit<SKU, "id" | "org_id"> & { org_id?: string };
-  // Hapus expiry_date jika ada (sudah ditolak di atas, tapi jaga-jaga)
-  const { expiry_date: _ignored, ...clean } = payload as unknown as Record<string, unknown>;
-  return defaultRepo.createSKU(clean as Omit<SKU, "id" | "org_id"> & { org_id?: string });
+  const { expiry_date: _ignored, tags: _tags, ...clean } = payload as unknown as Record<string, unknown>;
+  const result = await defaultRepo.createSKU(clean as Omit<SKU, "id" | "org_id"> & { org_id?: string });
+  const tagStr = (data as { tags?: string }).tags ?? (data as unknown as { tag?: string }).tag;
+  if (typeof tagStr === "string" && tagStr.trim().length > 0) {
+    const names = tagStr.split(",").map((t) => t.trim()).filter(Boolean);
+    for (const nama of names) {
+      let tag = await db.tags.where("[org_id+nama]").equals([org, nama]).first();
+      if (!tag) {
+        const id = await db.tags.add({ nama, org_id: org });
+        tag = { id, nama, org_id: org };
+      }
+      const exists = await db.sku_tags.where("[sku_id+tag_id]").equals([result.id!, tag.id!]).first();
+      if (!exists) await db.sku_tags.add({ sku_id: result.id!, tag_id: tag.id!, org_id: org });
+    }
+  }
+  return result;
 }
 
 export async function getSKU(id: number): Promise<SKU | undefined> {

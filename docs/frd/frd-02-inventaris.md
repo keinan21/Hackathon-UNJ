@@ -22,7 +22,7 @@
 | **Kode SKU** | Kode unik per org format `XXX-NNN` prefix 3 huruf kapital + 3 digit urut, auto-generate, backfill lama, rename regenerasi transaksi. | Contoh DAI-001, unik per org_id |
 | **Tag** | Label bebas per SKU, many-to-many via `sku_tags`, tidak pengaruhi threshold. | Beda dari Kategori |
 | **Batch / Lot** | Stok fisik spesifik dari satu SKU: `qty` + `expiry_date` + `received_at` + `hpp_snapshot`. Satu SKU bisa punya N batch dengan tanggal beda. | Unit yang dihitung untuk expiry dan urgency, keluar pakai FEFO |
-| **Kategori** | Pengelompokan SKU untuk threshold notifikasi (contoh: Dairy, Snack, Beras). Punya config `threshold_h_minus: [7,3,1]` yang editable. | Beda kategori beda H- |
+| **Kategori** | Pengelompokan SKU untuk threshold notifikasi (contoh: Sembako, Bumbu Dapur, Makanan Kering, Makanan Basah, Makanan Frozen, Minuman Kaleng, Minuman Botol, Obat Bebas, Perawatan Diri, Rokok, Misc). Punya config `threshold_h_minus` yang editable per kategori. | Beda kategori beda H- |
 | **Expiry** | `expiry_date` per Batch. Barang non-perishable tetap punya Batch tapi `expiry_date = null` dan tidak masuk engine notifikasi. | v1 pakai satu field saja |
 | **Days to Expiry** | `ceil((expiry_date - today) / 1day)`. Negatif berarti sudah kadaluarsa. | Dihitung harian oleh engine, basis Asia/Jakarta startOfDay |
 | **Avg Daily Usage** | Rata-rata qty terjual per hari per SKU, auto-hitung dari histori transaksi (fallback input manual jika histori kurang dari 14 hari). | Untuk urgencyScore |
@@ -39,15 +39,15 @@ Supervisor catat stok dengan benar: satu jenis barang adalah SKU dengan kode pen
 
 ## Persona
 
-**Supervisor yang terima barang dari supplier tiap pagi.** Dia buka karung, cek nota, input ke HP. Dia tidak mau bingung beda SKU vs Batch. Dia mau pilih Kategori Dairy, ketik nama Susu UHT 1L Indomilk, lihat preview kode DAI-001, lalu tambah Batch 10 pcs expiry 2026-09-10 via tanggal kalender atau durasi 30 hari. Tag "kulkas" ia tempel agar filter cepat. Kalau barang tidak ada kadaluarsa seperti beras karung, cukup isi tanpa tanggal. Saat jual, stok yang paling mepet expiry keluar duluan tanpa ia atur manual.
+**Supervisor yang terima barang dari supplier tiap pagi.** Dia buka karung, cek nota, input ke HP. Dia tidak mau bingung beda SKU vs Batch. Dia mau pilih Kategori Makanan Kering, ketik nama Roti Tawar, lihat preview kode MKR-001, lalu tambah Batch 10 pcs expiry 2026-09-10 via tanggal kalender atau durasi 30 hari. Tag "kulkas" ia tempel agar filter cepat. Kalau barang tidak ada kadaluarsa seperti beras karung, cukup isi tanpa tanggal. Saat jual, stok yang paling mepet expiry keluar duluan tanpa ia atur manual.
 
 ---
 
 ## Requirements
 
 - Model SKU: `id`, `kode` (wajib, format `XXX-NNN` prefix 3 huruf kapital, unik per `org_id`, auto-generate), `nama` (wajib, tidak kosong), `kategori_id` (wajib), `hpp` (angka lebih dari 0), `harga_normal` (lebih dari atau sama dengan HPP, beri warning jika di bawah HPP), `barcode` opsional (unik per org jika diisi), `org_id` default `toko-01`. Relasi many-to-many ke Tag via `sku_tags`.
-- Kode SKU auto: `computeKode(kategoriNama, org_id)` ambil 3 huruf kapital pertama dari nama kategori yang dinormalisasi (contoh Dairy jadi DAI, Snack jadi SNA, Beras jadi BER), lalu suffix 3 digit urut per kategori per org (001, 002). Unik per org di-index `&[org_id+kode]`. Backfill: migrasi Dexie v1 ke v2 generate kode untuk SKU lama yang belum punya kode dalam satu transaksi. Rename kategori: regenerasi kode semua SKU di kategori tersebut dalam SATU transaksi Dexie, cek unik, jika konflik rollback dan tampil pesan Indonesia. Tampilkan preview kode di form sebelum simpan.
-- Model Kategori: `id`, `nama` (Dairy, Snack, Beras default), `threshold_h_minus` array angka, editable, validasi menurun, lebih dari 0, tidak duplikat, tidak kosong, `org_id` default `toko-01`.
+- Kode SKU auto: `computeKode(kategoriNama, org_id)` pakai peta prefix kurasi untuk 11 kategori default (Sembako SEM, Bumbu Dapur BUM, Makanan Kering MKR, Makanan Basah MBS, Makanan Frozen MFZ, Minuman Kaleng MKL, Minuman Botol MBT, Obat Bebas OBT, Perawatan Diri PRW, Rokok RKK, Misc MSC), fallback derivasi 3 huruf kapital untuk kategori buatan user, lalu suffix 3 digit urut per kategori per org (001, 002). Unik per org di-index `&[org_id+kode]`. Backfill: migrasi Dexie v1 ke v2 generate kode untuk SKU lama yang belum punya kode dalam satu transaksi. Rename kategori: regenerasi kode semua SKU di kategori tersebut dalam SATU transaksi Dexie, cek unik, jika konflik rollback dan tampil pesan Indonesia. Tampilkan preview kode di form sebelum simpan.
+- Model Kategori: `id`, `nama` (11 default: Sembako [60,30,14] SEM, Bumbu Dapur [30,14,7] BUM, Makanan Kering [30,14,7] MKR, Makanan Basah [7,3,1] MBS, Makanan Frozen [14,7,3] MFZ, Minuman Kaleng [60,30,14] MKL, Minuman Botol [30,14,7] MBT, Obat Bebas [90,30,14] OBT, Perawatan Diri [90,30,14] PRW, Rokok [180,90,30] RKK, Misc [14,7,3] MSC), `threshold_h_minus` array angka, editable, validasi menurun, lebih dari 0, tidak duplikat, tidak kosong, `org_id` default `toko-01`.
 - Model Tag: `id`, `nama` (bebas, contoh "laris", "kulkas"), unik per `org_id`, tidak pengaruhi threshold atau notifikasi. Tabel `tags` dan `sku_tags` many-to-many. CRUD terpisah dari Kategori.
 - Tag vs Kategori: Kategori tentukan threshold dan warna badge dan masuk tidaknya ke halaman kritis. Tag hanya untuk filter dan search katalog. Jangan campur, jangan pakai Tag untuk atur H-. Validasi: Tag tidak punya threshold_h_minus, Kategori tidak dipakai sebagai filter bebas.
 - Model Batch / Lot: `id`, `sku_id` (wajib, foreign key), `qty` (lebih dari 0), `expiry_date` nullable (null untuk non-perishable, dan batch null tidak masuk engine), `received_at` auto now, `hpp_snapshot` copy dari SKU saat terima atau dari `harga_beli` input masuk, `org_id`.
@@ -57,7 +57,7 @@ Supervisor catat stok dengan benar: satu jenis barang adalah SKU dengan kode pen
 - Avg Daily Usage disimpan per SKU: auto dari histori `transaksis` (sku_id, qty_sold, sold_at) selama 14 hari terakhir, fallback input manual jika data kurang dari 14 hari.
 - Input tanggal Batch: dukung dua mode, pilih tanggal kalender atau isi durasi X hari dari `received_at` yang dikonversi ke `expiry_date` via startOfDay Asia/Jakarta. Validasi `expiry_date >= received_at` atau tolak "Tanggal tidak valid".
 - HPP timpa: barang masuk timpa `SKU.hpp = harga_beli` terakhir dan arsip ke `hpp_history { sku_id, hpp_lama, hpp_baru, created_at, org_id }`. Jika `harga_normal < hpp` baru tampil warning Indonesia, tetap simpan. Guardrail promo tetap pakai `hpp_snapshot` Batch.
-- Threshold default generik `[7,3,1]` untuk semua kategori, seed boleh override per kategori tapi tetap editable via `updateKategoriThreshold`.
+- Threshold default per kategori sesuai daftar 11 kurasi (contoh Sembako [60,30,14], Rokok [180,90,30], Makanan Basah [7,3,1]), tetap editable via `updateKategoriThreshold`.
 - Semua operasi lewat `InventoryRepository` Dexie, dengan index `sku_id`, `kategori_id`, `expiry_date`, `org_id`, dan `&[org_id+kode]` untuk kode.
 
 ---
@@ -68,22 +68,22 @@ Supervisor catat stok dengan benar: satu jenis barang adalah SKU dengan kode pen
 Feature: Inventaris SKU Batch Kategori
 
   Scenario: Buat SKU valid dengan kode auto
-    Given kategori Dairy dengan threshold [7,3,1] sudah ada
-    When supervisor buat SKU nama "Susu UHT 1L Indomilk" kategori Dairy hpp 12000 harga_normal 15000
-    Then SKU tersimpan dengan kode DAI-001 unik per org dan bisa dicari by kategori_id
+    Given kategori Makanan Kering dengan threshold [30,14,7] sudah ada
+    When supervisor buat SKU nama "Roti Tawar" kategori Makanan Kering hpp 8000 harga_normal 12000
+    Then SKU tersimpan dengan kode MKR-001 unik per org dan bisa dicari by kategori_id
     And preview kode tampil sebelum simpan
 
   Scenario: Kode unik per org dan backfill
     Given SKU lama tanpa kode dari v1 masih ada
     When migrasi v2 jalan
     Then semua SKU lama ter-backfill kode tanpa duplikat
-    When buat SKU baru kategori Dairy lagi
-    Then kode jadi DAI-002 bukan DAI-001
+    When buat SKU baru kategori Makanan Kering lagi
+    Then kode jadi MKR-002 bukan MKR-001
 
   Scenario: Rename kategori regenerasi kode transaksi
-    Given SKU Susu kode DAI-001 kategori Dairy
-    When supervisor rename kategori Dairy jadi Dairy Segar
-    Then kode SKU berubah jadi DAI-001 yang baru tetap unik dalam satu transaksi
+    Given SKU Roti kode MKR-001 kategori Makanan Kering
+    When supervisor rename kategori Makanan Kering jadi Makanan Kering Premium
+    Then kode SKU berubah jadi MKR-001 yang baru tetap unik dalam satu transaksi
     And jika konflik duplikat maka rollback dan tampil pesan Indonesia
 
   Scenario: Tolak HPP tidak valid
@@ -125,14 +125,14 @@ Feature: Inventaris SKU Batch Kategori
     Then ditolak "Stok tidak cukup"
 
   Scenario: Tag vs Kategori terpisah
-    Given Tag "kulkas" dan Kategori Dairy ada
-    When supervisor attach Tag kulkas ke SKU Susu
-    Then filter Tag kulkas tampilkan Susu tapi tidak ubah threshold atau badge
+    Given Tag "kulkas" dan Kategori Makanan Kering ada
+    When supervisor attach Tag kulkas ke SKU Roti
+    Then filter Tag kulkas tampilkan Roti tapi tidak ubah threshold atau badge
     When buat Tag duplikat nama sama per org
     Then ditolak pesan Indonesia
 
   Scenario: Edit threshold kategori valid dan tidak valid
-    Given kategori Dairy threshold [7,3,1]
+    Given kategori Sembako threshold [60,30,14]
     When supervisor ubah jadi [14,7,3]
     Then berhasil simpan
     When supervisor ubah jadi [3,3,1]
