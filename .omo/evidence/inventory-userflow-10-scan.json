@@ -1,0 +1,16 @@
+{
+  "task": "10-scan",
+  "branch": "feat/barcode-scan",
+  "allowlist": "html5-qrcode lazy /scan only, no OCR/QR, ADR-003",
+  "files": "package.json (+html5-qrcode), src/features/scan/ScanPage.tsx lazy dynamic import, src/App.tsx /scan guarded login lazy, src/features/sku/SkuForm.tsx scan button 48px + barcode-scanned listener, e2e/scan.spec.ts 4 tests",
+  "functionality": "Scan button /sku/baru -> /scan lazy chunk -> dynamic import html5-qrcode -> camera start facingMode environment, qrbox 250, on success dispatch barcode-scanned + sessionStorage + stop+clear+pushState /sku/baru; deny -> error Bahasa Indonesia + manual fallback always visible 48px; offline manual tetap jalan; stop only if isScanning, cleanup on unmount",
+  "lazy_verification": "main bundle 0 Html5Qrcode, ScanPage-qAyWw4qy.js 4.4k lazy, index-ki6vobsM.js contains html5-qrcode (375k) loaded via __vite__mapDeps dynamic import, static import check grep -r 'from \"html5-qrcode\"' src/features/scan = 0 top-level",
+  "verification": {
+    "bun_test_src": "119 pass 0 fail 17 files",
+    "bun_build": "exit 0, 1757 modules, ScanPage-*.js lazy chunk 4.4k, manifest.webmanifest+sw.js ok",
+    "playwright_scan": "4 passed (guard redirect, grant+tampil+manual 48px+isi balik, deny mock NotAllowedError pesan Indonesia+manual, back tanpa scan)",
+    "typecheck": "tsc --noEmit exit 0",
+    "evidence_png": ".omo/evidence/inventory-userflow-10-scan.png 35k"
+  },
+  "notes": "Headless decode tidak dimock nyata (kamera fake), tapi grant path verifikasi page tampil + fallback manual visible + manual submit mengisi input-barcode via barcode-scanned CustomEvent + sessionStorage; deny path mock getUserMedia NotAllowedError via addInitScript, assert scan-error Bahasa Indonesia; kamera stop hanya jika isScanning cegah 'Cannot stop' error blank page"
+}
