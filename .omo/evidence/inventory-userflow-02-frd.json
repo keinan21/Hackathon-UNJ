@@ -1,0 +1,40 @@
+{
+  "task": "2 - FRD-02/03/05/06 + CONTEXT + AGENTS user flow rewrite",
+  "branch": "feat/frd-userflow-rewrite",
+  "commit": "docs(frd): user flow rewrite 3-tab + FEFO + Telegram",
+  "timestamp": "2026-09-03T15:13:12Z",
+  "gates": {
+    "grep_3tab_dashboard": "PASS",
+    "grep_Tag_context": "PASS",
+    "grep_todo_docs_frd": 0,
+    "grep_todo_expected": 0,
+    "grep_kode_frd02": "PASS",
+    "grep_FEFO_frd02": "PASS",
+    "grep_cashflow_frd03": "PASS",
+    "grep_nama_toko_frd06": "PASS",
+    "grep_grafik_mini_frd05": "PASS",
+    "grep_Tag_vs_Kategori": "PASS",
+    "grep_BEP": "PASS",
+    "grep_telegramQueue_AGENTS": "PASS"
+  },
+  "bun_test": {
+    "command": "bun test src",
+    "result": "97 pass 0 fail 370 expect() calls across 13 files",
+    "exit": 0
+  },
+  "files_modified": [
+    "docs/frd/frd-02-inventaris.md",
+    "docs/frd/frd-03-expiry.md",
+    "docs/frd/frd-05-dashboard.md",
+    "docs/frd/frd-06-backup.md",
+    "CONTEXT.md",
+    "AGENTS.md"
+  ],
+  "verification": {
+    "grep_3tab": "grep -q \"3 tab\" docs/frd/frd-05-dashboard.md exit 0",
+    "grep_Tag": "grep -q \"Tag\" CONTEXT.md exit 0",
+    "grep_todo": "grep -ri \"todo\" docs/frd | wc -l = 0",
+    "bun_test": "bun test src 97 pass"
+  },
+  "notes": "Docs-only wave, no src changes. FRD-02 kode prefix 3-huruf kapital + Tag vs Kategori + FEFO consume + backfill + rename transaksi, FRD-03 Telegram 07:00 rekap + cashflow + kritis <= max threshold + durasi, FRD-05 3-tab Dashboard/SKU/Setting + sub-tab Statistik + grafik mini SVG 14 titik + BEP #16a34a + halaman kritis, FRD-06 profil toko nama_toko + backup v2 extended + HUMAN.md ref, CONTEXT Tag/Kode/Omzet/Margin/Cashflow, AGENTS guardrail telegramQueue retry + scan + Must NOT."
+}

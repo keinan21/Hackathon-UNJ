@@ -302,30 +302,35 @@ git branch -d feat/TASK-02-dexie-schema
 
 ### Must
 
-- Must baca `CONTEXT.md` sebelum pakai istilah SKU, Batch, Kategori, UrgencyScore. Jangan sebut barang tanpa klarifikasi SKU vs Batch.
+- Must baca `CONTEXT.md` sebelum pakai istilah SKU, Batch, Kategori, Tag, Kode SKU, UrgencyScore, Omzet, Margin, Cashflow. Jangan sebut barang tanpa klarifikasi SKU vs Batch, jangan campur Kategori vs Tag.
 - Must pakai `InventoryRepository` untuk akses Dexie. Dexie hanya di `src/db/**`, sisanya lewat interface.
-- Must pakai `org_id` default `toko-01` di semua tabel Dexie sejak v1, comment `sync-ready sharding`.
-- Must hitung `daysToExpiry` pakai `Asia/Jakarta` startOfDay dan `ceil`, bukan UTC.
-- Must hitung `urgencyScore = qty * days_to_expiry / max(avg_daily_usage, 1)` rule deterministik, bukan LLM.
-- Must enforce `harga_tebus >= HPP * 0.85` sebelum LLM call, angka dari DB.
-- Must tulis tombol min 48px, font min 16px, bahasa Indonesia di semua UI.
-- Must cache advisor di `advisorCache` Dexie TTL 24 jam, trigger daily 07:05 plus on-demand after batch insert urgent.
-- Must enkripsi token Telegram via PBKDF2 100k + AES-GCM di `src/lib/crypto.ts`, antre di `telegramQueue` Dexie retry 3x 5s/30s/5m dedup `batchId+tanggal`, fetch `api.telegram.org` direct-HTTPS tanpa backend.
-- Must lazy-load `html5-qrcode` hanya di route `/scan` untuk barcode SKU, fallback input manual jika permission denied. OCR dan QR generation tetap dilarang.
+- Must pakai `org_id` default `toko-01` di semua tabel Dexie sejak v1, comment `sync-ready sharding`. Kode SKU unik per `org_id` via index `&[org_id+kode]`.
+- Must hitung `daysToExpiry` pakai `Asia/Jakarta` startOfDay dan `ceil`, bukan UTC. Input Batch dukung tanggal kalender atau durasi X hari yang dikonversi via startOfDay Asia/Jakarta.
+- Must hitung `urgencyScore = qty * days_to_expiry / max(avg_daily_usage, 1)` rule deterministik, bukan LLM. Kritis = `days <= max(threshold_h_minus)` kategori induk.
+- Must enforce `harga_tebus >= HPP * 0.85` sebelum LLM call, angka dari DB. Floor per-jenis promo tetap HPP*0.85.
+- Must tulis tombol min 48px, font min 16px, bahasa Indonesia di semua UI. Navigasi 3 tab Dashboard/SKU/Setting plus sub-tab Statistik dan In-Out, max 3 tap ke approve.
+- Must cache advisor di `advisorCache` Dexie TTL 24 jam, trigger daily 07:05 plus on-demand after batch insert kritis.
+- Must hitung `omzet = Σ harga_jual_snapshot * qty keluar`, `margin = omzet - Σ hpp_snapshot * qty keluar`, `cashflow = omzet - belanja 14d` via `src/engine/omzet.ts` deterministik 14 hari, angka dari DB bukan LLM, untuk rekap Telegram dan Statistik.
+- Must FEFO saat keluar: kurangi Batch dengan expiry paling dekat dulu, tulis `transaksis` jenis keluar dengan `harga_jual_snapshot`, batch `expiry null` skip FEFO.
+- Must simpan profil toko `nama_toko` di `settings`, isi saat login bersama PIN, bisa edit di Setting, ikut backup v2.
+- Must enkripsi token Telegram via PBKDF2 100k + AES-GCM di `src/lib/crypto.ts` (salt 16 byte, iv 12 byte), simpan terenkripsi di `settings`, antre di `telegramQueue` Dexie retry 3x 5s/30s/5m dedup `batchId+tanggal`, fetch `api.telegram.org` direct-HTTPS tanpa backend (ADR-003). Isi rekap 07:00: list kritis plus omzet/margin/cashflow 14 hari, Bahasa Indonesia. Referensi token di [HUMAN.md](../HUMAN.md).
+- Must lazy-load `html5-qrcode` hanya di route `/scan` untuk barcode SKU, fallback input manual jika permission denied. OCR baca nota dan QR generation tetap dilarang.
 - Must 1 worktree per TASK, 1 reviewer per PR, conventional commits.
 - Must simpan Evidence di `.omo/evidence/task-yy-*` dan sync ke git.
 
 ### Must NOT
 
-- Must NOT simpan expiry di SKU. Expiry milik Batch. `expiry_date = null` untuk non-perishable, skip engine.
-- Must NOT biarkan LLM hitung angka harga, HPP, urgency, atau days_to_expiry. LLM hanya wording dan pairing.
-- Must NOT hardcode threshold non-editable. Seed default `[7,3,1]` editable via `updateKategoriThreshold`.
-- Must NOT tambah backend, Supabase, Firebase, OCR, QR generation, WA send, POS cart, multi-role di v1. Allowlist: Telegram `api.telegram.org` fetch dan `html5-qrcode` lazy di `/scan` (ADR-003) saja.
+- Must NOT simpan expiry di SKU. Expiry milik Batch. `expiry_date = null` untuk non-perishable, skip engine dan FEFO.
+- Must NOT biarkan LLM hitung angka harga, HPP, urgency, days_to_expiry, omzet, margin, cashflow, atau BEP. LLM hanya wording dan pairing.
+- Must NOT hardcode threshold non-editable. Seed default `[7,3,1]` editable via `updateKategoriThreshold`, validasi menurun unik tidak kosong, Bahasa Indonesia.
+- Must NOT tambah backend, Supabase, Firebase, OCR, QR generation, WA send, POS cart, multi-role di v1. Allowlist satu-satunya (ADR-003): Telegram `api.telegram.org` fetch direct-HTTPS tanpa backend (token enkripsi, `telegramQueue` retry 3x 5s/30s/5m dedup `batchId+tanggal`) dan `html5-qrcode` lazy di `/scan` saja. OCR baca nota tetap dilarang.
+- Must NOT pakai Tag untuk atur threshold. Tag hanya filter katalog many-to-many via `sku_tags`, tidak pengaruhi badge atau notifikasi. Kategori yang tentukan H-.
+- Must NOT simpan kode SKU duplikat per org. Harus `&[org_id+kode]` unik, backfill otomatis, rename kategori regenerasi dalam transaksi dengan rollback jika konflik.
 - Must NOT push langsung ke main. Must NOT merge tanpa CI hijau dan 1 reviewer.
 - Must NOT kerjakan 2 TASK di 1 worktree.
 - Must NOT tulis kode `src/**` di mode docs-only sebelum Gate hijau.
 - Must NOT buat file di luar yang di-assign crew tanpa pair.
-- Must NOT simpan token Telegram, PIN, atau API key plain text di code atau git.
+- Must NOT simpan token Telegram, PIN, atau API key plain text di code atau git. Token rujuk [HUMAN.md](../HUMAN.md).
 - Must NOT tambah placeholder TODO di docs. Tulis lengkap atau kosongkan dengan alasan jelas.
 
 ---
