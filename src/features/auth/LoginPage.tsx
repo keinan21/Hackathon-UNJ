@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { isPinSet, setPin, verifyPin } from "./pinStore";
 import { setLoggedIn } from "./session";
+import { AppButton } from "../../components/ui";
+import { Shop, Lock, WarningCircle, CheckCircle } from "iconoir-react";
 
 const PROFILE_KEY = "profil_toko_v1";
 const LOCKOUT_THRESHOLD = 5;
@@ -20,7 +22,6 @@ function getNamaTokoStored(): string {
 function saveNamaToko(nama: string): void {
   try {
     localStorage.setItem(PROFILE_KEY, JSON.stringify({ nama_toko: nama, updated_at: new Date().toISOString() }));
-    // best-effort Dexie settings persist — sync-ready, non-blocking
     import("../../db/db")
       .then(({ db }) => {
         const maybe = db as unknown as { settings?: { put(v: unknown): Promise<unknown> } };
@@ -73,7 +74,6 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
     };
   }, []);
 
-  // lockout countdown
   useEffect(() => {
     if (lockoutUntil === null) return;
     const tick = () => {
@@ -160,8 +160,8 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
 
   if (mode === "loading") {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F5F0" }}>
-        <p style={{ fontSize: 16, color: "#595959" }}>Memuat...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F0]">
+        <p className="text-[16px] text-[#595959]">Memuat...</p>
       </div>
     );
   }
@@ -171,15 +171,24 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
   return (
     <div
       data-testid="login-page"
-      style={{ minHeight: "100vh", background: "#F5F5F0", display: "flex", flexDirection: "column", alignItems: "center", padding: 16 }}
+      className="min-h-screen bg-[#F5F5F0] flex flex-col items-center px-4 py-8"
     >
-      <div style={{ width: "100%", maxWidth: 480, marginTop: 32 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0F7A4A", textAlign: "center", margin: 0 }}>Inventaris Tebus Murah</h1>
-        <p style={{ fontSize: 14, color: "#595959", textAlign: "center", marginTop: 4 }}>{isSetup ? "Buat PIN untuk toko Anda" : "Masuk ke toko Anda"}</p>
+      <div className="w-full max-w-[480px] mt-4 sm:mt-8">
+        {/* Brand hangat */}
+        <div className="flex flex-col items-center text-center">
+          <div className="w-14 h-14 rounded-2xl bg-[#0F7A4A] text-white flex items-center justify-center shadow-sm">
+            <Shop width={26} height={26} strokeWidth={1.6} />
+          </div>
+          <h1 className="text-[22px] font-bold text-[#0F7A4A] mt-3 leading-tight">Inventaris Tebus Murah</h1>
+          <p className="text-sm text-[#595959] mt-1 leading-relaxed">
+            {isSetup ? "Buat PIN untuk toko Anda — data aman di perangkat" : "Masuk ke toko Anda — cepat dan aman"}
+          </p>
+        </div>
 
-        <div style={{ background: "#FFFFFF", border: "1px solid #D9D9D9", borderRadius: 12, padding: 16, marginTop: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+        <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-5 sm:p-6 mt-6">
           {/* Nama toko */}
-          <label htmlFor="input-nama-toko" style={{ display: "block", fontSize: 16, fontWeight: 600, color: "#1A1A1A", marginBottom: 6 }}>
+          <label htmlFor="input-nama-toko" className="flex items-center gap-2 text-[16px] font-semibold text-neutral mb-2">
+            <Shop width={16} height={16} className="text-[#0F7A4A]" />
             Nama Toko
           </label>
           {isSetup ? (
@@ -191,16 +200,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
               onChange={(e) => setNamaToko(e.target.value)}
               placeholder="Contoh: Toko Berkah"
               aria-label="Nama Toko"
-              style={{
-                width: "100%",
-                minHeight: 48,
-                fontSize: 16,
-                padding: "10px 12px",
-                border: "1px solid #D9D9D9",
-                borderRadius: 8,
-                boxSizing: "border-box",
-                outline: "none",
-              }}
+              className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
             />
           ) : (
             <input
@@ -211,23 +211,13 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
               readOnly
               aria-label="Nama Toko"
               aria-readonly="true"
-              style={{
-                width: "100%",
-                minHeight: 48,
-                fontSize: 16,
-                padding: "10px 12px",
-                border: "1px solid #D9D9D9",
-                borderRadius: 8,
-                boxSizing: "border-box",
-                background: "#F5F5F0",
-                color: "#595959",
-                outline: "none",
-              }}
+              className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-[#F5F5F0] text-[#595959] border-base-300 px-3"
             />
           )}
 
           {/* PIN */}
-          <label htmlFor="input-pin" style={{ display: "block", fontSize: 16, fontWeight: 600, color: "#1A1A1A", marginTop: 16, marginBottom: 6 }}>
+          <label htmlFor="input-pin" className="flex items-center gap-2 text-[16px] font-semibold text-neutral mt-5 mb-2">
+            <Lock width={16} height={16} className="text-[#0F7A4A]" />
             PIN
           </label>
           <input
@@ -242,23 +232,14 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
             placeholder="Masukkan PIN"
             aria-label="PIN"
             disabled={isLocked}
-            style={{
-              width: "100%",
-              minHeight: 48,
-              fontSize: 16,
-              padding: "10px 12px",
-              border: "1px solid #D9D9D9",
-              borderRadius: 8,
-              boxSizing: "border-box",
-              outline: "none",
-              opacity: isLocked ? 0.6 : 1,
-            }}
+            className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3 disabled:opacity-60"
           />
 
           {/* Konfirmasi PIN hanya di setup */}
           {isSetup && (
             <>
-              <label htmlFor="input-pin-confirm" style={{ display: "block", fontSize: 16, fontWeight: 600, color: "#1A1A1A", marginTop: 16, marginBottom: 6 }}>
+              <label htmlFor="input-pin-confirm" className="flex items-center gap-2 text-[16px] font-semibold text-neutral mt-5 mb-2">
+                <CheckCircle width={16} height={16} className="text-[#0F7A4A]" />
                 Konfirmasi PIN
               </label>
               <input
@@ -272,61 +253,46 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
                 onChange={(e) => setPinConfirm(e.target.value)}
                 placeholder="Ulangi PIN"
                 aria-label="Konfirmasi PIN"
-                style={{
-                  width: "100%",
-                  minHeight: 48,
-                  fontSize: 16,
-                  padding: "10px 12px",
-                  border: "1px solid #D9D9D9",
-                  borderRadius: 8,
-                  boxSizing: "border-box",
-                  outline: "none",
-                }}
+                className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
               />
             </>
           )}
 
           {/* Error / lockout */}
           {error && (
-            <div data-testid="login-error" role="alert" style={{ marginTop: 12, padding: "10px 12px", background: "#FFEBEE", border: "1px solid #C62828", borderRadius: 8, color: "#C62828", fontSize: 14 }}>
-              {error}
+            <div data-testid="login-error" role="alert" className="mt-4 flex items-start gap-2 rounded-xl px-3 py-3 text-sm bg-[#FFEBEE] border border-[#FFCDD2] text-[#C62828]">
+              <WarningCircle width={18} height={18} className="shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 
           {isLocked && (
-            <div data-testid="lockout-message" role="alert" style={{ marginTop: 12, padding: "10px 12px", background: "#FFF3E0", border: "1px solid #E65100", borderRadius: 8, color: "#E65100", fontSize: 14 }}>
-              Akun terkunci. Coba lagi dalam {lockoutSeconds} detik.
+            <div data-testid="lockout-message" role="alert" className="mt-3 flex items-start gap-2 rounded-xl px-3 py-3 text-sm bg-[#FFF3E0] border border-[#FFE0B2] text-[#E65100]">
+              <WarningCircle width={18} height={18} className="shrink-0 mt-0.5" />
+              <span>Akun terkunci. Coba lagi dalam {lockoutSeconds} detik.</span>
             </div>
           )}
 
           {/* Tombol */}
-          <button
+          <AppButton
             type="button"
             data-testid="btn-masuk"
             onClick={isSetup ? handleSetup : handleLogin}
             disabled={isLocked || submitting}
+            loading={submitting}
+            fullWidth
             aria-label={isSetup ? "Buat PIN dan Masuk" : "Masuk"}
-            style={{
-              width: "100%",
-              minHeight: 48,
-              fontSize: 16,
-              fontWeight: 600,
-              background: isLocked ? "#BDBDBD" : "#0F7A4A",
-              color: "#FFFFFF",
-              border: "none",
-              borderRadius: 12,
-              marginTop: 20,
-              cursor: isLocked ? "not-allowed" : "pointer",
-              opacity: submitting ? 0.8 : 1,
-            }}
+            className="mt-6 rounded-xl"
           >
             {submitting ? "Memproses..." : isSetup ? "Buat PIN dan Masuk" : "Masuk"}
-          </button>
+          </AppButton>
 
           {isSetup ? (
-            <p style={{ fontSize: 12, color: "#595959", textAlign: "center", marginTop: 12 }}>PIN akan disimpan terenkripsi di perangkat ini.</p>
+            <p className="text-xs text-[#595959] text-center mt-3 leading-relaxed">PIN disimpan terenkripsi di perangkat ini. Aman dan offline siap.</p>
           ) : null}
         </div>
+
+        <p className="text-xs text-[#595959] text-center mt-4">Butuh bantuan? Semua data tersimpan lokal di perangkat.</p>
       </div>
     </div>
   );

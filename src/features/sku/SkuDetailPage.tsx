@@ -11,6 +11,8 @@ import { realRepo, dexieV2 } from "../../db/dexieRepository";
 import type { SKU, Kategori, Batch, Tag, Transaksi } from "../../db/types";
 import { daysToExpiry } from "../../engine/expiry";
 import { build14DaysJakarta, aggregateArus14, formatJakarta } from "../../engine/arus";
+import { AppButton, StatCard } from "../../components/ui";
+import { ArrowLeft, Package, Hashtag, StatsReport, WarningCircle, Calendar, Box, Clock } from "iconoir-react";
 
 const ChartArus = lazy(() => import("../../components/ChartArus"));
 
@@ -78,8 +80,8 @@ export function SkuDetailPage({ id }: { id: string }) {
 
   if (loading) {
     return (
-      <div data-testid="sku-detail-page" style={{ padding: 16 }}>
-        <p data-testid="sku-detail-loading" style={{ fontSize: 16, color: "#595959" }} role="status">
+      <div data-testid="sku-detail-page" className="w-full max-w-[720px] mx-auto">
+        <p data-testid="sku-detail-loading" className="text-[16px] text-[#595959]" role="status">
           Memuat detail SKU...
         </p>
       </div>
@@ -88,21 +90,19 @@ export function SkuDetailPage({ id }: { id: string }) {
 
   if (!sku) {
     return (
-      <div data-testid="sku-detail-page" style={{ padding: 16 }}>
-        <p data-testid="sku-detail-notfound" style={{ fontSize: 16, color: "#C62828" }}>
-          SKU tidak ditemukan
-        </p>
-        <button
-          type="button"
-          data-testid="sku-detail-back"
-          onClick={() => {
-            window.history.pushState({}, "", "/");
-            window.dispatchEvent(new PopStateEvent("popstate"));
-          }}
-          style={{ minHeight: 48, fontSize: 16, marginTop: 12, padding: "8px 16px", border: "1px solid #D9D9D9", borderRadius: 12, background: "#FFFFFF" }}
-        >
-          Kembali
-        </button>
+      <div data-testid="sku-detail-page" className="w-full max-w-[720px] mx-auto space-y-4">
+        <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-[#FFEBEE] border border-[#FFCDD2]/60 flex items-center justify-center text-[#C62828] mx-auto mb-4">
+            <WarningCircle width={28} height={28} />
+          </div>
+          <p data-testid="sku-detail-notfound" className="text-[16px] font-semibold text-[#C62828]">
+            SKU tidak ditemukan
+          </p>
+          <p className="text-sm text-[#595959] mt-1">Coba kembali ke katalog dan pilih SKU lain.</p>
+          <AppButton variant="outline" data-testid="sku-detail-back" onClick={() => { window.history.pushState({}, "", "/"); window.dispatchEvent(new PopStateEvent("popstate")); }} className="mt-5 rounded-xl gap-1.5">
+            <ArrowLeft width={16} height={16} /> Kembali
+          </AppButton>
+        </div>
       </div>
     );
   }
@@ -111,7 +111,6 @@ export function SkuDetailPage({ id }: { id: string }) {
   const marginPerPcs = sku.harga_normal - sku.hpp;
   const maxThreshold = getMaxThreshold(kategori);
 
-  // 14d helper
   const fourteenDays = build14DaysJakarta();
   const fourteenSet = new Set(fourteenDays);
 
@@ -126,7 +125,6 @@ export function SkuDetailPage({ id }: { id: string }) {
     })
     .sort((a, b) => b.sold_at.localeCompare(a.sold_at));
 
-  // agregasi via helper (tanpa duplikasi rumus)
   const { masukPerDay, keluarPerDay, marginPerDay, days } = aggregateArus14(allRecent, sku, fourteenDays);
 
   const hasAnyTransaksiIn14 = histori14.length > 0;
@@ -137,54 +135,66 @@ export function SkuDetailPage({ id }: { id: string }) {
   };
 
   return (
-    <div data-testid="sku-detail-page" style={{ maxWidth: 480, margin: "0 auto", padding: 16, fontFamily: "Inter, system-ui, sans-serif" }} className="space-y-4">
-      <button
+    <div data-testid="sku-detail-page" className="w-full max-w-[720px] mx-auto space-y-5">
+      <AppButton
         type="button"
+        variant="ghost"
         data-testid="sku-detail-back"
         onClick={handleBack}
-        style={{ minHeight: 48, fontSize: 16, padding: "8px 16px", border: "1px solid #D9D9D9", borderRadius: 12, background: "#FFFFFF", cursor: "pointer" }}
+        className="rounded-xl gap-1.5 self-start"
       >
-        ← Kembali
-      </button>
+        <ArrowLeft width={16} height={16} /> Kembali
+      </AppButton>
 
       {/* Header */}
-      <div data-testid="sku-detail-header" style={{ background: "#FFFFFF", border: "1px solid #D9D9D9", borderRadius: 12, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-        <h2 data-testid="sku-detail-nama" style={{ fontSize: 20, fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
-          {sku.nama}
-        </h2>
-        <p data-testid="sku-detail-kode" style={{ fontSize: 14, color: "#595959", margin: "4px 0 0" }}>
-          Kode: {sku.kode ?? "-"} {sku.barcode ? `• Barcode: ${sku.barcode}` : ""}
-        </p>
-        <p data-testid="sku-detail-kategori" style={{ fontSize: 14, color: "#595959", margin: "4px 0 0" }}>
-          Kategori: {kategori?.nama ?? "-"} • Threshold: [{kategori?.threshold_h_minus.join(",") ?? "7,3,1"}]
-        </p>
-        {tags.length > 0 && (
-          <p data-testid="sku-detail-tags" style={{ fontSize: 12, color: "#595959", margin: "4px 0 0" }}>
-            {tags.map((t) => `#${t.nama}`).join(" ")}
-          </p>
-        )}
+      <div data-testid="sku-detail-header" className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-[#0F7A4A]/10 text-[#0F7A4A] flex items-center justify-center shrink-0">
+            <Package width={20} height={20} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 data-testid="sku-detail-nama" className="text-xl font-bold text-neutral leading-tight">
+              {sku.nama}
+            </h2>
+            <p data-testid="sku-detail-kode" className="text-sm text-[#595959] mt-1 flex flex-wrap items-center gap-1">
+              <span>Kode: {sku.kode ?? "-"} </span> {sku.barcode ? <span className="badge badge-sm bg-base-200 border-base-300 text-neutral">Barcode: {sku.barcode}</span> : null}
+            </p>
+            <p data-testid="sku-detail-kategori" className="text-sm text-[#595959] mt-1">
+              Kategori: {kategori?.nama ?? "-"} • Threshold: [{kategori?.threshold_h_minus.join(",") ?? "7,3,1"}]
+            </p>
+            {tags.length > 0 && (
+              <p data-testid="sku-detail-tags" className="text-xs text-[#595959] mt-2 flex items-center gap-1.5 flex-wrap">
+                <Hashtag width={12} height={12} className="text-[#0F7A4A]" />
+                {tags.map((t) => `#${t.nama}`).join(" ")}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Ringkasan stok */}
-      <div data-testid="sku-detail-ringkas" style={{ background: "#FFFFFF", border: "1px solid #D9D9D9", borderRadius: 12, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1A1A1A", margin: 0 }}>Ringkasan Stok</h3>
-        <p data-testid="sku-detail-stok-total" style={{ fontSize: 16, color: "#1A1A1A", margin: "8px 0 0" }}>
-          Stok total: {stokTotal} pcs
-        </p>
-        <p data-testid="sku-detail-hpp" style={{ fontSize: 14, color: "#595959", margin: "4px 0 0" }}>
-          HPP: Rp{sku.hpp.toLocaleString("id-ID")} • Harga: Rp{sku.harga_normal.toLocaleString("id-ID")} • Margin: Rp{marginPerPcs.toLocaleString("id-ID")}/pcs
-        </p>
+      {/* Ringkasan stok — StatCard */}
+      <div data-testid="sku-detail-ringkas" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatCard label="Stok total" value={`${stokTotal} pcs`} icon={<Box width={18} height={18} />} variant="neutral" className="sm:col-span-1" />
+        <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-4 sm:col-span-2">
+          <p className="text-xs font-semibold tracking-wide opacity-70 uppercase">Harga & Margin</p>
+          <p data-testid="sku-detail-stok-total" className="sr-only">Stok total: {stokTotal} pcs</p>
+          <p data-testid="sku-detail-hpp" className="text-sm text-neutral mt-2 leading-relaxed">
+            HPP: Rp{sku.hpp.toLocaleString("id-ID")} • Harga: Rp{sku.harga_normal.toLocaleString("id-ID")} • Margin: <span className="font-bold text-[#0F7A4A]">Rp{marginPerPcs.toLocaleString("id-ID")}/pcs</span>
+          </p>
+        </div>
       </div>
 
       {/* Batch list */}
-      <div data-testid="sku-detail-batches" style={{ background: "#FFFFFF", border: "1px solid #D9D9D9", borderRadius: 12, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1A1A1A", margin: 0 }}>Daftar Batch</h3>
+      <div data-testid="sku-detail-batches" className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-5">
+        <h3 className="text-[16px] font-bold text-neutral flex items-center gap-2">
+          <Calendar width={16} height={16} className="text-[#0F7A4A]" /> Daftar Batch
+        </h3>
         {batches.length === 0 ? (
-          <p data-testid="sku-detail-batch-empty" style={{ fontSize: 14, color: "#595959", marginTop: 8 }}>
-            Belum ada batch
+          <p data-testid="sku-detail-batch-empty" className="text-sm text-[#595959] mt-3">
+            Belum ada batch — tambah stok untuk melihat kadaluarsa.
           </p>
         ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0", display: "flex", flexDirection: "column", gap: 8 }} aria-label="Daftar batch">
+          <ul className="mt-3 flex flex-col gap-2" aria-label="Daftar batch">
             {batches.map((b) => {
               const daysExp = b.expiry_date !== null ? daysToExpiry(b.expiry_date) : null;
               const isKritis = b.expiry_date !== null && daysExp !== null && daysExp <= maxThreshold;
@@ -192,30 +202,25 @@ export function SkuDetailPage({ id }: { id: string }) {
                 <li
                   key={b.id}
                   data-testid={`batch-row-${b.id}`}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    border: "1px solid #F0F0F0",
-                    borderRadius: 8,
-                    padding: "8px 12px",
-                    fontSize: 14,
-                    backgroundColor: isKritis ? "#FFEBEE" : "#FFFFFF",
-                  }}
+                  className={[
+                    "flex justify-between items-center rounded-xl px-3 py-2.5 border text-sm gap-2",
+                    isKritis ? "bg-[#FFEBEE] border-[#FFCDD2]" : "bg-base-200/60 border-base-300/40",
+                  ].join(" ")}
                 >
-                  <span data-testid={`batch-info-${b.id}`} style={{ fontSize: 14 }}>
+                  <span data-testid={`batch-info-${b.id}`} className="text-sm">
                     {b.qty} pcs • exp {b.expiry_date ?? "Tanpa kadaluarsa"} {daysExp !== null ? `(H-${daysExp})` : ""} • Rp{b.hpp_snapshot.toLocaleString("id-ID")}
                   </span>
                   {isKritis && (
                     <span
                       data-testid={`batch-kritis-${b.id}`}
-                      style={{ backgroundColor: "#C62828", color: "#FFFFFF", fontSize: 10, fontWeight: 600, borderRadius: 9999, padding: "2px 8px" }}
+                      className="badge badge-sm font-bold rounded-full text-white border-none shrink-0"
+                      style={{ backgroundColor: "#C62828" }}
                     >
-                      Kritis
+                      <WarningCircle width={10} height={10} /> Kritis
                     </span>
                   )}
                   {b.expiry_date === null && (
-                    <span data-testid={`batch-tanpa-${b.id}`} style={{ fontSize: 12, color: "#595959" }}>
+                    <span data-testid={`batch-tanpa-${b.id}`} className="text-xs text-[#595959] shrink-0">
                       Tanpa kadaluarsa
                     </span>
                   )}
@@ -226,31 +231,35 @@ export function SkuDetailPage({ id }: { id: string }) {
         )}
       </div>
 
-      {/* Grafik — ChartArus lazy */}
-      <div data-testid="sku-detail-grafik-section" style={{ background: "#FFFFFF", border: "1px solid #D9D9D9", borderRadius: 12, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1A1A1A", margin: 0 }}>Grafik Arus 14 Hari</h3>
+      {/* Grafik — ChartArus lazy — JANGAN disentuh */}
+      <div data-testid="sku-detail-grafik-section" className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-5">
+        <h3 className="text-[16px] font-bold text-neutral flex items-center gap-2">
+          <StatsReport width={16} height={16} className="text-[#0F7A4A]" /> Grafik Arus 14 Hari
+        </h3>
         {hasAnyTransaksiIn14 ? (
           <div data-testid="sku-detail-grafik">
-            <Suspense fallback={<p data-testid="chart-loading" style={{ fontSize: 14, color: "#595959" }}>Memuat grafik...</p>}>
+            <Suspense fallback={<p data-testid="chart-loading" className="text-sm text-[#595959]">Memuat grafik...</p>}>
               <ChartArus masukPerDay={masukPerDay} keluarPerDay={keluarPerDay} marginPerDay={marginPerDay} days={days} />
             </Suspense>
           </div>
         ) : (
-          <p data-testid="grafik-empty" style={{ fontSize: 14, color: "#595959", marginTop: 12 }}>
+          <p data-testid="grafik-empty" className="text-sm text-[#595959] mt-3">
             Belum ada transaksi 14 hari terakhir
           </p>
         )}
       </div>
 
       {/* Histori transaksi 14d */}
-      <div data-testid="sku-detail-histori" style={{ background: "#FFFFFF", border: "1px solid #D9D9D9", borderRadius: 12, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1A1A1A", margin: 0 }}>Histori Transaksi 14 Hari</h3>
+      <div data-testid="sku-detail-histori" className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-5">
+        <h3 className="text-[16px] font-bold text-neutral flex items-center gap-2">
+          <Clock width={16} height={16} className="text-[#0F7A4A]" /> Histori Transaksi 14 Hari
+        </h3>
         {histori14.length === 0 ? (
-          <p data-testid="histori-empty" style={{ fontSize: 14, color: "#595959", marginTop: 8 }}>
+          <p data-testid="histori-empty" className="text-sm text-[#595959] mt-3">
             Belum ada transaksi 14 hari terakhir
           </p>
         ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0", display: "flex", flexDirection: "column", gap: 8 }}>
+          <ul className="mt-3 flex flex-col gap-2">
             {histori14.map((t) => {
               const day = (() => {
                 try {
@@ -265,12 +274,12 @@ export function SkuDetailPage({ id }: { id: string }) {
                 <li
                   key={t.id}
                   data-testid={`histori-item-${t.id}`}
-                  style={{ display: "flex", justifyContent: "space-between", fontSize: 14, border: "1px solid #F0F0F0", borderRadius: 8, padding: "8px 12px" }}
+                  className="flex justify-between items-center text-sm rounded-xl px-3 py-2.5 border border-base-300/40 bg-base-200/50"
                 >
                   <span>
                     {day} • {jenis} • {t.qty_sold} pcs
                   </span>
-                  <span>Rp{harga.toLocaleString("id-ID")}</span>
+                  <span className="font-semibold">Rp{harga.toLocaleString("id-ID")}</span>
                 </li>
               );
             })}
