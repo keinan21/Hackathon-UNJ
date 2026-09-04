@@ -312,10 +312,10 @@ export class DexieRepository implements InventoryRepository {
     if (threshold_h_minus.some((t) => !(t > 0)))
       throw new ValidationError("Threshold harus lebih dari 0");
     if (new Set(threshold_h_minus).size !== threshold_h_minus.length)
-      throw new ValidationError("Angka threshold tidak boleh sama");
+      throw new ValidationError("Angka tidak boleh sama");
     for (let i = 1; i < threshold_h_minus.length; i++) {
       if (threshold_h_minus[i] >= threshold_h_minus[i - 1])
-        throw new ValidationError("Threshold harus urut besar ke kecil");
+        throw new ValidationError("Harus menurun");
     }
     const k = await this.d.kategoris.get(id);
     if (!k) throw new ValidationError(`Kategori ${id} tidak ditemukan`);
