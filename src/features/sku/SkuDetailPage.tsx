@@ -9,10 +9,23 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { realRepo, dexieV2 } from "../../db/dexieRepository";
 import type { SKU, Kategori, Batch, Tag, Transaksi } from "../../db/types";
-import { daysToExpiry } from "../../engine/expiry";
+import { daysToExpiry, toJakartaStartOfDay } from "../../engine/expiry";
 import { build14DaysJakarta, aggregateArus14, formatJakarta } from "../../engine/arus";
+import { onBatchInserted } from "../../engine/notifScheduler";
 import { AppButton, StatCard } from "../../components/ui";
-import { ArrowLeft, Package, Hashtag, StatsReport, WarningCircle, Calendar, Box, Clock } from "iconoir-react";
+import {
+  ArrowLeft,
+  Package,
+  Hashtag,
+  StatsReport,
+  WarningCircle,
+  Calendar,
+  Box,
+  Clock,
+  Plus,
+  ShoppingBag,
+  CheckCircle,
+} from "iconoir-react";
 
 const ChartArus = lazy(() => import("../../components/ChartArus"));
 
@@ -20,6 +33,410 @@ function getMaxThreshold(kategori: Kategori | undefined): number {
   const arr = kategori?.threshold_h_minus ?? [7, 3, 1];
   if (arr.length === 0) return 7;
   return Math.max(...arr);
+}
+
+const JKT_OFFSET_MS = 7 * 60 * 60 * 1000;
+function jakartaYMD(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+function addDaysJakarta(startUtc: Date, days: number): string {
+  return jakartaYMD(new Date(startUtc.getTime() + days * 86_400_000));
+}
+function jakartaMidnightFromYMD(ymd: string): Date {
+  const s = ymd.slice(0, 10);
+  const y = Number(s.slice(0, 4));
+  const m = Number(s.slice(5, 7));
+  const d = Number(s.slice(8, 10));
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return new Date(NaN);
+  return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0) - JKT_OFFSET_MS);
+}
+
+function InoutMasukPane({ sku, onDone }: { sku: SKU; onDone: () => void }) {
+  const [qty, setQty] = useState("");
+  const [mode, setMode] = useState<"tanggal" | "durasi">("tanggal");
+  const [tanggal, setTanggal] = useState("");
+  const [durasi, setDurasi] = useState("");
+  const [pengirim, setPengirim] = useState("");
+  const [hpp, setHpp] = useState(String(sku.hpp));
+  const [catatan, setCatatan] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    const qtyNum = Number(qty);
+    if (!Number.isFinite(qtyNum) || !(qtyNum > 0) || !Number.isInteger(qtyNum)) {
+      setError("Jumlah harus lebih dari 0");
+      return;
+    }
+    const hppNum = Number(hpp);
+    if (!Number.isFinite(hppNum) || !(hppNum > 0)) {
+      setError("Harga beli harus lebih dari 0");
+      return;
+    }
+    const now = new Date();
+    const receivedStart = toJakartaStartOfDay(now);
+    let expiry_date: string | null = null;
+    if (mode === "tanggal") {
+      if (!tanggal) {
+        setError("Tanggal kadaluarsa wajib diisi");
+        return;
+      }
+      const expiryMidnight = jakartaMidnightFromYMD(tanggal);
+      if (Number.isNaN(expiryMidnight.getTime()) || expiryMidnight.getTime() < receivedStart.getTime()) {
+        setError("Tanggal tidak valid");
+        return;
+      }
+      expiry_date = tanggal.slice(0, 10);
+    } else {
+      const durNum = Number(durasi);
+      if (!Number.isFinite(durNum) || !(durNum > 0) || !Number.isInteger(durNum)) {
+        setError("Durasi harus lebih dari 0");
+        return;
+      }
+      expiry_date = addDaysJakarta(receivedStart, durNum);
+      const expiryMidnight = jakartaMidnightFromYMD(expiry_date);
+      if (expiryMidnight.getTime() < receivedStart.getTime()) {
+        setError("Tanggal tidak valid");
+        return;
+      }
+    }
+    setSubmitting(true);
+    try {
+      const cur = await dexieV2.skus.get(sku.id);
+      if (!cur) {
+        setError("SKU tidak ditemukan");
+        return;
+      }
+      const hppLama = cur.hpp;
+      const nowIso = new Date().toISOString();
+      let batchId = "";
+      await dexieV2.transaction("rw", dexieV2.skus, dexieV2.hpp_history, dexieV2.batches, dexieV2.transaksis, async () => {
+        await dexieV2.hpp_history.put({
+          id: crypto.randomUUID(),
+          sku_id: sku.id,
+          hpp_lama: hppLama,
+          hpp_baru: hppNum,
+          created_at: nowIso,
+          org_id: "toko-01",
+        });
+        await dexieV2.skus.put({ ...cur, hpp: hppNum });
+        batchId = crypto.randomUUID();
+        await dexieV2.batches.put({
+          id: batchId,
+          sku_id: sku.id,
+          qty: qtyNum,
+          expiry_date,
+          received_at: nowIso,
+          hpp_snapshot: hppNum,
+          org_id: "toko-01",
+        });
+        await dexieV2.transaksis.put({
+          id: crypto.randomUUID(),
+          sku_id: sku.id,
+          qty_sold: qtyNum,
+          sold_at: nowIso,
+          org_id: "toko-01",
+          jenis: "masuk",
+          harga_jual_snapshot: 0,
+          pengirim: pengirim.trim() || null,
+          penerima: null,
+          catatan: catatan.trim() || null,
+        });
+      });
+      setSuccess("Barang masuk berhasil dicatat");
+      void onBatchInserted(batchId, "toko-01");
+      window.dispatchEvent(new CustomEvent("inbound-created", { detail: { id: batchId, skuId: sku.id } }));
+      setTimeout(() => onDone(), 600);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("Tanggal tidak valid")) setError("Tanggal tidak valid");
+      else setError(msg || "Gagal mencatat barang masuk");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <div className="rounded-xl bg-[#F5F5F0] border border-base-300/40 px-3 py-2.5 flex items-center gap-2">
+        <Package width={16} height={16} className="text-[#0F7A4A] shrink-0" />
+        <span className="text-sm font-semibold text-neutral truncate" data-testid="inout-masuk-sku">
+          {sku.nama} • {sku.kode ?? sku.id.slice(0, 6)}
+        </span>
+        <span className="ml-auto text-xs text-[#595959]">Rp{sku.hpp.toLocaleString("id-ID")}</span>
+      </div>
+      <div>
+        <label htmlFor="inout-qty-masuk" className="block text-[16px] font-semibold text-neutral mb-2">
+          Jumlah *
+        </label>
+        <input
+          id="inout-qty-masuk"
+          data-testid="input-qty"
+          type="number"
+          inputMode="numeric"
+          value={qty}
+          onChange={(e) => setQty(e.target.value)}
+          placeholder="Contoh: 10"
+          className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
+        />
+      </div>
+      <div>
+        <p className="block text-[16px] font-semibold text-neutral mb-2">Mode kadaluarsa *</p>
+        <div className="flex gap-3" role="radiogroup" aria-label="Mode kadaluarsa">
+          <label className="flex items-center gap-2 cursor-pointer min-h-[48px] px-4 rounded-xl border border-base-300 bg-base-100 has-[input:checked]:border-[#0F7A4A] has-[input:checked]:bg-[#0F7A4A]/5">
+            <input type="radio" name="inout-mode" value="tanggal" checked={mode === "tanggal"} onChange={() => setMode("tanggal")} data-testid="radio-tanggal" className="radio radio-sm" />
+            <Calendar width={16} height={16} className="text-[#0F7A4A]" />
+            <span className="text-[16px]">Tanggal</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer min-h-[48px] px-4 rounded-xl border border-base-300 bg-base-100 has-[input:checked]:border-[#0F7A4A] has-[input:checked]:bg-[#0F7A4A]/5">
+            <input type="radio" name="inout-mode" value="durasi" checked={mode === "durasi"} onChange={() => setMode("durasi")} data-testid="radio-durasi" className="radio radio-sm" />
+            <Clock width={16} height={16} className="text-[#0F7A4A]" />
+            <span className="text-[16px]">Durasi</span>
+          </label>
+        </div>
+      </div>
+      {mode === "tanggal" ? (
+        <div>
+          <label htmlFor="inout-tanggal" className="block text-[16px] font-semibold text-neutral mb-2">
+            Tanggal kadaluarsa *
+          </label>
+          <input
+            id="inout-tanggal"
+            data-testid="input-tanggal"
+            type="date"
+            value={tanggal}
+            onChange={(e) => setTanggal(e.target.value)}
+            className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
+          />
+        </div>
+      ) : (
+        <div>
+          <label htmlFor="inout-durasi" className="block text-[16px] font-semibold text-neutral mb-2">
+            Durasi (hari) *
+          </label>
+          <input
+            id="inout-durasi"
+            data-testid="input-durasi"
+            type="number"
+            inputMode="numeric"
+            value={durasi}
+            onChange={(e) => setDurasi(e.target.value)}
+            placeholder="Contoh: 30"
+            className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
+          />
+        </div>
+      )}
+      <div>
+        <label htmlFor="inout-pengirim" className="block text-[16px] font-semibold text-neutral mb-2">
+          Pengirim
+        </label>
+        <input
+          id="inout-pengirim"
+          data-testid="input-pengirim"
+          type="text"
+          value={pengirim}
+          onChange={(e) => setPengirim(e.target.value)}
+          placeholder="Supplier A"
+          className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
+        />
+      </div>
+      <div>
+        <label htmlFor="inout-hpp" className="block text-[16px] font-semibold text-neutral mb-2">
+          Harga beli (HPP) *
+        </label>
+        <input
+          id="inout-hpp"
+          data-testid="input-hpp"
+          type="number"
+          inputMode="numeric"
+          value={hpp}
+          onChange={(e) => setHpp(e.target.value)}
+          placeholder="12000"
+          className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
+        />
+      </div>
+      <div>
+        <label htmlFor="inout-catatan-masuk" className="block text-[16px] font-semibold text-neutral mb-2">
+          Catatan
+        </label>
+        <textarea
+          id="inout-catatan-masuk"
+          data-testid="textarea-catatan"
+          value={catatan}
+          onChange={(e) => setCatatan(e.target.value)}
+          placeholder="Nota #123"
+          rows={2}
+          className="textarea textarea-bordered w-full min-h-[80px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3 py-3"
+        />
+      </div>
+      {error && (
+        <p data-testid="form-error" role="alert" className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2]">
+          <WarningCircle width={16} height={16} className="shrink-0" /> {error}
+        </p>
+      )}
+      {success && (
+        <p data-testid="form-success" role="status" className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium bg-[#E8F5E9] text-[#0F7A4A] border border-[#C8E6C9]">
+          <CheckCircle width={16} height={16} className="shrink-0" /> {success}
+        </p>
+      )}
+      <AppButton type="submit" data-testid="btn-masuk-simpan" disabled={submitting} loading={submitting} fullWidth className="rounded-xl">
+        {submitting ? "Menyimpan..." : "Simpan Barang Masuk"}
+      </AppButton>
+    </form>
+  );
+}
+
+function InoutKeluarPane({ sku, batches, onDone }: { sku: SKU; batches: Batch[]; onDone: () => void }) {
+  const [qty, setQty] = useState("");
+  const [penerima, setPenerima] = useState("");
+  const [catatan, setCatatan] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const stokTotal = batches.reduce((a, b) => a + b.qty, 0);
+  const expiring = batches.filter((b) => b.expiry_date !== null && b.qty > 0).sort((a, b) => (a.expiry_date as string).localeCompare(b.expiry_date as string));
+  const nonPerish = batches.filter((b) => b.expiry_date === null && b.qty > 0);
+  const stokFEFO = expiring.length > 0 ? expiring.reduce((a, b) => a + b.qty, 0) : nonPerish.reduce((a, b) => a + b.qty, 0);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    const qtyNum = Number(qty);
+    if (!Number.isFinite(qtyNum) || !(qtyNum > 0) || !Number.isInteger(qtyNum)) {
+      setError("Qty harus lebih dari 0");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const cur = await dexieV2.skus.get(sku.id);
+      if (!cur) {
+        setError("SKU tidak ditemukan");
+        return;
+      }
+      await dexieV2.transaction("rw", dexieV2.skus, dexieV2.batches, dexieV2.transaksis, async () => {
+        const all: Batch[] = await dexieV2.batches.where("[org_id+sku_id]").equals(["toko-01", sku.id]).toArray();
+        const exp = all.filter((b) => b.expiry_date !== null && b.qty > 0).sort((a, b) => (a.expiry_date as string).localeCompare(b.expiry_date as string));
+        const non = all.filter((b) => b.expiry_date === null && b.qty > 0);
+        const target = exp.length > 0 ? exp : non;
+        const total = target.reduce((a, b) => a + b.qty, 0);
+        if (total < qtyNum) throw new Error("Stok tidak cukup");
+        let remaining = qtyNum;
+        for (const b of target) {
+          if (remaining <= 0) break;
+          const take = Math.min(b.qty, remaining);
+          await dexieV2.batches.put({ ...b, qty: b.qty - take });
+          remaining -= take;
+        }
+        await (dexieV2.transaksis as unknown as { put: (x: unknown) => Promise<unknown> }).put({
+          id: crypto.randomUUID(),
+          sku_id: sku.id,
+          qty_sold: qtyNum,
+          sold_at: new Date().toISOString(),
+          org_id: "toko-01",
+          jenis: "keluar",
+          harga_jual_snapshot: cur.harga_normal,
+          pengirim: null,
+          penerima: penerima.trim() || null,
+          catatan: catatan.trim() || null,
+        });
+      });
+      setSuccess("Barang keluar berhasil dicatat");
+      window.dispatchEvent(new CustomEvent("outbound-created", { detail: { id: sku.id } }));
+      setTimeout(() => onDone(), 600);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("Stok tidak cukup")) setError("Stok tidak cukup");
+      else if (msg.includes("Qty harus lebih dari 0")) setError("Qty harus lebih dari 0");
+      else setError(msg || "Gagal mencatat barang keluar");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <div className="rounded-xl bg-[#F5F5F0] border border-base-300/40 px-3 py-2.5">
+        <p data-testid="outbound-stok-info" className="text-xs text-[#595959]">
+          Stok total: {stokTotal} pcs • Stok siap FEFO: {stokFEFO} pcs {expiring.length > 0 ? `• ${expiring.length} batch expiring` : "(non-perishable)"}
+        </p>
+        {expiring.length > 0 && (
+          <div data-testid="outbound-fefo-preview" className="mt-2">
+            <p className="text-xs font-semibold text-neutral uppercase tracking-wide">FEFO terdekat</p>
+            <ul className="mt-1 flex flex-col gap-1">
+              {expiring.slice(0, 3).map((b) => (
+                <li key={b.id} data-testid={`fefo-row-${b.id}`} className="text-xs text-[#595959] flex justify-between">
+                  <span>exp {b.expiry_date} • {b.qty} pcs</span>
+                  <span>Rp{b.hpp_snapshot.toLocaleString("id-ID")}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+      <div>
+        <label htmlFor="inout-qty-keluar" className="block text-[16px] font-semibold text-neutral mb-2">
+          Jumlah *
+        </label>
+        <input
+          id="inout-qty-keluar"
+          data-testid="input-qty"
+          type="number"
+          inputMode="numeric"
+          value={qty}
+          onChange={(e) => setQty(e.target.value)}
+          placeholder="Contoh: 5"
+          className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
+        />
+      </div>
+      <div>
+        <label htmlFor="inout-penerima" className="block text-[16px] font-semibold text-neutral mb-2">
+          Penerima
+        </label>
+        <input
+          id="inout-penerima"
+          data-testid="input-penerima"
+          type="text"
+          value={penerima}
+          onChange={(e) => setPenerima(e.target.value)}
+          placeholder="Pelanggan / Cabang B"
+          className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
+        />
+      </div>
+      <div>
+        <label htmlFor="inout-catatan-keluar" className="block text-[16px] font-semibold text-neutral mb-2">
+          Catatan
+        </label>
+        <textarea
+          id="inout-catatan-keluar"
+          data-testid="textarea-catatan"
+          value={catatan}
+          onChange={(e) => setCatatan(e.target.value)}
+          placeholder="Retur rusak, penjualan ecer"
+          rows={2}
+          className="textarea textarea-bordered w-full min-h-[80px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3 py-3"
+        />
+      </div>
+      {error && (
+        <p data-testid="form-error" role="alert" className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2]">
+          <WarningCircle width={16} height={16} className="shrink-0" /> {error}
+        </p>
+      )}
+      {success && (
+        <p data-testid="form-success" role="status" className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium bg-[#E8F5E9] text-[#0F7A4A] border border-[#C8E6C9]">
+          <CheckCircle width={16} height={16} className="shrink-0" /> {success}
+        </p>
+      )}
+      <AppButton type="submit" data-testid="btn-keluar-simpan" disabled={submitting} loading={submitting} fullWidth className="rounded-xl">
+        {submitting ? "Menyimpan..." : "Simpan Barang Keluar"}
+      </AppButton>
+    </form>
+  );
 }
 
 export function SkuDetailPage({ id }: { id: string }) {
@@ -30,6 +447,7 @@ export function SkuDetailPage({ id }: { id: string }) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [transaksis, setTransaksis] = useState<Transaksi[]>([]);
   const [allRecent, setAllRecent] = useState<Transaksi[]>([]);
+  const [activeTab, setActiveTab] = useState<"masuk" | "keluar">("masuk");
 
   useEffect(() => {
     let cancelled = false;
@@ -128,6 +546,23 @@ export function SkuDetailPage({ id }: { id: string }) {
   const { masukPerDay, keluarPerDay, marginPerDay, days } = aggregateArus14(allRecent, sku, fourteenDays);
 
   const hasAnyTransaksiIn14 = histori14.length > 0;
+
+  const masukCount = transaksis.filter((t) => (t.jenis ?? "keluar") === "masuk").length;
+  const keluarCount = transaksis.filter((t) => (t.jenis ?? "keluar") === "keluar").length;
+  const hasAnyTransaksi = transaksis.length > 0;
+
+  const reloadDetail = async () => {
+    if (!sku) return;
+    try {
+      const [batchList, transList] = await Promise.all([
+        realRepo.listBatchesBySku(sku.id, "toko-01"),
+        realRepo.listTransaksisBySku(sku.id, "toko-01").catch(() => []),
+      ]);
+      setBatches(batchList);
+      setTransaksis(transList);
+      setAllRecent(transList);
+    } catch {}
+  };
 
   const handleBack = () => {
     window.history.pushState({}, "", "/");
@@ -247,6 +682,64 @@ export function SkuDetailPage({ id }: { id: string }) {
             Belum ada transaksi 14 hari terakhir
           </p>
         )}
+      </div>
+
+      {/* In-Out sub-tabs — TASK-15 */}
+      <div data-testid="inout-section" className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 overflow-hidden">
+        <div className="flex border-b border-base-300/50" role="tablist" aria-label="Masuk Keluar">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "masuk"}
+            data-testid="tab-masuk"
+            onClick={() => setActiveTab("masuk")}
+            className={[
+              "flex-1 flex items-center justify-center gap-2 min-h-[48px] text-[16px] font-semibold transition-colors",
+              activeTab === "masuk" ? "bg-[#0F7A4A] text-white" : "bg-base-100 text-[#595959] hover:bg-base-200",
+            ].join(" ")}
+          >
+            <Plus width={18} height={18} /> Masuk {masukCount > 0 ? `• ${masukCount}` : ""}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "keluar"}
+            data-testid="tab-keluar"
+            onClick={() => setActiveTab("keluar")}
+            className={[
+              "flex-1 flex items-center justify-center gap-2 min-h-[48px] text-[16px] font-semibold transition-colors",
+              activeTab === "keluar" ? "bg-[#0F7A4A] text-white" : "bg-base-100 text-[#595959] hover:bg-base-200",
+            ].join(" ")}
+          >
+            <ShoppingBag width={18} height={18} /> Keluar {keluarCount > 0 ? `• ${keluarCount}` : ""}
+          </button>
+        </div>
+        <div className="p-5">
+          {!hasAnyTransaksi && (
+            <p data-testid="inout-tab-empty" className="text-sm text-[#595959] text-center py-2">
+              Tanpa transaksi
+            </p>
+          )}
+          {activeTab === "masuk" ? (
+            <div data-testid="inout-pane-masuk">
+              {hasAnyTransaksi && masukCount === 0 && (
+                <p data-testid="inout-tab-empty" className="text-sm text-[#595959] text-center py-2 mb-3">
+                  Tanpa transaksi
+                </p>
+              )}
+              <InoutMasukPane sku={sku} onDone={reloadDetail} />
+            </div>
+          ) : (
+            <div data-testid="inout-pane-keluar">
+              {hasAnyTransaksi && keluarCount === 0 && (
+                <p data-testid="inout-tab-empty" className="text-sm text-[#595959] text-center py-2 mb-3">
+                  Tanpa transaksi
+                </p>
+              )}
+              <InoutKeluarPane sku={sku} batches={batches} onDone={reloadDetail} />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Histori transaksi 14d */}

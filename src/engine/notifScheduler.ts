@@ -260,6 +260,79 @@ export async function checkAndNotify(
 }
 
 // ---------------------------------------------------------------------------
+// onBatchInserted — trigger advisor jika batch kritis (wiring TASK-15)
+// ---------------------------------------------------------------------------
+
+/**
+ * Dipanggil setelah insert batch berhasil (Task 15 wiring).
+ * - Skip jika batch null / expiry null / days > threshold max (default 7)
+ * - Trigger checkAndNotify (badge + push) + advisor onBatchInserted jika urgent
+ * - MUST NOT throw — fire-and-forget aman untuk UI
+ */
+export async function onBatchInserted(
+  batchId: string,
+  orgId = "toko-01",
+  repoOverride?: unknown
+): Promise<void> {
+  try {
+    const repo: any =
+      repoOverride ??
+      (await import("../db/dexieRepository")).realRepo;
+    const batch = await repo.getBatch?.(batchId) ?? await repo.getBatch?.(batchId);
+    if (!batch) return;
+    if (batch.expiry_date === null || batch.expiry_date === undefined) return;
+    const trimmed = String(batch.expiry_date).trim();
+    if (trimmed === "") return;
+    const days = daysToExpiry(trimmed);
+    if (days === null) return;
+
+    // threshold urgency = max threshold kategori atau default 7
+    // Ambil sku → kategori untuk threshold akurat, fallback 7
+    let isKritis = days <= 7;
+    try {
+      const sku = await repo.getSku?.(batch.sku_id) ?? await repo.getSKU?.(batch.sku_id);
+      if (sku) {
+        const kategori = await repo.getKategori?.(sku.kategori_id) ?? await repo.getKategori?.(sku.kategori_id);
+        if (kategori && Array.isArray((kategori as Kategori).threshold_h_minus)) {
+          const max = Math.max(...(kategori as Kategori).threshold_h_minus);
+          isKritis = days <= max;
+        }
+      }
+    } catch {
+    }
+
+    try {
+      const legacyRepo = (await import("../db/db")).db ? null : null;
+      void legacyRepo;
+      await checkAndNotify(repo as unknown as InventoryRepository);
+    } catch {
+    }
+
+    if (!isKritis) return;
+
+    // Trigger advisor on-demand (fire-and-forget)
+    try {
+      const { LangChainGeminiAdvisor } = await import("../advisor/LangChainGeminiAdvisor");
+      // Lazy load LLM via pin store, fallback MockLLM
+      let llm: import("../advisor/LangChainGeminiAdvisor").LLMPort;
+      try {
+        const { createLLMFromPinStore } = await import("../advisor/RealJustwokerLLM");
+        llm = await createLLMFromPinStore("2005");
+      } catch {
+        const { MockLLM } = await import("../advisor/LangChainGeminiAdvisor");
+        llm = new MockLLM();
+      }
+      const advisor = new LangChainGeminiAdvisor(repo, llm);
+      await advisor.onBatchInserted(batchId, orgId).catch(() => {});
+    } catch {
+      // ignore advisor error — scheduler must not throw
+    }
+  } catch {
+    // must not throw
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Scheduler helpers — daily 07:00 + on-demand (on app open)
 // ---------------------------------------------------------------------------
 
