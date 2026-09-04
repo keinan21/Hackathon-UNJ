@@ -227,6 +227,8 @@ export interface InventoryRepository {
   // Tags
   createTag(t: Omit<Tag, "id" | "org_id"> & { org_id?: string }): Promise<Tag>;
   listTags(org_id?: string): Promise<Tag[]>;
+  renameTag(id: number, namaBaru: string, org_id?: string): Promise<Tag>;
+  deleteTag(id: number, org_id?: string): Promise<void>;
   addTagToSKU(sku_id: number, tag_id: number, org_id?: string): Promise<SkuTag>;
   listTagsBySKU(sku_id: number, org_id?: string): Promise<Tag[]>;
   removeTagFromSKU(sku_id: number, tag_id: number, org_id?: string): Promise<void>;
@@ -455,6 +457,35 @@ export class DexieRepository implements InventoryRepository {
   async listTags(org_id?: string): Promise<Tag[]> {
     const org = assertOrgId(org_id);
     return this.d.tags.where("org_id").equals(org).toArray();
+  }
+
+  async renameTag(id: number, namaBaru: string, org_id?: string): Promise<Tag> {
+    const trimmed = namaBaru.trim();
+    if (!trimmed) throw new ValidationError("Nama tag tidak boleh kosong");
+    const tag = await this.d.tags.get(id);
+    if (!tag) throw new ValidationError(`Tag ${id} tidak ditemukan`);
+    const org = org_id ? assertOrgId(org_id) : tag.org_id;
+    if (tag.org_id !== org) throw new ValidationError(`Tag ${id} tidak ditemukan`);
+    if (trimmed === tag.nama) return tag;
+    const exists = await this.d.tags.where("[org_id+nama]").equals([org, trimmed]).first();
+    if (exists) throw new ValidationError("Nama tag sudah dipakai");
+    await this.d.tags.update(id, { nama: trimmed });
+    return { ...tag, nama: trimmed };
+  }
+
+  async deleteTag(id: number, org_id?: string): Promise<void> {
+    const tag = await this.d.tags.get(id);
+    if (!tag) throw new ValidationError(`Tag ${id} tidak ditemukan`);
+    if (org_id) {
+      const org = assertOrgId(org_id);
+      if (tag.org_id !== org) throw new ValidationError(`Tag ${id} tidak ditemukan`);
+    }
+    await this.d.transaction("rw", this.d.tags, this.d.sku_tags, async () => {
+      await this.d.tags.delete(id);
+      const links = await this.d.sku_tags.where("tag_id").equals(id).toArray();
+      const ids = links.map((l) => l.id).filter((x): x is number => x !== undefined);
+      if (ids.length > 0) await this.d.sku_tags.bulkDelete(ids);
+    });
   }
 
   async addTagToSKU(sku_id: number, tag_id: number, org_id?: string): Promise<SkuTag> {

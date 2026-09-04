@@ -1,0 +1,26 @@
+{
+  "task": "12-tags",
+  "commit": "feat(sku): tags terpisah dari kategori",
+  "branch": "feat/tag-crud",
+  "timestamp": "2026-09-04T00:00:00+07:00",
+  "tests": {
+    "tags.test": "14 pass 0 fail (create+list, duplikat Nama tag sudah dipakai, rename propagasi by id, attach idempotent, detach, delete cascade)",
+    "full_src": "133 pass 0 fail 18 files",
+    "build": "exit 0 tsc -b + vite build 1758 modules dist/manifest.webmanifest+sw.js"
+  },
+  "coverage": {
+    "create": true,
+    "list": true,
+    "duplikat_pesan_Indonesia": "Nama tag sudah dipakai",
+    "rename": true,
+    "rename_propagasi_by_id": true,
+    "rename_duplikat_reject": true,
+    "attach_idempotent": true,
+    "detach": true,
+    "detach_idempotent": true,
+    "delete_cascade_sku_tags": true,
+    "sku_tetap_ada_after_delete": true,
+    "filter_tag_tidak_pengaruhi_threshold": true
+  },
+  "evidence": "bun test src/db/tags.test.ts 14 pass; bun test src 133 pass; bun run build exit 0"
+}
