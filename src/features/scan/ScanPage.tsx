@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { PageHeader, AppButton } from "../../components/ui";
+import { ScanBarcode, WarningCircle, ArrowLeft } from "iconoir-react";
 
 export function ScanPage() {
   const readerRef = useRef<HTMLDivElement>(null);
@@ -14,7 +16,6 @@ export function ScanPage() {
 
     (async () => {
       try {
-        // Dynamic import — never top-level, keeps main bundle small
         const mod = await import("html5-qrcode");
         if (cancelled) return;
         const Html5Qrcode = mod.Html5Qrcode;
@@ -35,7 +36,6 @@ export function ScanPage() {
             (decodedText: string) => {
               if (stoppedRef.current) return;
               stoppedRef.current = true;
-              // dispatch barcode to listeners (SkuForm)
               window.dispatchEvent(
                 new CustomEvent("barcode-scanned", { detail: { barcode: decodedText } }),
               );
@@ -53,15 +53,12 @@ export function ScanPage() {
                   window.dispatchEvent(new PopStateEvent("popstate"));
                 });
             },
-            () => {
-              // per-frame decode error — ignore
-            },
+            () => {},
           );
           if (!cancelled) setLoading(false);
         } catch (err: unknown) {
           const msg =
             err instanceof Error ? err.message : String(err ?? "");
-          // Permission denied or no camera
           if (!cancelled) {
             const lower = msg.toLowerCase();
             if (lower.includes("permission") || lower.includes("notallowed") || lower.includes("denied")) {
@@ -144,33 +141,41 @@ export function ScanPage() {
   };
 
   return (
-    <div data-testid="scan-page" className="w-full max-w-[480px] mx-auto px-4 space-y-4">
-      <h2 className="text-[20px] font-bold text-[#1A1A1A]">Scan Barcode</h2>
+    <div data-testid="scan-page" className="w-full max-w-[640px] mx-auto space-y-5">
+      <PageHeader
+        title="Scan Barcode"
+        subtitle="Arahkan kamera ke barcode — atau isi manual bila kamera tidak siap."
+        icon={<ScanBarcode width={18} height={18} />}
+      />
 
       {loading && !error && (
-        <p data-testid="scan-loading" className="text-[14px] text-[#595959]" style={{ fontSize: "14px" }}>
+        <p data-testid="scan-loading" className="text-sm text-[#595959]">
           Memuat kamera...
         </p>
       )}
 
       {error && (
-        <p data-testid="scan-error" role="alert" className="rounded-[8px] px-3 py-2 text-[14px] font-medium" style={{ fontSize: "14px", backgroundColor: "#FFF3CD", color: "#856404", border: "1px solid #FFE69C" }}>
-          {error}
+        <p data-testid="scan-error" role="alert" className="flex items-start gap-2 rounded-xl px-3 py-3 text-sm font-medium bg-[#FFF3CD] text-[#856404] border border-[#FFE69C]">
+          <WarningCircle width={16} height={16} className="shrink-0 mt-0.5" />
+          <span>{error}</span>
         </p>
       )}
 
-      <div
-        id="scan-reader"
-        ref={readerRef}
-        data-testid="scan-reader"
-        className="w-full rounded-[12px] overflow-hidden border border-[#D9D9D9] bg-black"
-        style={{ minHeight: "280px" }}
-      />
+      <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-3">
+        <div
+          id="scan-reader"
+          ref={readerRef}
+          data-testid="scan-reader"
+          className="w-full rounded-xl overflow-hidden border border-base-300 bg-black"
+          style={{ minHeight: "280px" }}
+        />
+        <p className="text-xs text-[#595959] text-center mt-2">Posisikan barcode di tengah kotak. Pencahayaan cukup membantu hasil.</p>
+      </div>
 
       {/* Manual fallback — always visible */}
-      <form onSubmit={handleManualSubmit} className="space-y-2" noValidate>
-        <label htmlFor="scan-manual-barcode" className="block text-[14px] font-medium text-[#1A1A1A]" style={{ fontSize: "14px" }}>
-          Input manual barcode
+      <form onSubmit={handleManualSubmit} className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-5 space-y-3" noValidate>
+        <label htmlFor="scan-manual-barcode" className="block text-[16px] font-semibold text-neutral flex items-center gap-2">
+          <ScanBarcode width={16} height={16} className="text-[#0F7A4A]" /> Input manual barcode
         </label>
         <input
           id="scan-manual-barcode"
@@ -179,31 +184,31 @@ export function ScanPage() {
           value={manualBarcode}
           onChange={(e) => setManualBarcode(e.target.value)}
           placeholder="Contoh: 8991234567890"
-          className="w-full border border-[#D9D9D9] rounded-[12px] px-3"
-          style={{ minHeight: "48px", fontSize: "16px" }}
+          className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
         />
-        <button
+        <AppButton
           type="submit"
           data-testid="scan-manual-submit"
-          className="w-full rounded-[12px] font-semibold"
-          style={{ minHeight: "48px", fontSize: "16px", backgroundColor: "#0F7A4A", color: "#FFFFFF", border: "none" }}
+          fullWidth
+          className="rounded-xl"
         >
           Pakai Barcode Ini
-        </button>
-        <p data-testid="scan-manual-hint" className="text-[12px] text-[#595959]" style={{ fontSize: "12px" }}>
+        </AppButton>
+        <p data-testid="scan-manual-hint" className="text-xs text-[#595959] leading-relaxed">
           Jika kamera tidak tersedia atau ditolak, isi barcode manual lalu tekan tombol di atas.
         </p>
       </form>
 
-      <button
+      <AppButton
         type="button"
+        variant="outline"
         onClick={handleBack}
         data-testid="scan-back"
-        className="w-full rounded-[12px] font-semibold border border-[#0F7A4A] text-[#0F7A4A] bg-white"
-        style={{ minHeight: "48px", fontSize: "16px" }}
+        fullWidth
+        className="rounded-xl gap-1.5"
       >
-        Kembali ke form SKU
-      </button>
+        <ArrowLeft width={16} height={16} /> Kembali ke form SKU
+      </AppButton>
     </div>
   );
 }

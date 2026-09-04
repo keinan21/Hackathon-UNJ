@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import { realRepo, dexieV2 } from "../../db/dexieRepository";
 import type { SKU, Kategori, Batch, Tag } from "../../db/types";
 import { daysToExpiry } from "../../engine/expiry";
+import { PageHeader, EmptyState, AppButton, BadgeKritis } from "../../components/ui";
+import { Package, Search, Plus, WarningCircle } from "iconoir-react";
 
 type BatchMap = Record<string, Batch[]>;
 type SkuTagsMap = Record<string, Tag[]>;
@@ -72,9 +74,7 @@ export function KatalogPage() {
           if (!skuTagMap[link.sku_id]) skuTagMap[link.sku_id] = [];
           skuTagMap[link.sku_id].push(tag);
         }
-      } catch {
-        // tag table may not exist yet
-      }
+      } catch {}
       setSkuTagsMap(skuTagMap);
     } catch (e) {
       console.error(e);
@@ -93,18 +93,14 @@ export function KatalogPage() {
   };
 
   const dedupedKategoris = dedupeKategoris(kategoris);
-
   const searchLower = debouncedSearch.trim().toLowerCase();
 
   const filtered = skus.filter((sku) => {
-    // Kategori chip filter
     if (selectedKategori !== null && sku.kategori_id !== selectedKategori) return false;
-    // Tag chip filter
     if (selectedTag !== null) {
       const tagsForSku = skuTagsMap[sku.id] ?? [];
       if (!tagsForSku.some((t) => t.id === selectedTag)) return false;
     }
-    // Search debounce filter
     if (searchLower === "") return true;
     const tagsForSku = skuTagsMap[sku.id] ?? [];
     const tagNames = tagsForSku.map((t) => t.nama.toLowerCase());
@@ -129,10 +125,26 @@ export function KatalogPage() {
     return false;
   };
 
+  const kritisDaysForSku = (sku: SKU): number | null => {
+    const kategori = dedupedKategoris.find((k) => k.id === sku.kategori_id);
+    const maxThreshold = getMaxThreshold(kategori);
+    const batches = batchesBySku[sku.id] ?? [];
+    let min: number | null = null;
+    for (const b of batches) {
+      if (b.expiry_date === null) continue;
+      const d = daysToExpiry(b.expiry_date);
+      if (d === null) continue;
+      if (d <= maxThreshold) {
+        if (min === null || d < min) min = d;
+      }
+    }
+    return min;
+  };
+
   if (loading) {
     return (
-      <div data-testid="katalog-page" className="w-full max-w-[480px] mx-auto px-4">
-        <p className="text-base text-[#595959]" style={{ fontSize: "16px" }} role="status">
+      <div data-testid="katalog-page" className="w-full max-w-[720px] mx-auto">
+        <p className="text-base text-[#595959] text-[16px]" role="status">
           Memuat katalog...
         </p>
       </div>
@@ -143,24 +155,27 @@ export function KatalogPage() {
   const showEmptySearch = skus.length > 0 && filtered.length === 0;
 
   return (
-    <div data-testid="katalog-page" className="w-full max-w-[480px] mx-auto px-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-[20px] font-bold text-[#1A1A1A]" style={{ fontSize: "20px" }}>
-          Katalog SKU
-        </h2>
-        <button
-          type="button"
-          onClick={handleTambahSku}
-          data-testid="btn-tambah-sku"
-          className="btn btn-primary rounded-[12px] px-4 font-semibold"
-          style={{ minHeight: "48px", fontSize: "16px", backgroundColor: "#0F7A4A", color: "#FFFFFF", border: "none" }}
-        >
-          Tambah SKU
-        </button>
-      </div>
+    <div data-testid="katalog-page" className="w-full max-w-[720px] mx-auto space-y-5">
+      <PageHeader
+        title="Katalog SKU"
+        subtitle="Cari, filter, dan kelola barang — semua stok di satu tempat."
+        icon={<Package width={18} height={18} />}
+        action={
+          <AppButton
+            onClick={handleTambahSku}
+            data-testid="btn-tambah-sku"
+            className="gap-1.5 rounded-xl"
+          >
+            <Plus width={16} height={16} /> Tambah SKU
+          </AppButton>
+        }
+      />
 
-      {/* Search */}
-      <div>
+      {/* Search — hangat rounded-xl */}
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#595959] pointer-events-none">
+          <Search width={18} height={18} />
+        </span>
         <input
           type="search"
           placeholder="Cari nama, kode, barcode, tag..."
@@ -168,8 +183,7 @@ export function KatalogPage() {
           onChange={(e) => setSearchRaw(e.target.value)}
           data-testid="katalog-search"
           aria-label="Cari SKU"
-          className="w-full border border-[#D9D9D9] rounded-[12px] px-3"
-          style={{ minHeight: "48px", fontSize: "16px" }}
+          className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none pl-10 pr-3"
         />
       </div>
 
@@ -183,14 +197,12 @@ export function KatalogPage() {
           }}
           data-testid="chip-semua"
           aria-pressed={selectedKategori === null && selectedTag === null ? "true" : "false"}
-          className="rounded-full px-3 border"
-          style={{
-            minHeight: "48px",
-            fontSize: "16px",
-            backgroundColor: selectedKategori === null && selectedTag === null ? "#0F7A4A" : "#FFFFFF",
-            color: selectedKategori === null && selectedTag === null ? "#FFFFFF" : "#1A1A1A",
-            borderColor: "#D9D9D9",
-          }}
+          className={[
+            "badge min-h-[48px] px-4 rounded-full border text-[16px] font-medium transition-colors",
+            selectedKategori === null && selectedTag === null
+              ? "bg-[#0F7A4A] text-white border-[#0F7A4A]"
+              : "bg-base-100 text-neutral border-base-300 hover:bg-base-200",
+          ].join(" ")}
         >
           Semua
         </button>
@@ -205,14 +217,12 @@ export function KatalogPage() {
             data-testid={`chip-kategori-${k.id}`}
             aria-pressed={selectedKategori === k.id ? "true" : "false"}
             aria-label={`Filter ${k.nama}`}
-            className="rounded-full px-3 border"
-            style={{
-              minHeight: "48px",
-              fontSize: "16px",
-              backgroundColor: selectedKategori === k.id ? "#0F7A4A" : "#FFFFFF",
-              color: selectedKategori === k.id ? "#FFFFFF" : "#1A1A1A",
-              borderColor: "#D9D9D9",
-            }}
+            className={[
+              "badge min-h-[48px] px-4 rounded-full border text-[16px] font-medium transition-colors",
+              selectedKategori === k.id
+                ? "bg-[#0F7A4A] text-white border-[#0F7A4A]"
+                : "bg-base-100 text-neutral border-base-300 hover:bg-base-200",
+            ].join(" ")}
           >
             {k.nama}
           </button>
@@ -228,14 +238,12 @@ export function KatalogPage() {
             data-testid={`chip-tag-${t.id}`}
             aria-pressed={selectedTag === t.id ? "true" : "false"}
             aria-label={`Filter tag ${t.nama}`}
-            className="rounded-full px-3 border"
-            style={{
-              minHeight: "48px",
-              fontSize: "16px",
-              backgroundColor: selectedTag === t.id ? "#0F7A4A" : "#FFFFFF",
-              color: selectedTag === t.id ? "#FFFFFF" : "#1A1A1A",
-              borderColor: "#D9D9D9",
-            }}
+            className={[
+              "badge min-h-[48px] px-4 rounded-full border text-[16px] font-medium transition-colors",
+              selectedTag === t.id
+                ? "bg-[#0F7A4A] text-white border-[#0F7A4A]"
+                : "bg-[#FFF8E1] text-[#8D6E63] border-[#FFE082]/60 hover:bg-[#FFF3C4]",
+            ].join(" ")}
           >
             #{t.nama}
           </button>
@@ -244,45 +252,36 @@ export function KatalogPage() {
 
       {/* List */}
       {showEmptyAll ? (
-        <div
-          data-testid="katalog-empty"
-          className="bg-white border border-[#D9D9D9] rounded-[12px] p-6 text-center"
-          style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
-          role="status"
-          aria-live="polite"
-        >
-          <p className="text-base text-[#595959] mb-4" style={{ fontSize: "16px" }}>
-            Belum ada SKU → Tambah SKU
-          </p>
-          <button
-            type="button"
-            onClick={handleTambahSku}
-            data-testid="btn-empty-tambah-sku"
-            className="btn btn-primary rounded-[12px] px-4 font-semibold"
-            style={{ minHeight: "48px", fontSize: "16px", backgroundColor: "#0F7A4A", color: "#FFFFFF", border: "none" }}
-          >
-            Tambah SKU
-          </button>
+        <div data-testid="katalog-empty" role="status" aria-live="polite">
+          <EmptyState
+            icon={<Package width={28} height={28} strokeWidth={1.4} />}
+            title="Belum ada SKU"
+            description="Mulai dengan tambah barang pertama. Mudah — cukup nama, kategori, dan harga."
+            actionLabel="Tambah SKU"
+            onAction={handleTambahSku}
+            actionTestId="btn-empty-tambah-sku"
+            className="mt-2"
+          />
         </div>
       ) : showEmptySearch ? (
         <div
           data-testid="katalog-empty-search"
-          className="bg-white border border-[#D9D9D9] rounded-[12px] p-6 text-center"
-          style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+          className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-8 text-center"
           role="status"
           aria-live="polite"
         >
-          <p className="text-base text-[#595959]" style={{ fontSize: "16px" }}>
-            Tidak ada hasil untuk &quot;{debouncedSearch.trim()}&quot;
-          </p>
-          <p className="text-[14px] text-[#595959] mt-2" style={{ fontSize: "14px" }}>
-            Coba kata kunci lain atau tambah SKU baru.
-          </p>
+          <div className="w-16 h-16 rounded-2xl bg-[#FFF8E1] border border-[#FFE082]/60 flex items-center justify-center text-[#8D6E63] mx-auto mb-4">
+            <Search width={26} height={26} strokeWidth={1.6} />
+          </div>
+          <h3 className="text-base font-bold text-neutral">Tidak ada hasil</h3>
+          <p className="text-sm text-[#595959] mt-1">Untuk &quot;{debouncedSearch.trim()}&quot; tidak ditemukan</p>
+          <p className="text-sm text-[#595959] mt-1">Coba kata kunci lain atau tambah SKU baru.</p>
         </div>
       ) : (
         <ul className="space-y-3" aria-label="Daftar SKU" data-testid="katalog-list">
           {filtered.map((sku) => {
             const isKritis = isKritisForSku(sku);
+            const kritisDays = kritisDaysForSku(sku);
             const batches = batchesBySku[sku.id] ?? [];
             const tagsForSku = skuTagsMap[sku.id] ?? [];
             const isExpanded = expandedSku === sku.id;
@@ -291,8 +290,7 @@ export function KatalogPage() {
               <li
                 key={sku.id}
                 data-testid={`sku-card-${sku.id}`}
-                className="bg-white border border-[#D9D9D9] rounded-[12px] p-4"
-                style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+                className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-4 hover:shadow-md transition-shadow"
               >
                 <button
                   type="button"
@@ -301,40 +299,39 @@ export function KatalogPage() {
                   aria-expanded={isExpanded}
                   className="w-full text-left"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="font-semibold text-[#1A1A1A]" style={{ fontSize: "16px" }}>
-                        {sku.nama}
-                      </p>
-                      <p className="text-[14px] text-[#595959]" style={{ fontSize: "14px" }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-xl bg-[#0F7A4A]/10 text-[#0F7A4A] flex items-center justify-center shrink-0">
+                          <Package width={16} height={16} />
+                        </div>
+                        <p className="font-semibold text-neutral text-[16px] truncate">{sku.nama}</p>
+                      </div>
+                      <p className="text-sm text-[#595959] mt-2 ml-1">
                         {sku.kode ?? "-"} {sku.barcode ? `• ${sku.barcode}` : ""} • {kategori?.nama ?? "-"}
                       </p>
                       {tagsForSku.length > 0 && (
-                        <p className="text-[12px] text-[#595959] mt-1" style={{ fontSize: "12px" }} data-testid={`sku-tags-${sku.id}`}>
+                        <p className="text-xs text-[#595959] mt-1 ml-1" data-testid={`sku-tags-${sku.id}`}>
                           {tagsForSku.map((t) => `#${t.nama}`).join(" ")}
                         </p>
                       )}
-                      <p className="text-[14px] text-[#1A1A1A] mt-1" style={{ fontSize: "14px" }}>
+                      <p className="text-sm text-neutral mt-1.5 ml-1">
                         HPP Rp{sku.hpp.toLocaleString("id-ID")} • Harga Rp{sku.harga_normal.toLocaleString("id-ID")}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      {isKritis && (
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      {isKritis ? (
                         <span
                           data-testid={`badge-kritis-${sku.id}`}
                           aria-label="Kritis - stok mepet kadaluarsa"
-                          className="rounded-full px-2 py-1 text-[12px] font-semibold inline-flex items-center gap-1"
-                          style={{ backgroundColor: "#C62828", color: "#FFFFFF", fontSize: "12px" }}
+                          className="badge gap-1 border-none font-bold rounded-full text-white"
+                          style={{ backgroundColor: "#C62828", fontSize: 12, padding: "2px 10px", height: 24 }}
                         >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="12" />
-                            <line x1="12" y1="16" x2="12.01" y2="16" />
-                          </svg>
+                          <WarningCircle width={12} height={12} aria-hidden style={{ flexShrink: 0 }} />
                           Kritis
                         </span>
-                      )}
-                      <span className="text-[12px] text-[#595959]" style={{ fontSize: "12px" }}>
+                      ) : null}
+                      <span className="text-xs text-[#595959] bg-base-200 rounded-full px-2.5 py-1 border border-base-300/50">
                         {batches.length} batch
                       </span>
                     </div>
@@ -342,11 +339,9 @@ export function KatalogPage() {
                 </button>
 
                 {isExpanded && (
-                  <div className="mt-3 border-t border-[#D9D9D9] pt-3" data-testid={`batch-rows-${sku.id}`}>
+                  <div className="mt-3 border-t border-base-200 pt-3" data-testid={`batch-rows-${sku.id}`}>
                     {batches.length === 0 ? (
-                      <p className="text-[14px] text-[#595959]" style={{ fontSize: "14px" }}>
-                        Belum ada batch untuk SKU ini.
-                      </p>
+                      <p className="text-sm text-[#595959]">Belum ada batch untuk SKU ini.</p>
                     ) : (
                       <ul className="space-y-2" aria-label="Daftar batch">
                         {batches.map((b) => {
@@ -357,17 +352,16 @@ export function KatalogPage() {
                             <li
                               key={b.id}
                               data-testid={`batch-row-${b.id}`}
-                              className="flex justify-between items-center text-[14px] border border-[#F0F0F0] rounded-[8px] px-3 py-2"
-                              style={{ fontSize: "14px", backgroundColor: batchKritis ? "#FFEBEE" : "#FFFFFF" }}
+                              className={[
+                                "flex justify-between items-center text-sm rounded-xl px-3 py-2.5 border gap-2",
+                                batchKritis ? "bg-[#FFEBEE] border-[#FFCDD2]" : "bg-base-200/60 border-base-300/50",
+                              ].join(" ")}
                             >
-                              <span>
+                              <span className="text-sm">
                                 {b.qty} pcs • exp {b.expiry_date ?? "Tanpa kadaluarsa"} {days !== null ? `(H-${days})` : ""} • Rp{b.hpp_snapshot.toLocaleString("id-ID")}
                               </span>
                               {batchKritis && (
-                                <span
-                                  className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                                  style={{ backgroundColor: "#C62828", color: "#FFFFFF", fontSize: "10px" }}
-                                >
+                                <span className="badge badge-sm font-bold rounded-full text-white border-none" style={{ backgroundColor: "#C62828" }}>
                                   Kritis
                                 </span>
                               )}
