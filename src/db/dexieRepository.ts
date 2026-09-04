@@ -3,7 +3,7 @@ import type { SKU, Batch, Kategori, Transaksi, Promo, AdvisorCacheEntry, Tag, Sk
 import type { InventoryRepository } from "./repository";
 
 /**
- * Dexie real untuk string ids (v2) — dipakai UI real, bukan FakeRepository dummy.
+ * Dexie real untuk string ids (v2) — dipakai UI real.
  * - org_id default toko-01 sync-ready sharding, tanpa cloud sync v1
  * - expiry_date null = non-perishable skip engine (tidak di-index)
  */

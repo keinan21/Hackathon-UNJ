@@ -29,7 +29,7 @@ export function formatRupiah(value: number): string {
   return `Rp${value.toLocaleString("id-ID")}`;
 }
 
-// Demo fixtures — values from FakeRepository convention org_id toko-01
+// Demo fixtures — values convention org_id toko-01
 export function createDemoPromos(today: Date = new Date()): Promo[] {
   // Use fixed expiry 2026-09-02 H-2 style, with harga_tebus 9000 floor 8500
   const expiry = "2026-09-02";

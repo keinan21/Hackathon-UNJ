@@ -1,13 +1,73 @@
 import { useEffect, useState } from "react";
 import { NavArrowLeft, Clock, Shop } from "iconoir-react";
-import { getHistoriById, type HistoriItem } from "../../lib/fakeHistoriRepository";
+import { realRepo } from "../../db/dexieRepository";
+
+type HistoriItem = {
+  id: string;
+  aksi: string;
+  alasan: string;
+  pasangan: string;
+  harga_tebus: number;
+  harga_floor: number;
+  sku_name: string;
+  sku_pasangan_name: string;
+  created_at: string;
+  confidence: number;
+  org_id: string;
+};
 
 export function HistoriDetailPage({ id, onBack }: { id: string; onBack?: () => void }) {
   const [item, setItem] = useState<HistoriItem | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const found = getHistoriById(id) ?? null;
-    setItem(found);
+    let cancelled = false;
+    (async () => {
+      try {
+        const cache = await realRepo.listAdvisorCache("toko-01").catch(() => []);
+        const promos = await realRepo.listPromos("toko-01").catch(() => []);
+        if (cancelled) return;
+        const fromCache: HistoriItem[] = cache.map((c) => {
+          const s = c.suggestion;
+          return {
+            id: c.batch_id,
+            aksi: s.aksi,
+            alasan: s.alasan,
+            pasangan: s.pasangan_tebus_murah ?? "-",
+            harga_tebus: s.harga_tebus,
+            harga_floor: Math.round((s.harga_tebus - s.estimasi_margin) * 0.85),
+            sku_name: s.batch_id,
+            sku_pasangan_name: s.pasangan_tebus_murah ?? "-",
+            created_at: s.created_at,
+            confidence: s.confidence === "Tinggi" ? 0.92 : s.confidence === "Sedang" ? 0.75 : 0.6,
+            org_id: c.org_id,
+          } as unknown as HistoriItem;
+        });
+        const fromPromos: HistoriItem[] = promos.map((p) => ({
+          id: p.id,
+          aksi: `Tebus Murah ${p.batch_id}`,
+          alasan: "Promo tebus murah",
+          pasangan: p.sku_pasangan_id ?? "-",
+          harga_tebus: p.harga_tebus,
+          harga_floor: 0,
+          sku_name: p.batch_id,
+          sku_pasangan_name: p.sku_pasangan_id ?? "-",
+          created_at: p.created_at,
+          confidence: 0.9,
+          org_id: p.org_id,
+        } as unknown as HistoriItem));
+        const all = [...fromCache, ...fromPromos];
+        const found = all.find((h) => h.id === id) ?? null;
+        if (!cancelled) setItem(found);
+      } catch {
+        if (!cancelled) setItem(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const handleBack = () => {
@@ -17,6 +77,14 @@ export function HistoriDetailPage({ id, onBack }: { id: string; onBack?: () => v
       window.dispatchEvent(new PopStateEvent("popstate"));
     }
   };
+
+  if (loading) {
+    return (
+      <section className="w-full max-w-[480px] mx-auto px-4 py-4" data-testid="histori-detail">
+        <p className="text-center text-[#595959]" style={{ fontSize: "16px" }}>Memuat histori...</p>
+      </section>
+    );
+  }
 
   if (!item) {
     return (

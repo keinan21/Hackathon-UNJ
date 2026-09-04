@@ -2,13 +2,9 @@ import { useEffect, useState, useRef } from "react";
 import { UrgentList } from "./UrgentList";
 import { PromoAktifList } from "../promo/PromoAktifList";
 import { HistoriList } from "./HistoriList";
-import { WarningCircle } from "iconoir-react";
+import { WarningCircle, Package } from "iconoir-react";
 import { daysToExpiry } from "../../engine/expiry";
 import { realRepo } from "../../db/dexieRepository";
-
-export type DashboardPageProps = {
-  seedMode?: "demo" | "many" | "empty" | "expiryNull";
-};
 
 function KritisBanner() {
   const [count, setCount] = useState<number | null>(null);
@@ -17,20 +13,6 @@ function KritisBanner() {
     let cancelled = false;
     (async () => {
       try {
-        const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-        const seed = params?.get("seed");
-        if (seed === "empty" || seed === "expiryNull") {
-          if (!cancelled) setCount(0);
-          return;
-        }
-        if (seed === "demo") {
-          if (!cancelled) setCount(2);
-          return;
-        }
-        if (seed === "many") {
-          if (!cancelled) setCount(60);
-          return;
-        }
         const batches = await realRepo.listBatchesExpiring("toko-01");
         const kategoris = await realRepo.listKategoris("toko-01");
         const kategoriMap = new Map(kategoris.map((k) => [k.id, k]));
@@ -51,15 +33,16 @@ function KritisBanner() {
         if (!cancelled) setCount(0);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (count === null) return null;
   if (count === 0) return null;
 
   const handleClick = () => {
-    const search = window.location.search;
-    window.history.pushState({}, "", `/kritis${search}`);
+    window.history.pushState({}, "", `/kritis`);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
@@ -93,31 +76,77 @@ function KritisBanner() {
   );
 }
 
-export function DashboardPage({ seedMode }: DashboardPageProps) {
+export function DashboardPage() {
   const promoRef = useRef<HTMLElement>(null);
+  const [skuCount, setSkuCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const skus = await realRepo.listSkus("toko-01");
+        if (!cancelled) setSkuCount(skus.length);
+      } catch {
+        if (!cancelled) setSkuCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleTambahSku = () => {
+    window.history.pushState({}, "", "/sku/baru");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
+  const isEmpty = skuCount !== null && skuCount === 0;
 
   return (
     <div data-testid="dashboard-page" className="w-full">
       <KritisBanner />
+      {isEmpty && (
+        <div
+          data-testid="dashboard-empty"
+          role="status"
+          aria-live="polite"
+          className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-8 text-center flex flex-col items-center mb-6"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-[#FFF8E1] border border-[#FFE082]/60 flex items-center justify-center text-[#F9A825] mb-4">
+            <Package width={28} height={28} />
+          </div>
+          <h3 className="text-[16px] font-bold text-[#1A1A1A]">Belum ada SKU</h3>
+          <p className="text-sm text-[#595959] mt-1.5 leading-relaxed max-w-sm">Tambah SKU pertama untuk mulai kelola inventaris. Semua data tersimpan lokal di perangkat.</p>
+          <button
+            type="button"
+            data-testid="dashboard-empty-cta"
+            onClick={handleTambahSku}
+            className="btn btn-primary w-full min-h-[48px] mt-5 text-[16px] font-semibold rounded-xl shadow-sm"
+            style={{ minHeight: "48px", fontSize: "16px" }}
+            aria-label="Tambah SKU"
+          >
+            Tambah SKU
+          </button>
+        </div>
+      )}
       {/* Seksi 1: Urgent */}
       <section data-testid="section-urgent" className="mb-6">
-        <UrgentList seedMode={seedMode} onViewSuggestion={() => promoRef.current?.scrollIntoView({ behavior: "smooth" })} />
+        <UrgentList onViewSuggestion={() => promoRef.current?.scrollIntoView({ behavior: "smooth" })} />
       </section>
 
-      {/* Spacer 24px token space-lg */}
       <div style={{ height: 24 }} aria-hidden="true" />
 
       {/* Seksi 2: Promo Aktif */}
       <section ref={promoRef} data-testid="section-promo" className="mb-6">
-        <PromoAktifList seedMode={seedMode} />
+        <PromoAktifList />
       </section>
 
       <div style={{ height: 24 }} aria-hidden="true" />
 
       {/* Seksi 3: Histori */}
       <section data-testid="section-histori" className="mb-6">
-        <HistoriList seedMode={seedMode} />
-        <span className="sr-only" data-testid="histori-count">Menampilkan 5 terbaru</span>
+        <HistoriList />
+        <span className="sr-only" data-testid="histori-count">Menampilkan histori terbaru</span>
       </section>
     </div>
   );

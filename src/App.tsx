@@ -340,15 +340,6 @@ function AppShell() {
     return "dashboard";
   });
 
-  const seedMode = (() => {
-    const p = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-    if (p?.get("seed") === "many" || p?.get("prototype") === "many") return "many" as const;
-    if (p?.get("seed") === "empty") return "empty" as const;
-    if (p?.get("seed") === "expiryNull") return "expiryNull" as const;
-    if (p?.get("seed") === "demo") return "demo" as const;
-    return undefined;
-  })() as "demo" | "many" | "empty" | "expiryNull" | undefined;
-
   useEffect(() => {
     (window as unknown as { __APP_VIEW__: string }).__APP_VIEW__ = view;
   }, [view]);
@@ -409,7 +400,7 @@ function AppShell() {
   else {
     content = (
       <>
-        {view === "dashboard" && <DashboardPage seedMode={seedMode} />}
+        {view === "dashboard" && <DashboardPage />}
         {view === "promo" && <PromoAktifList />}
         {view === "settings" && <SettingsPage />}
         {view === "sku" && <KatalogPage />}

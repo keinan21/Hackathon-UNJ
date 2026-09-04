@@ -4,8 +4,6 @@ import Badge from "../../components/Badge";
 import { daysToExpiry, urgencyScore } from "../../engine/expiry";
 import { realRepo } from "../../db/dexieRepository";
 import { seedDefaultKategoris } from "../../db/seed";
-// Keep FakeRepository for test overrides (e2e) — real data by default
-import { FakeRepository, type UrgentBatch as FakeUrgentBatch } from "../../lib/fakeRepository";
 
 type FilterState = string[];
 type FilterAction = { type: "TOGGLE"; payload: string };
@@ -25,10 +23,6 @@ function filterReducer(state: FilterState, action: FilterAction): FilterState {
 
 export type UrgentListProps = {
   initialFilter?: FilterState;
-  seedMode?: "demo" | "many" | "empty" | "expiryNull";
-  batchesOverride?: FakeUrgentBatch[];
-  /** Force real Dexie mode (default true). If false, use FakeRepository dummy (legacy for e2e). */
-  useRealData?: boolean;
   onViewSuggestion?: (batchId: string) => void;
 };
 
@@ -47,116 +41,36 @@ type RealUrgentBatch = {
   urgencyScore: number;
 };
 
-export function UrgentList({ initialFilter, seedMode, batchesOverride, useRealData = true, onViewSuggestion }: UrgentListProps) {
+export function UrgentList({ initialFilter, onViewSuggestion }: UrgentListProps) {
   const [selected, dispatch] = useReducer(filterReducer, initialFilter ?? ["Semua"]);
   const [sortBy, setSortBy] = useState<"expiry" | "urgency">("expiry");
   const [visibleCount, setVisibleCount] = useState(50);
   const [realBatches, setRealBatches] = useState<RealUrgentBatch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fakeRepo] = useState(() => new FakeRepository());
 
   const today = useMemo(() => new Date(), []);
 
-  // Real data fetch — replaces dummy seedUrgentDemo
   useEffect(() => {
-    if (batchesOverride) {
-      setLoading(false);
-      return;
-    }
-    // If explicitly requested fake mode (for legacy e2e), use FakeRepository
-    if (!useRealData) {
-      const win = typeof window !== "undefined" ? (window as unknown as { __FAKE_SEED_MODE?: string }) : null;
-      const mode = win?.__FAKE_SEED_MODE ?? seedMode;
-      if (mode === "many") fakeRepo.seedManyUrgent(60, today);
-      else if (mode === "empty") fakeRepo.clear();
-      else if (mode === "expiryNull") {
-        fakeRepo.clear();
-        fakeRepo.batches = [
-          {
-            id: "b-null",
-            sku_id: "sku-susu",
-            sku_name: "Susu UHT 1L",
-            kategori_id: "k-dairy",
-            kategori_name: "Dairy",
-            qty: 10,
-            expiry_date: null,
-            received_at: new Date().toISOString(),
-            hpp_snapshot: 10000,
-            org_id: "toko-01",
-            avg_daily_usage: 2,
-          },
-        ];
-      } else fakeRepo.seedUrgentDemo(today);
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
     (async () => {
       try {
-        // Ensure kategori exists (seed if empty) — real data from nol
         const existingKategoris = await realRepo.listKategoris("toko-01").catch(() => []);
         if (existingKategoris.length === 0) {
           await seedDefaultKategoris(realRepo as unknown as import("../../db/db").InventoryRepository).catch(() => {});
         }
-
-        // Real data from nol — only explicit URL ?seed=... triggers fake for e2e, prop seedMode is ignored in real mode
-        const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-        const urlSeed = params?.get("seed") ?? params?.get("prototype") ?? params?.get("empty");
-        const effectiveSeed = urlSeed;
-        if (effectiveSeed === "empty") {
-          // Real empty — do not seed batches, just fetch (will be empty)
-          const batches = await realRepo.listBatchesExpiring("toko-01");
-          if (cancelled) return;
-          // No batches → empty state is correct real data from nol
-          setRealBatches([]);
-          setLoading(false);
-          return;
-        }
-        if (effectiveSeed === "expiryNull") {
-          setRealBatches([]);
-          setLoading(false);
-          return;
-        }
-
-        // Explicit ?seed=demo/many via URL still uses fake for e2e/preview demo, even in real mode
-        if (effectiveSeed === "demo") {
-          fakeRepo.seedUrgentDemo(today);
-          const fakeUrgent = fakeRepo.getUrgentBatches(today, sortBy) as unknown as RealUrgentBatch[];
-          if (!cancelled) {
-            setRealBatches(fakeUrgent);
-            setLoading(false);
-          }
-          return;
-        }
-        if (effectiveSeed === "many") {
-          fakeRepo.seedManyUrgent(60, today);
-          const fakeUrgent = fakeRepo.getUrgentBatches(today, sortBy) as unknown as RealUrgentBatch[];
-          if (!cancelled) {
-            setRealBatches(fakeUrgent);
-            setLoading(false);
-          }
-          return;
-        }
-
-        // Real data: fetch expiring batches only, no dummy auto-seed (data beneran dari nol)
         const batches = await realRepo.listBatchesExpiring("toko-01");
-        const allBatchesRaw = batches;
-
-        // Now compute urgent batches: filter days <= maxThreshold, sort, calc urgency
         const kategoris = await realRepo.listKategoris("toko-01");
         const kategoriMap = new Map(kategoris.map((k) => [k.id, k]));
         const skus = await realRepo.listSkus("toko-01");
         const skuMap = new Map(skus.map((s) => [s.id, s]));
-        // For avg usage, fetch transaksis (if none, fallback 1)
         const transaksis = await realRepo.listTransaksis("toko-01").catch(() => []);
-        const avgMap = new Map<string, number>();
         const totals = new Map<string, number>();
         for (const t of transaksis) totals.set(t.sku_id, (totals.get(t.sku_id) ?? 0) + ((t as unknown as { qty_sold?: number }).qty_sold ?? 1));
+        const avgMap = new Map<string, number>();
         for (const [k, v] of totals) avgMap.set(k, v / 14);
 
         const urgent: RealUrgentBatch[] = [];
-        for (const b of allBatchesRaw) {
+        for (const b of batches) {
           if (b.expiry_date === null) continue;
           const days = daysToExpiry(b.expiry_date, today);
           if (days === null) continue;
@@ -199,58 +113,28 @@ export function UrgentList({ initialFilter, seedMode, batchesOverride, useRealDa
     return () => {
       cancelled = true;
     };
-  }, [today, sortBy, seedMode, batchesOverride, useRealData, fakeRepo]);
+  }, [today, sortBy]);
 
-  // Expose reset helper for "reset data sekarang" — clears real Dexie
   useEffect(() => {
     (window as unknown as { __RESET_REAL_DATA__?: () => Promise<void> }).__RESET_REAL_DATA__ = async () => {
       try {
         await (realRepo as unknown as { clearAll?: (org: string) => Promise<void> }).clearAll?.("toko-01");
       } catch {}
       try {
-        // clear both v1 and v2 DBs
         indexedDB.deleteDatabase("inventaris-tebus-murah");
         indexedDB.deleteDatabase("inventaris-tebus-murah-v2");
       } catch {}
-      // also clear fake in-memory for e2e
-      try {
-        fakeRepo.clear();
-      } catch {}
       location.reload();
     };
-    // Auto-reset if ?reset=1 in URL (for "reset data sekarang")
     try {
       const p = new URLSearchParams(window.location.search);
       if (p.get("reset") === "1") {
         (window as unknown as { __RESET_REAL_DATA__?: () => Promise<void> }).__RESET_REAL_DATA__?.();
       }
     } catch {}
-  }, [fakeRepo]);
+  }, []);
 
-  // Derived for render: if batchesOverride provided (e2e), use it; else if useRealData false, use fakeRepo; else use realBatches
-  const urgentBatches = useMemo(() => {
-    if (batchesOverride) return batchesOverride as unknown as RealUrgentBatch[];
-    if (!useRealData) {
-      const win = typeof window !== "undefined" ? (window as unknown as { __FAKE_SEED_MODE?: string }) : null;
-      const mode = win?.__FAKE_SEED_MODE ?? seedMode;
-      // fakeRepo already seeded in effect above, but for render we need to compute again synchronously
-      // Use fakeRepo.getUrgentBatches for fake mode
-      return fakeRepo.getUrgentBatches(today, sortBy) as unknown as RealUrgentBatch[];
-    }
-    return realBatches;
-  }, [batchesOverride, useRealData, fakeRepo, today, sortBy, realBatches, seedMode]);
-
-  // Also handle window reseed for fake mode
-  useEffect(() => {
-    if (useRealData) return;
-    const handler = () => {
-      const win = window as unknown as { __FAKE_SEED_MODE?: string };
-      if (win.__FAKE_SEED_MODE === "many") fakeRepo.seedManyUrgent(60, today);
-      else if (win.__FAKE_SEED_MODE === "demo") fakeRepo.seedUrgentDemo(today);
-    };
-    window.addEventListener("__reseed", handler as EventListener);
-    return () => window.removeEventListener("__reseed", handler as EventListener);
-  }, [fakeRepo, today, useRealData]);
+  const urgentBatches = realBatches;
 
   const filtered = useMemo(() => {
     if (selected.includes("Semua")) return urgentBatches;
@@ -272,8 +156,7 @@ export function UrgentList({ initialFilter, seedMode, batchesOverride, useRealDa
     setVisibleCount(50);
   };
 
-  const showExpiryNullSkipped = urgentBatches.length === 0 && seedMode === "expiryNull";
-  const showLoading = loading && useRealData && !batchesOverride;
+  const showLoading = loading;
 
   return (
     <section className="w-full max-w-[480px] mx-auto px-4" aria-labelledby="urgent-heading">
@@ -331,7 +214,6 @@ export function UrgentList({ initialFilter, seedMode, batchesOverride, useRealDa
           <p className="text-base text-[#1A1A1A] leading-relaxed" style={{ fontSize: "16px" }}>
             Stok aman, tidak ada yang mepet kadaluarsa. Cek lagi besok jam 7 pagi.
           </p>
-          {showExpiryNullSkipped && <p className="text-sm text-[#595959] mt-2">Batch tanpa tanggal kadaluarsa tidak masuk daftar.</p>}
         </div>
       ) : (
         <ul className="space-y-3" aria-label="Daftar stok mepet">
