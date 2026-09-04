@@ -67,6 +67,7 @@ export class FakeInventoryRepository implements InventoryRepository {
   async getPromo(id: string) { return this.promos.get(id); }
   async createPromo(promo: Promo) { this.promos.set(promo.id, promo); }
   async updatePromo(promo: Promo) { this.promos.set(promo.id, promo); }
+  async deletePromo(id: string) { this.promos.delete(id); }
 
   async getAdvisorCache(batchId: string, orgId: string) {
     return this.advisorCache.get(`${orgId}:${batchId}`);

@@ -5,6 +5,7 @@ import type { Promo } from "./promo.types";
 import { createDemoPromos, formatRupiah } from "./promo.types";
 import { realRepo } from "../../db/dexieRepository";
 import { daysToExpiry } from "../../engine/expiry";
+import { validatePromoUsul } from "../../lib/validation";
 
 export type PromoAktifListProps = {
   initialPromos?: Promo[];
@@ -51,6 +52,7 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
   const [dialogOpen, setDialogOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
   const [offline, setOffline] = useState<boolean>(() => {
     if (forceOffline) return true;
     if (typeof window !== "undefined") {
@@ -190,27 +192,54 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
   const handleConfirm = useCallback(async () => {
     if (!selected) return;
     if (useRealData && !seedMode) {
-      // Real: update DB Promo status to active
       try {
         const dbPromo = await realRepo.getPromo(selected.id);
-        if (dbPromo) {
-          await realRepo.updatePromo({ ...dbPromo, status: "active", updated_at: new Date().toISOString() });
-          // Refresh list
-          const updated = await realRepo.listPromos("toko-01");
-          // Re-map will happen via effect, but optimistically update UI
-        }
-      } catch {}
+        if (!dbPromo) throw new Error("Promo tidak ditemukan");
+        const batch = await realRepo.getBatch(dbPromo.batch_id);
+        if (!batch) throw new Error("Batch tidak ditemukan");
+        if (batch.qty <= 0) throw new Error("Stok habis, tidak bisa approve tebus murah");
+        const sku = await realRepo.getSku(batch.sku_id);
+        if (!sku) throw new Error("SKU tidak ditemukan");
+        const guard = validatePromoUsul("tebus", { hpp: batch.hpp_snapshot, harga_tebus: dbPromo.harga_tebus, harga_normal: sku.harga_normal });
+        if (!guard.valid) throw new Error(guard.error ?? "Harga tebus tidak valid");
+        await realRepo.updatePromo({ ...dbPromo, status: "active", updated_at: new Date().toISOString() });
+        setPromos((prev) => prev.map((p) => (p.id === selected.id ? { ...p, status: "active" as const } : p)));
+        setDialogOpen(false);
+        setSelected(null);
+        setPromoError(null);
+        setToast("Tebus murah aktif, tampil di Dashboard");
+        return;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Gagal approve tebus murah";
+        setPromoError(msg);
+        setToast(msg);
+        return;
+      }
     }
     setPromos((prev) => prev.map((p) => (p.id === selected.id ? { ...p, status: "active" as const } : p)));
     setDialogOpen(false);
     setSelected(null);
+    setPromoError(null);
     setToast("Tebus murah aktif, tampil di Dashboard");
-  }, [selected, useRealData]);
+  }, [selected, useRealData, seedMode]);
 
   const handleCancel = useCallback(() => {
     setDialogOpen(false);
     setSelected(null);
+    setPromoError(null);
   }, []);
+
+  const handleTolak = useCallback(async (promo: Promo) => {
+    if (useRealData && !seedMode) {
+      try {
+        const dbPromo = await realRepo.getPromo(promo.id);
+        if (dbPromo) await realRepo.deletePromo(dbPromo.id);
+      } catch {}
+    }
+    setPromos((prev) => prev.filter((p) => p.id !== promo.id));
+    setToast("Usulan ditolak");
+    setPromoError(null);
+  }, [useRealData, seedMode]);
 
   const dismissToast = useCallback(() => {
     setToastVisible(false);
@@ -270,11 +299,11 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
               <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-2" style={{ fontSize: "16px" }}>
                 Usulan Tebus Murah ({proposedCount})
               </h3>
-              <ul className="space-y-3" aria-label="Daftar usulan tebus murah">
+              <ul className="space-y-3" aria-label="Daftar usulan tebus murah" data-testid="promo-proposed-list">
                 {promos
                   .filter((p) => p.status === "proposed")
                   .map((p) => (
-                    <PromoCard key={p.id} promo={p} onApprove={() => handleRequestApprove(p)} />
+                    <PromoCard key={p.id} promo={p} onApprove={() => handleRequestApprove(p)} onTolak={() => handleTolak(p)} />
                   ))}
               </ul>
             </div>
@@ -299,6 +328,12 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
             )}
           </div>
         </>
+      )}
+
+      {promoError && (
+        <p role="alert" data-testid="promo-error" className="mt-3 text-[14px] text-[#C62828] bg-[#FFEBEE] border border-[#FFCDD2] rounded-[12px] px-3 py-2" style={{ fontSize: "14px" }}>
+          {promoError}
+        </p>
       )}
 
       <ApproveDialog open={dialogOpen} promo={selected} onConfirm={handleConfirm} onCancel={handleCancel} />
@@ -338,7 +373,7 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
   );
 }
 
-function PromoCard({ promo, onApprove, isActiveList = false }: { promo: Promo; onApprove: () => void; isActiveList?: boolean }) {
+function PromoCard({ promo, onApprove, onTolak, isActiveList = false }: { promo: Promo; onApprove: () => void; onTolak?: () => void; isActiveList?: boolean }) {
   const isActive = promo.status === "active";
   const isProposed = promo.status === "proposed";
   const modalText = formatRupiah(promo.modal);
@@ -426,8 +461,20 @@ function PromoCard({ promo, onApprove, isActiveList = false }: { promo: Promo; o
           Setujui Tebus Murah
         </button>
       )}
+      {isProposed && !isActiveList && onTolak && (
+        <button
+          type="button"
+          onClick={onTolak}
+          aria-label={`Tolak tebus murah ${promo.sku_name}`}
+          className="btn btn-outline w-full min-h-[48px] mt-2 text-base font-semibold rounded-[12px]"
+          style={{ minHeight: "48px", fontSize: "16px", borderColor: "#D9D9D9", color: "#1A1A1A", backgroundColor: "#FFFFFF", borderWidth: "1px", width: "100%" }}
+          data-testid="btn-tolak-promo"
+        >
+          Tolak
+        </button>
+      )}
       {isProposed && !isActiveList && (
-        <button type="button" className="btn btn-outline w-full min-h-[48px] mt-2 text-base font-semibold rounded-[12px]" style={{ minHeight: "48px", fontSize: "16px", borderColor: "#D9D9D9", color: "#1A1A1A", backgroundColor: "#FFFFFF", borderWidth: "1px", width: "100%" }} data-testid="btn-ubah-harga">
+        <button type="button" className="btn btn-ghost w-full min-h-[48px] mt-2 text-base font-semibold rounded-[12px]" style={{ minHeight: "48px", fontSize: "16px", color: "#595959", backgroundColor: "transparent", border: "none", width: "100%" }} data-testid="btn-ubah-harga">
           Ubah Harga
         </button>
       )}

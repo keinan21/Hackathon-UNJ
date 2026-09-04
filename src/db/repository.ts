@@ -27,6 +27,7 @@ export interface InventoryRepository {
   getPromo(id: string): Promise<Promo | undefined>;
   createPromo(promo: Promo): Promise<void>;
   updatePromo(promo: Promo): Promise<void>;
+  deletePromo(id: string): Promise<void>;
   // AdvisorCache
   getAdvisorCache(batchId: string, orgId: string): Promise<AdvisorCacheEntry | undefined>;
   setAdvisorCache(entry: AdvisorCacheEntry): Promise<void>;

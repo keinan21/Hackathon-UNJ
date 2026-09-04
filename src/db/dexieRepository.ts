@@ -127,6 +127,9 @@ export class DexieInventoryRepository implements InventoryRepository {
   async updatePromo(promo: Promo) {
     await this.db.promos.put(promo);
   }
+  async deletePromo(id: string) {
+    await this.db.promos.delete(id);
+  }
   // AdvisorCache
   async getAdvisorCache(batchId: string, orgId: string) {
     return this.db.advisorCache.get([orgId, batchId]);
