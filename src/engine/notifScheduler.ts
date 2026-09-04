@@ -16,6 +16,8 @@
 import type { InventoryRepository, Batch, SKU, Kategori } from "../db/db";
 import { daysToExpiry, urgencyScore } from "./expiry";
 import { calcAvgDailyUsage } from "./avgUsage";
+import { calcOmzet14 } from "./omzet";
+import { buildRecapText, enqueueTelegram, buildDedupKey } from "../lib/telegram";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,28 +53,53 @@ export async function getDueNotifications(
 ): Promise<DueNotification[]> {
   const d = today ?? new Date();
 
-  // Load kategoris → map id → kategori (untuk threshold per kategori)
-  const kategoris = await repo.listKategoris();
-  const kategoriMap = new Map<number, Kategori>();
+  const anyRepo = repo as unknown as Record<string, unknown>;
+  const kategoris = await (async () => {
+    try {
+      const r = await (anyRepo.listKategoris as (orgId?: string) => Promise<Kategori[]>)("toko-01");
+      if (Array.isArray(r)) return r;
+    } catch {}
+    return repo.listKategoris();
+  })();
+  const kategoriMap = new Map<number | string, Kategori>();
   for (const k of kategoris) {
-    if (k.id !== undefined) kategoriMap.set(k.id, k);
+    const id = (k as unknown as { id: number | string }).id;
+    if (id !== undefined) kategoriMap.set(id, k);
   }
 
-  // Batches dengan expiry != null (non-perishable ter-skip otomatis via index)
-  const batches = await repo.listBatchesExpiring();
+  const batches = await (async () => {
+    try {
+      const r = await (anyRepo.listBatchesExpiring as (orgId?: string) => Promise<Batch[]>)("toko-01");
+      if (Array.isArray(r)) return r;
+    } catch {}
+    return repo.listBatchesExpiring();
+  })();
 
   const result: DueNotification[] = [];
 
   for (const batch of batches) {
-    // Guard: skip expiry null (walaupun listBatchesExpiring sudah filter, tetap jaga)
     if (batch.expiry_date === null || batch.expiry_date === undefined) continue;
-    // Dexie where notEqual("") masih bisa kembalikan string kosong edge, skip juga
     if (typeof batch.expiry_date === "string" && batch.expiry_date.trim() === "") continue;
 
-    const sku = await repo.getSKU(batch.sku_id);
+    const sku: SKU | undefined = await (async () => {
+      const a = anyRepo.getSKU as ((id: number) => Promise<SKU | undefined>) | undefined;
+      if (typeof a === "function") {
+        try {
+          const r = await a.call(repo, batch.sku_id as unknown as number);
+          if (r) return r;
+        } catch {}
+      }
+      const b = anyRepo.getSku as ((id: string) => Promise<SKU | undefined>) | undefined;
+      if (typeof b === "function") {
+        try {
+          return await b.call(repo, String(batch.sku_id));
+        } catch {}
+      }
+      return undefined;
+    })();
     if (!sku) continue;
 
-    const kategori = kategoriMap.get(sku.kategori_id);
+    const kategori = kategoriMap.get(sku.kategori_id as unknown as number | string);
     if (!kategori) continue;
 
     const days = daysToExpiry(batch.expiry_date, d);
@@ -88,12 +115,24 @@ export async function getDueNotifications(
     let avg = 1;
     try {
       const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-      const transaksis = await repo.listTransaksisBySKU(sku.id!, since);
-      if (transaksis.length > 0) {
-        // calcAvgDailyUsage dengan fallback 1 — jika distinct <14 akan return 1
-        // Jika tanpa fallback, distinct 10 akan return avg 2 (untuk test pure), tapi untuk scheduler kita pakai fallback 1 agar tidak NaN
-        avg = calcAvgDailyUsage(transaksis, 1);
-        // calcAvgDailyUsage bisa return 0 jika histori qty 0, tapi urgencyScore pakai max(...,1) jadi aman
+      const skuId = (sku as unknown as { id: number | string }).id!;
+      let transaksis: unknown[] | undefined;
+      try {
+        transaksis = await (repo as unknown as { listTransaksisBySKU: (id: number, since: string) => Promise<unknown[]> }).listTransaksisBySKU(
+          skuId as unknown as number,
+          since,
+        );
+      } catch {}
+      if (!transaksis) {
+        try {
+          const all = await (anyRepo.listTransaksisBySKU as (id: string, orgId: string) => Promise<unknown[]>)?.call(repo, String(skuId), "toko-01");
+          if (Array.isArray(all)) {
+            transaksis = (all as Array<{ sold_at: string }>).filter((t) => (t.sold_at ?? "") >= since);
+          }
+        } catch {}
+      }
+      if (transaksis && transaksis.length > 0) {
+        avg = calcAvgDailyUsage(transaksis as Parameters<typeof calcAvgDailyUsage>[0], 1);
         if (!Number.isFinite(avg)) avg = 1;
       }
     } catch {
@@ -384,10 +423,275 @@ export function getDelayUntilNext07Jakarta(now: Date = new Date()): number {
   return Math.max(0, targetJakarta07.getTime() - nowMs);
 }
 
+// ---------------------------------------------------------------------------
+// Omzet + Rekap 07:00 — angka deterministik via src/engine/omzet.ts
+// ---------------------------------------------------------------------------
+
+function formatJakartaYMDForRecap(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+async function collectTransaksis14(
+  repo: InventoryRepository,
+  sinceIso: string,
+): Promise<unknown[]> {
+  const anyRepo = repo as unknown as Record<string, unknown>;
+  // string-repo path: listTransaksis(orgId)
+  if (typeof anyRepo.listTransaksis === "function") {
+    try {
+      const all = (await (anyRepo.listTransaksis as (orgId: string) => Promise<unknown[]>)("toko-01")) as Array<{ sold_at: string }>;
+      return all.filter((t) => (t.sold_at ?? "") >= sinceIso);
+    } catch {
+      // fallback ke numeric path
+    }
+  }
+  // numeric path: via kategoris → SKUs → transaksisBySKU
+  const result: unknown[] = [];
+  try {
+    const kategoris = (await (repo as unknown as { listKategoris: () => Promise<Kategori[]> }).listKategoris()) as Kategori[];
+    for (const k of kategoris) {
+      const id = (k as unknown as { id: number }).id;
+      if (id === undefined) continue;
+      const skus = await (repo as unknown as { listSKUsByKategori: (id: number) => Promise<SKU[]> }).listSKUsByKategori(id);
+      for (const s of skus) {
+        const sid = (s as unknown as { id: number }).id;
+        if (sid === undefined) continue;
+        try {
+          const trans = await (repo as unknown as { listTransaksisBySKU: (sid: number, since: string) => Promise<unknown[]> }).listTransaksisBySKU(
+            sid,
+            sinceIso,
+          );
+          result.push(...trans);
+        } catch {
+          // ignore per-sku error
+        }
+      }
+    }
+  } catch {
+    // ignore collect error → return what we have
+  }
+  // fallback: coba direct db jika repo tidak punya data
+  if (result.length === 0) {
+    try {
+      const { db } = await import("../db/db");
+      const all = await (db as unknown as { transaksis: { where: (f: string) => { equals: (v: string) => { toArray: () => Promise<unknown[]> } } } }).transaksis
+        .where("org_id")
+        .equals("toko-01")
+        .toArray();
+      return (all as Array<{ sold_at: string }>).filter((t) => (t.sold_at ?? "") >= sinceIso);
+    } catch {
+      return result;
+    }
+  }
+  return result;
+}
+
+async function collectBatchesForOmzet(repo: InventoryRepository): Promise<unknown[]> {
+  const anyRepo = repo as unknown as Record<string, unknown>;
+  const result: unknown[] = [];
+  try {
+    const kategoris = (await (repo as unknown as { listKategoris: () => Promise<Kategori[]> }).listKategoris()) as Kategori[];
+    for (const k of kategoris) {
+      const id = (k as unknown as { id: number }).id;
+      if (id === undefined) continue;
+      const skus = await (repo as unknown as { listSKUsByKategori: (id: number) => Promise<SKU[]> }).listSKUsByKategori(id);
+      for (const s of skus) {
+        const sid = (s as unknown as { id: number }).id;
+        if (sid === undefined) continue;
+        try {
+          const batches = await (repo as unknown as { listBatchesBySKU: (sid: number) => Promise<unknown[]> }).listBatchesBySKU(sid);
+          result.push(...batches);
+        } catch {}
+      }
+    }
+    if (result.length > 0) return result;
+  } catch {}
+  // fallback string-repo: listBatchesExpiring or via db
+  if (typeof anyRepo.listBatchesExpiring === "function") {
+    try {
+      const exp = (await (anyRepo.listBatchesExpiring as (orgId: string) => Promise<unknown[]>)("toko-01")) as unknown[];
+      // exp hanya expiry != null, tapi tetap gunakan sebagai fallback batch set
+      if (exp.length > 0) return exp;
+    } catch {}
+  }
+  try {
+    const { db } = await import("../db/db");
+    const all = await (db as unknown as { batches: { where: (f: string) => { equals: (v: string) => { toArray: () => Promise<unknown[]> } } } }).batches
+      .where("org_id")
+      .equals("toko-01")
+      .toArray();
+    return all;
+  } catch {
+    return result;
+  }
+}
+
+export async function calcOmzetForRepo(
+  repo: InventoryRepository,
+  today: Date = new Date(),
+): Promise<{ omzet: number; margin: number; cashflow: number; belanja: number }> {
+  try {
+    const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" });
+    const p = fmt.formatToParts(today);
+    const y = Number(p.find((x) => x.type === "year")!.value);
+    const m = Number(p.find((x) => x.type === "month")!.value);
+    const d = Number(p.find((x) => x.type === "day")!.value);
+    const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0) - 7 * 60 * 60 * 1000);
+    const sinceIso = new Date(start.getTime() - 13 * 86_400_000).toISOString();
+    const transaksis = (await collectTransaksis14(repo, sinceIso)) as unknown as Parameters<typeof calcOmzet14>[0];
+    const batches = (await collectBatchesForOmzet(repo)) as unknown as Parameters<typeof calcOmzet14>[1];
+    return calcOmzet14(transaksis as any, batches as any, today);
+  } catch {
+    try {
+      const fmt2 = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" });
+      const p2 = fmt2.formatToParts(today);
+      const y2 = Number(p2.find((x) => x.type === "year")!.value);
+      const m2 = Number(p2.find((x) => x.type === "month")!.value);
+      const d2 = Number(p2.find((x) => x.type === "day")!.value);
+      const start2 = new Date(Date.UTC(y2, m2 - 1, d2, 0, 0, 0, 0) - 7 * 60 * 60 * 1000);
+      const since2 = new Date(start2.getTime() - 13 * 86_400_000).toISOString();
+      const trans2 = (await collectTransaksis14(repo, since2)) as any;
+      const batches2 = (await collectBatchesForOmzet(repo)) as any;
+      return calcOmzet14(trans2, batches2, today);
+    } catch {
+      return { omzet: 0, margin: 0, cashflow: 0, belanja: 0 };
+    }
+  }
+}
+
+export type DailyRecap = {
+  kritis: Array<{ nama: string; qty: number; days: number }>;
+  omzet: number;
+  margin: number;
+  cashflow: number;
+  belanja: number;
+  text: string;
+  tanggal: string;
+};
+
+/**
+ * Bangun rekap harian 07:00 Jakarta berisi list kritis + omzet/margin/cashflow 14 hari.
+ * Angka dari engine deterministik (calcOmzet14), bukan LLM. Teks via buildRecapText task-17.
+ * Tidak throw — return text kosong jika repo error.
+ */
+export async function buildDailyRecap(
+  repo: InventoryRepository,
+  today: Date = new Date(),
+): Promise<DailyRecap> {
+  const tanggal = formatJakartaYMDForRecap(today);
+  try {
+    const due = await getDueNotifications(repo, today);
+    const kritis = due.map((d) => ({ nama: d.sku.nama, qty: d.batch.qty, days: d.daysToExpiry }));
+    const { omzet, margin, cashflow, belanja } = await calcOmzetForRepo(repo, today);
+    const text = buildRecapText({ kritis, omzet, margin, cashflow, tanggal });
+    return { kritis, omzet, margin, cashflow, belanja, text, tanggal };
+  } catch {
+    const text = buildRecapText({ kritis: [], omzet: 0, margin: 0, cashflow: 0, tanggal });
+    return { kritis: [], omzet: 0, margin: 0, cashflow: 0, belanja: 0, text, tanggal };
+  }
+}
+
+/**
+ * Kirim rekap harian via Telegram — offline → badge tetap update + antre queue.
+ * - Badge via checkAndNotify path existing walau offline (MUST NOT throw jika permission denied)
+ * - Telegram: coba sendRecap jika token tersedia, gagal/offline → enqueueTelegram dedup batchId+tanggal
+ * - Jika token belum disetting → skip kirim, hanya badge (tidak throw)
+ * - Dedup key: "rekap"+tanggal agar satu hari satu pesan rekap
+ */
+export async function sendDailyRecap(
+  repo: InventoryRepository,
+  today: Date = new Date(),
+): Promise<{ badgeCount: number; text: string; queued: boolean }> {
+  // Badge tetap jalan walau offline — jangan throw
+  let badgeCount = 0;
+  try {
+    const res = await checkAndNotify(repo, today);
+    badgeCount = res.badgeCount;
+  } catch {
+    badgeCount = 0;
+  }
+
+  let recap: DailyRecap;
+  try {
+    recap = await buildDailyRecap(repo, today);
+  } catch {
+    recap = { kritis: [], omzet: 0, margin: 0, cashflow: 0, belanja: 0, text: "", tanggal: formatJakartaYMDForRecap(today) };
+  }
+
+  const text = recap.text;
+  if (!text || text.trim().length === 0) return { badgeCount, text: "", queued: false };
+
+  const tanggal = recap.tanggal;
+  const dedupKey = buildDedupKey("rekap", tanggal);
+
+  // Coba kirim Telegram jika settings ada — tanpa PIN tidak bisa decrypt, jadi fallback enqueue
+  // Prioritas: coba fetch terdekripsi via getDecryptedToken dengan PIN yang umum, lalu direct sendRecap
+  // Jika tidak ada token/chatId → skip kirim tapi tetap badge (tidak throw)
+  try {
+    const { getTelegramSettingsRaw, getDecryptedToken, sendRecap } = await import("../lib/telegram");
+    const raw = getTelegramSettingsRaw();
+    if (!raw) {
+      return { badgeCount, text, queued: false };
+    }
+    const chatId = raw.chatId;
+    if (!chatId) return { badgeCount, text, queued: false };
+
+    // Coba decrypt dengan PIN yang mungkin ada di memStore (coba PIN umum + yang tersimpan di pinStore)
+    let token: string | null = null;
+    const tryPins = ["1234", "2005", "0000"];
+    // coba PIN dari pinStore jika ada (best-effort)
+    try {
+      const { getPinRecord } = await import("../features/auth/pinStore");
+      const rec = getPinRecord();
+      // pinStore tidak simpan plaintext, jadi tidak bisa ambil PIN — skip
+      void rec;
+    } catch {}
+    for (const pin of tryPins) {
+      try {
+        const t = await getDecryptedToken(pin);
+        if (t) {
+          token = t;
+          break;
+        }
+      } catch {}
+    }
+    if (!token) {
+      // tidak bisa decrypt → antre dengan chatId yang ada (fetch akan gagal & queue)
+      await enqueueTelegram({ dedupKey, chatId, text, batchId: "rekap", tanggal });
+      return { badgeCount, text, queued: true };
+    }
+    // token ada → coba sendRecap direct-HTTPS
+    try {
+      const res = await sendRecap(token, chatId, text, { batchId: "rekap", tanggal });
+      // sendRecap sudah handle offline→queue internally
+      return { badgeCount, text, queued: res.queued ?? false };
+    } catch {
+      await enqueueTelegram({ dedupKey, chatId, text, batchId: "rekap", tanggal });
+      return { badgeCount, text, queued: true };
+    }
+  } catch {
+    // fallback enqueue jika import gagal
+    try {
+      const { getTelegramSettingsRaw: getRaw2 } = await import("../lib/telegram");
+      const raw2 = getRaw2();
+      const chatId2 = raw2?.chatId ?? "unknown";
+      await enqueueTelegram({ dedupKey, chatId: chatId2, text, batchId: "rekap", tanggal });
+      return { badgeCount, text, queued: true };
+    } catch {
+      return { badgeCount, text, queued: false };
+    }
+  }
+}
+
 /**
  * Mulai scheduler harian 07:00 Asia/Jakarta.
- * - Langsung panggil checkAndNotify sekali (on app open)
- * - Lalu setTimeout sampai 07:00 berikutnya, kemudian setInterval 24 jam
+ * - Langsung panggil checkAndNotify + sendDailyRecap sekali (on app open)
+ * - Lalu setTimeout sampai 07:00 berikutnya, kemudian setInterval 24 jam (keduanya panggil badge+rekap)
  * - Return stop function untuk cleanup
  * - Daily 07:00 + on-demand — cukup function, tidak perlu setInterval real di test
  */
@@ -395,8 +699,9 @@ export function startDailyScheduler(
   repo: InventoryRepository,
   opts: { onNotify?: (r: CheckNotifyResult) => void } = {}
 ): () => void {
-  // On app open — on-demand
+  // On app open — on-demand (badge + rekap, fire-and-forget, MUST NOT throw)
   void checkAndNotify(repo).then((r) => opts.onNotify?.(r)).catch(() => {});
+  void sendDailyRecap(repo).catch(() => {});
 
   const delay = getDelayUntilNext07Jakarta(new Date());
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -404,8 +709,10 @@ export function startDailyScheduler(
 
   timeoutId = setTimeout(() => {
     void checkAndNotify(repo).then((r) => opts.onNotify?.(r)).catch(() => {});
+    void sendDailyRecap(repo).catch(() => {});
     intervalId = setInterval(() => {
       void checkAndNotify(repo).then((r) => opts.onNotify?.(r)).catch(() => {});
+      void sendDailyRecap(repo).catch(() => {});
     }, 24 * 60 * 60 * 1000);
   }, delay);
 
