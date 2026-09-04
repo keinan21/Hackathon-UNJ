@@ -138,14 +138,7 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
     interaction: { mode: "index" as const, intersect: false },
     plugins: {
       legend: {
-        position: "top" as const,
-        labels: {
-          usePointStyle: true,
-          font: { size: 12 },
-          color: "#1A1A1A",
-          boxWidth: 12,
-          boxHeight: 12,
-        },
+        display: false,
       },
       tooltip: {
         backgroundColor: "rgba(26,26,26,0.92)",
@@ -185,7 +178,7 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
     scales: {
       x: {
         grid: { display: false },
-        ticks: { color: "#595959", font: { size: 11 }, maxRotation: 0, autoSkip: false },
+        ticks: { color: "#595959", font: { size: 12 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 },
         title: {
           display: true,
           text: "Tanggal (DD-MM)",
@@ -216,7 +209,7 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
     <div data-testid="chart-arus-wrapper" style={{ marginTop: 12 }}>
       <div
         data-testid="chart-arus-container"
-        style={{ position: "relative", height: 260, minHeight: 220, width: "100%" }}
+        style={{ position: "relative", height: 300, minHeight: 240, width: "100%" }}
       >
         {/* canvas akan di-render oleh Chart */}
         <Chart type="bar" data={data} options={options} data-testid="chart-arus-canvas" />

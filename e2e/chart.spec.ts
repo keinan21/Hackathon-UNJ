@@ -99,25 +99,23 @@ test.describe("ChartArus Chart.js lazy + BEP jelas", () => {
     const box = await canvas.boundingBox();
     expect(box).not.toBeNull();
     expect(box!.width).toBeGreaterThan(200);
-    expect(box!.height).toBeGreaterThan(150);
+    expect(box!.height).toBeGreaterThan(240);
 
-    // legenda jelas Bahasa Indonesia
+    // legenda custom bottom (Chart.js top legend hidden display:false) — Bahasa Indonesia
     await expect(page.getByTestId("chart-arus-wrapper")).toContainText("Masuk");
     await expect(page.getByTestId("chart-arus-wrapper")).toContainText("Keluar");
-    await expect(page.getByTestId("chart-arus-wrapper")).toContainText("BEP");
+    await expect(page.getByTestId("chart-arus-wrapper")).toContainText("BEP (amber)");
+    // custom bottom legend + BEP label visible, top Chart.js legend hidden
+    await expect(page.locator('[data-testid="chart-arus-wrapper"] >> text=BEP (amber)')).toBeVisible();
 
-    // sumbu-x DD-MM dan sumbu-y Qty — cek label di canvas wrapper atau via evaluate
-    // Chart.js ticks rendered on canvas, but we can check that labels are DD-MM via exposed props
+    // sumbu-x DD-MM (maxTicksLimit 7, font 12, autoSkip) + sumbu-y Qty + container height 300
     const labelsOk = await page.evaluate(() => {
-      const w = window as unknown as Record<string, unknown>;
-      // check that chart-arus container has canvas and that wrapper text contains DD-MM pattern? fallback to true if chart present
-      const container = document.querySelector('[data-testid="chart-arus-container"]');
+      const container = document.querySelector('[data-testid="chart-arus-container"]') as HTMLElement | null;
       if (!container) return false;
       const canvasEl = container.querySelector("canvas");
       if (!canvasEl) return false;
-      // check via canvas dimensions that chart is responsive (maintainAspectRatio false -> container height controls)
-      const styleHeight = (container as HTMLElement).style.height;
-      // container should have explicit height for responsive false
+      if (container.style.height !== "300px") return false;
+      if (parseInt(container.style.minHeight) < 240) return false;
       return true;
     });
     expect(labelsOk).toBeTruthy();
