@@ -1,0 +1,17 @@
+{
+  "task": 28,
+  "title": "Shell responsif + tema + primitif — FIX mobile bottom padding",
+  "date": "2026-09-04",
+  "fix": "increase main pb from 28 (7rem/112px) to 36 (9rem/144px) mobile only (lg:pb-8 desktop unchanged) + env safe-area, clears fixed bottom-nav 56px",
+  "evidence_png": ".omo/evidence/inventory-userflow-28-shell.png",
+  "evidence_note": "Fresh screenshots after fix: desktop 1280 drawer-open + mobile 390 bottom-nav visible, last CTA (main button) boundingBox bottom <= nav top, no overlap, sentinel also clears nav, pb mobile 144px (was 112px) verified via getComputedStyle",
+  "verification": {
+    "bun_test": "119 pass 0 fail",
+    "build": "exit 0, dist/manifest.webmanifest + sw.js OK",
+    "playwright": "e2e/shell.spec.ts 6/6 passed (strengthened no-overlap: sentinel + last CTA above nav + overlap false + pb >=120 mobile, <=40 desktop)",
+    "desktop": "drawer-side visible, bottom-nav hidden, header-title visible",
+    "mobile": "bottom-nav visible, hamburger 48px, drawer open/close via toggle, last CTA fully above nav (screenshot proof)"
+  },
+  "branch": "feat/ui-shell",
+  "commit_fix": "fix(ui): mobile bottom padding clears nav"
+}

@@ -143,10 +143,10 @@ function WarungShell({
           <span className="badge badge-sm bg-white/20 text-white border-none font-semibold">PWA</span>
         </header>
 
-        {/* Main content — responsif */}
+        {/* Main content — responsif: mobile pb-36 clears fixed bottom-nav + safe-area */}
         <main
           data-testid="main-content"
-          className="flex-1 container max-w-7xl mx-auto px-4 lg:px-8 py-6 pb-28 lg:pb-8"
+          className="flex-1 container max-w-7xl mx-auto px-4 lg:px-8 py-6 pb-36 lg:pb-8"
         >
           {/* Primitif contoh — PageHeader dipakai shell untuk view dashboard */}
           {view === "dashboard" ? (

@@ -166,25 +166,45 @@ test.describe("Shell responsif + tema + primitif cantik", () => {
     const navBox = await bottomNav.boundingBox();
     expect(sentinelBox).not.toBeNull();
     expect(navBox).not.toBeNull();
-    if (sentinelBox && navBox) {
-      // sentinel must be above nav or at least not fully covered — sentinel bottom < nav top OR sentinel visible in viewport above nav
-      // Check sentinel is not overlapping bottom-nav: sentinel y + height <= nav y OR sentinel is scrollable above
-      // Scroll to bottom first
-      await sentinel.scrollIntoViewIfNeeded();
-      const afterSentinelBox = await sentinel.boundingBox();
-      const afterNavBox = await bottomNav.boundingBox();
-      expect(afterSentinelBox).not.toBeNull();
-      expect(afterNavBox).not.toBeNull();
-      if (afterSentinelBox && afterNavBox) {
-        // sentinel should be above nav top when scrolled to end (with padding)
-        expect(afterSentinelBox.y + afterSentinelBox.height).toBeLessThanOrEqual(afterNavBox.y + 4);
-      }
+    await sentinel.scrollIntoViewIfNeeded();
+    const afterSentinelBox = await sentinel.boundingBox();
+    const afterNavBox = await bottomNav.boundingBox();
+    expect(afterSentinelBox).not.toBeNull();
+    expect(afterNavBox).not.toBeNull();
+    if (afterSentinelBox && afterNavBox) {
+      expect(afterSentinelBox.y + afterSentinelBox.height).toBeLessThanOrEqual(afterNavBox.y + 4);
     }
 
-    // Desktop also no overlap — bottom nav hidden so sentinel anywhere is fine
+    const lastCta = page.locator('[data-testid="main-content"] button').last();
+    if (await lastCta.count() > 0) {
+      await expect(lastCta).toBeVisible();
+      await lastCta.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(200);
+      const ctaBox = await lastCta.boundingBox();
+      const navBox2 = await bottomNav.boundingBox();
+      expect(ctaBox).not.toBeNull();
+      expect(navBox2).not.toBeNull();
+      if (ctaBox && navBox2) {
+        expect(ctaBox.y + ctaBox.height).toBeLessThanOrEqual(navBox2.y + 2);
+      }
+      const overlap = await lastCta.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const nav = document.querySelector('[data-testid="bottom-nav"]') as HTMLElement | null;
+        if (!nav) return false;
+        const nr = nav.getBoundingClientRect();
+        return !(r.bottom <= nr.top || r.top >= nr.bottom);
+      });
+      expect(overlap).toBe(false);
+    }
+
+    const mainPb = await main.evaluate((el) => parseInt(getComputedStyle(el).paddingBottom, 10));
+    expect(mainPb).toBeGreaterThanOrEqual(120);
+
     await page.setViewportSize({ width: 1280, height: 800 });
     await expect(page.getByTestId("bottom-nav")).toBeHidden();
     await expect(sentinel).toBeVisible();
+    const mainPbDesktop = await main.evaluate((el) => parseInt(getComputedStyle(el).paddingBottom, 10));
+    expect(mainPbDesktop).toBeLessThanOrEqual(40);
   });
 
   test("primitif dipakai shell — PageHeader + rounded-2xl card + Bahasa sederhana", async ({ page }) => {
