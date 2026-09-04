@@ -136,6 +136,57 @@ function useKritisRoute() {
   return isKritis;
 }
 
+/**
+ * Banner kecil permission fallback — TASK 25 wiring global scheduler + permission fallback
+ * Jika Notification.permission === "denied" → tidak throw, tetap tampil badge via checkAndNotify,
+ * tampilkan banner Bahasa Indonesia "Notifikasi dimatikan, badge tetap update".
+ * StrictMode-safe, tidak throw, dismissible.
+ */
+function NotifPermissionBanner() {
+  const [dismissed, setDismissed] = useState(false);
+  const [isDenied, setIsDenied] = useState(() => {
+    try {
+      return typeof Notification !== "undefined" && Notification.permission === "denied";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (typeof Notification === "undefined") return;
+      setIsDenied(Notification.permission === "denied");
+    } catch {
+      // tidak throw
+    }
+  }, []);
+
+  if (!isDenied || dismissed) return null;
+
+  return (
+    <div
+      data-testid="notif-permission-banner"
+      role="status"
+      aria-live="polite"
+      className="flex items-center justify-between gap-3 rounded-2xl border border-[#FFE082] bg-[#FFF8E1] px-4 py-3 mb-4 shadow-sm"
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-[16px] leading-tight text-[#8D6E63]">Notifikasi dimatikan, badge tetap update</span>
+      </div>
+      <button
+        type="button"
+        aria-label="Tutup banner notifikasi"
+        data-testid="notif-banner-dismiss"
+        onClick={() => setDismissed(true)}
+        className="btn btn-ghost btn-sm min-h-[32px] text-[14px] rounded-xl shrink-0"
+        style={{ fontSize: "14px" }}
+      >
+        Tutup
+      </button>
+    </div>
+  );
+}
+
 // Warung shell — daisyUI drawer + responsive container
 function WarungShell({
   headerTitle,
@@ -407,6 +458,7 @@ function AppShell() {
 
   return (
     <WarungShell headerTitle={headerTitle} namaToko={namaToko} view={view} setView={setView}>
+      <NotifPermissionBanner />
       {content}
     </WarungShell>
   );

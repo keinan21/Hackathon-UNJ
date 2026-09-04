@@ -90,8 +90,21 @@ export function handlePushEvent(_event: unknown): void {
   console.log("[SW notif stub] handlePushEvent — no-op v1");
 }
 
+export function getNotificationPermission(): NotificationPermission {
+  try {
+    const g = globalThis as unknown as { Notification?: { permission: NotificationPermission } };
+    if (typeof g.Notification === "undefined") return "denied";
+    const p = g.Notification.permission;
+    if (p === "granted" || p === "denied" || p === "default") return p;
+    return "denied";
+  } catch {
+    return "denied";
+  }
+}
+
 /**
  * Stub untuk request permission — wrapper agar engine tidak import Notification langsung di test
+ * Jika ditolak → tidak throw, return "denied", badge tetap update via checkAndNotify fallback path
  */
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
   const g = globalThis as unknown as {
