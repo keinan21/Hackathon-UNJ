@@ -1,0 +1,55 @@
+{
+  "task": "18. Scheduler 07:00 + on-open + on-insert + rekap manajer",
+  "commit": "feat(notif): rekap 07:00 + omzet engine",
+  "branch": "feat/scheduler-omzet",
+  "date": "2026-09-04T17:39:00+07:00",
+  "files": [
+    "src/engine/omzet.ts",
+    "src/engine/omzet.test.ts",
+    "src/engine/notifScheduler.ts",
+    "src/App.tsx"
+  ],
+  "mapping": {
+    "note": "JANGAN ubah schema Dexie — pakai field existing",
+    "omzet": "Σ harga_jual_snapshot × qty (jenis=keluar)",
+    "margin": "omzet − Σ hpp_snapshot × qty terjual (enrichment hpp_snapshot jika ada, fallback 0)",
+    "cashflow": "omzet − Σ harga_beli masuk",
+    "belanja": "untuk jenis=masuk: hpp_snapshot/harga_beli enrichment atau cari batch matching received_at≈sold_at±5s dan qty sama, ambil batch.hpp_snapshot",
+    "batchLink": "InboundForm menyimpan batch+hpp_snapshot dan transaksi masuk dengan nowIso sama, sehingga matching 5s valid",
+    "window": "14 hari kalender Asia/Jakarta startOfDay, dipotong via Set YYYY-MM-DD"
+  },
+  "functionality": {
+    "rekap0700": "buildDailyRecap(repo, today) → getDueNotifications (list kritis) + calcOmzetForRepo (omzet/margin/cashflow 14d) → buildRecapText → sendRecap/enqueueTelegram",
+    "offline": "badge tetap update via checkAndNotify walau offline (MUST NOT throw permission denied), Telegram antre queue dedup rekap+tanggal",
+    "onOpen": "startDailyScheduler dipanggil di App.tsx effect SEKALI guard StrictMode double-invoke, fire-and-forget checkAndNotify+sendDailyRecap",
+    "onInsert": "sudah ada via onBatchInserted (task-15) trigger checkAndNotify + advisor, task-18 tambah rekap 07:00 + omzet engine",
+    "telegram": "direct-HTTPS api.telegram.org tanpa backend, PBKDF2 100k + AES-GCM token enkripsi reuse telegram.ts, dedup batchId+tanggal rekap"
+  },
+  "verification": {
+    "bun_test_single": "bun test src/engine/omzet.test.ts → 8 pass 0 fail 22 expect (isolasi fake-indexeddb + fetch/onLine/timers save-restore)",
+    "bun_test_full": "bun test src → 153 pass 0 fail 591 expect (145 existing +8 baru)",
+    "vitest_full": "bun run test (vitest+jsdom) → 153 pass 20 files",
+    "tsc": "npx tsc --noEmit → 0 error",
+    "build": "bun run build → exit 0, dist/manifest.webmanifest + dist/sw.js ada, 451k gzip 128k",
+    "grep_leak": "grep -r supabase|firebase src → hanya test assertions, no leak impl; html5-qrcode lazy di /scan allowlist ADR-003"
+  },
+  "qa_happy": [
+    "omzet=jual×qty exact Rp (2*15000+3*15000=75000)",
+    "margin=omzet−HPP (50000-32000=18000)",
+    "cashflow=omzet−belanja via batch 10*8000=80000, 30000-80000=-50000",
+    "tanpa transaksi → nol semua",
+    "window 14d potong 20 hari lalu (hanya 5*10000)",
+    "enrichment hpp_snapshot langsung tanpa batches",
+    "batas inklusif hari ini + helper build14DaysSet 14 tanggal"
+  ],
+  "qa_failure": [
+    "offline → navigator.onLine=false → sendDailyRecap tetap badge update, enqueueTelegram dedup rekap+tanggal (tidak throw)",
+    "permission denied Notification → checkAndNotify fallback badge only, tidak throw (existing path)"
+  ],
+  "governance": {
+    "fresh_branch": "git merge-base --is-ancestor origin/main HEAD → FRESH",
+    "wiring": "src/App.tsx useRef guard schedulerGuard, dynamic import realRepo + notifScheduler, startDailyScheduler once",
+    "no_touch": "tidak ubah telegram.ts/crypto.ts/db.ts/validation.ts/task13-17 files selain wiring 1 baris App.tsx + scheduler extension",
+    "language": "Bahasa Indonesia semua pesan/error"
+  }
+}

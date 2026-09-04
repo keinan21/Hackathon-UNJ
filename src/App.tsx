@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { OfflineFallback } from "./components/OfflineFallback";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
@@ -362,6 +362,22 @@ function AppShell() {
         (window as unknown as Record<string, unknown>).__DEXIE_V2__ = dv;
       } catch {
         // ignore
+      }
+    })();
+  }, []);
+
+  const schedulerGuard = useRef(false);
+  useEffect(() => {
+    if (schedulerGuard.current) return;
+    schedulerGuard.current = true;
+    (async () => {
+      try {
+        const { realRepo } = await import("./db/dexieRepository");
+        const { startDailyScheduler } = await import("./engine/notifScheduler");
+        const stop = startDailyScheduler(realRepo as unknown as never);
+        (window as unknown as Record<string, unknown>).__SCHEDULER_STOP__ = stop;
+      } catch {
+        // tidak throw — fallback badge+banner via checkAndNotify
       }
     })();
   }, []);
