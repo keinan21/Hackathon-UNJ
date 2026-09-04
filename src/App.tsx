@@ -3,7 +3,6 @@ import { OfflineFallback } from "./components/OfflineFallback";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { HistoriDetailPage } from "./features/dashboard/HistoriDetailPage";
-import { PromoAktifList } from "./features/promo/PromoAktifList";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { KatalogPage } from "./features/sku/KatalogPage";
 import { SkuForm } from "./features/sku/SkuForm";
@@ -14,12 +13,12 @@ import { SkuDetailPage } from "./features/sku/SkuDetailPage";
 import { InboundForm } from "./features/inout/InboundForm";
 import { OutboundForm } from "./features/inout/OutboundForm";
 import { KritisPage } from "./features/expiry/KritisPage";
-import { Home, Package, ShoppingBag, Settings as SettingsIcon, Shop, Menu, Xmark } from "iconoir-react";
+import { Home, Package, Settings as SettingsIcon, Shop, Menu, Xmark } from "iconoir-react";
 import { PageHeader } from "./components/ui";
 
 const ScanPage = lazy(() => import("./features/scan/ScanPage"));
 
-type View = "dashboard" | "promo" | "settings" | "sku";
+type View = "dashboard" | "settings" | "sku";
 
 function useHistoriRoute() {
   const [historiId, setHistoriId] = useState<string | null>(() => {
@@ -169,7 +168,6 @@ function WarungShell({
   const menu = [
     { id: "dashboard" as View, label: "Dashboard", icon: <Home width={20} height={20} /> },
     { id: "sku" as View, label: "SKU", icon: <Package width={20} height={20} /> },
-    { id: "promo" as View, label: "Promo", icon: <ShoppingBag width={20} height={20} /> },
     { id: "settings" as View, label: "Pengaturan", icon: <SettingsIcon width={20} height={20} /> },
   ];
 
@@ -218,7 +216,7 @@ function WarungShell({
           <div data-testid="content-end-sentinel" aria-hidden className="h-2 w-full mt-8" />
         </main>
 
-        {/* Bottom nav — HANYA mobile */}
+        {/* Bottom nav — HANYA mobile — 3-tab Dashboard/SKU/Setting (design.md), 48px min, 16px font, kontras AA, iconoir */}
         <nav
           data-testid="bottom-nav"
           aria-label="Navigasi utama"
@@ -234,9 +232,10 @@ function WarungShell({
               onClick={() => navigate(tab.id)}
               data-testid={`bottom-nav-${tab.id}`}
               className={[
-                "flex flex-col items-center justify-center gap-0.5 min-h-[56px] min-w-[64px] px-2 rounded-xl text-xs font-semibold transition-colors",
+                "flex flex-col items-center justify-center gap-0.5 min-h-[56px] min-w-[64px] px-2 rounded-xl font-semibold transition-colors",
                 view === tab.id ? "text-[#0F7A4A] bg-[#0F7A4A]/10" : "text-[#595959] hover:bg-base-200",
               ].join(" ")}
+              style={{ minHeight: "48px", fontSize: "16px" }}
             >
               <span className={view === tab.id ? "text-[#0F7A4A]" : ""}>{tab.icon}</span>
               {tab.label}
@@ -335,7 +334,6 @@ function AppShell() {
     if (typeof window === "undefined") return "dashboard";
     const p = new URLSearchParams(window.location.search);
     if (p.get("view") === "settings") return "settings";
-    if (p.get("view") === "promo") return "promo";
     if (p.get("view") === "sku") return "sku";
     return "dashboard";
   });
@@ -401,7 +399,6 @@ function AppShell() {
     content = (
       <>
         {view === "dashboard" && <DashboardPage />}
-        {view === "promo" && <PromoAktifList />}
         {view === "settings" && <SettingsPage />}
         {view === "sku" && <KatalogPage />}
       </>
