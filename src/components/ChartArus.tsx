@@ -24,6 +24,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import type { ChartData, ChartOptions, TooltipItem } from "chart.js";
 import { Chart } from "react-chartjs-2";
 
 let registered = false;
@@ -91,7 +92,7 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
   const pointHoverRadius = marginPerDay.map((_, i) => (i === bepIndex ? 9 : 0));
   const pointBg = marginPerDay.map((_, i) => (i === bepIndex ? "#F59E0B" : "rgba(245,158,11,0)"));
 
-  const data = {
+  const data: ChartData<"bar" | "line", number[], string> = {
     labels,
     datasets: [
       {
@@ -131,7 +132,7 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
     ],
   };
 
-  const options: any = {
+  const options: ChartOptions<"bar" | "line"> = {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: "index" as const, intersect: false },
@@ -152,15 +153,16 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
         bodyFont: { size: 12 },
         padding: 10,
         callbacks: {
-          title: (items: { label: string; dataIndex: number }[]) => {
+          title: (items: TooltipItem<"bar" | "line">[]) => {
             const idx = items[0]?.dataIndex ?? 0;
             const d = days[idx] ?? items[0]?.label ?? "";
             if (d && d.includes("-") && d.length === 10) return `Tanggal ${formatDayLabelDDMM(d)}`;
             return `Tanggal ${d}`;
           },
-          label: (ctx: { dataset: { label?: string }; parsed: { y: number | null }; dataIndex: number }) => {
+          label: (ctx: TooltipItem<"bar" | "line">) => {
             const lab = ctx.dataset.label ?? "";
-            const v = ctx.parsed.y ?? 0;
+            const raw = ctx.parsed.y;
+            const v = typeof raw === "number" ? raw : 0;
             if (lab === "Masuk") return `Masuk: ${v} pcs`;
             if (lab === "Keluar") return `Keluar: ${v} pcs`;
             if (lab.includes("Kumulatif")) {
@@ -170,7 +172,7 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
             }
             return `${lab}: ${v}`;
           },
-          footer: (items: { dataIndex: number }[]) => {
+          footer: (items: TooltipItem<"bar" | "line">[]) => {
             const idx = items[0]?.dataIndex;
             if (idx === undefined) return "";
             if (bepIndex !== null && idx === bepIndex) return "\u25B2 BEP tercapai di hari ini";
