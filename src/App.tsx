@@ -11,6 +11,7 @@ import { LoginPage, getProfilToko } from "./features/auth/LoginPage";
 import { isLoggedIn } from "./features/auth/session";
 import { lazy, Suspense } from "react";
 import { SkuDetailPage } from "./features/sku/SkuDetailPage";
+import { InboundForm } from "./features/inout/InboundForm";
 import { Home, Package, ShoppingBag, Settings as SettingsIcon, Shop, Menu, Xmark } from "iconoir-react";
 import { PageHeader } from "./components/ui";
 
@@ -66,12 +67,28 @@ function useScanRoute() {
   return isScan;
 }
 
+function useInboundRoute() {
+  const isInbound = () => {
+    if (typeof window === "undefined") return false;
+    const p = window.location.pathname;
+    return p === "/masuk" || p === "/inbound" || p === "/sku/masuk";
+  };
+  const [val, setVal] = useState(() => isInbound());
+  useEffect(() => {
+    const onPop = () => setVal(isInbound());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  return val;
+}
+
 function useSkuDetailRoute() {
   const getId = () => {
     if (typeof window === "undefined") return null;
     const m = window.location.pathname.match(/^\/sku\/([^/]+)/);
     if (!m) return null;
     if (m[1] === "baru") return null;
+    if (m[1] === "masuk") return null;
     return m[1];
   };
   const [skuId, setSkuId] = useState<string | null>(() => getId());
@@ -273,6 +290,7 @@ function AppShell() {
   const historiId = useHistoriRoute();
   const isSkuBaru = useSkuBaruRoute();
   const isScan = useScanRoute();
+  const isInbound = useInboundRoute();
   const skuDetailId = useSkuDetailRoute();
   const [view, setView] = useState<View>(() => {
     if (typeof window === "undefined") return "dashboard";
@@ -322,6 +340,7 @@ function AppShell() {
   // Unified content
   let content: React.ReactNode;
   if (historiId) content = <HistoriDetailPage id={historiId} />;
+  else if (isInbound) content = <InboundForm />;
   else if (isScan)
     content = (
       <Suspense fallback={<p data-testid="scan-loading" className="text-sm text-[#595959]">Memuat kamera...</p>}>
