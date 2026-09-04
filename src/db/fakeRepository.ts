@@ -28,7 +28,7 @@ export class FakeInventoryRepository implements InventoryRepository {
     if (!threshold.length) throw new Error('Threshold tidak boleh kosong');
     if (new Set(threshold).size !== threshold.length) throw new Error('Angka tidak boleh sama');
     for (let i = 1; i < threshold.length; i++) {
-      if (threshold[i] >= threshold[i-1]) throw new Error('Harus urut besar ke kecil');
+      if (threshold[i] >= threshold[i-1]) throw new Error('Harus menurun');
     }
     if (threshold.some(v => v <= 0)) throw new Error('Harus lebih dari 0');
     this.kategoris.set(id, { ...k, threshold_h_minus: threshold });
