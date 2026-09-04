@@ -1,0 +1,44 @@
+{
+  "task": "25. Wiring global scheduler + permission fallback",
+  "commit": "feat(notif): wiring global + fallback",
+  "branch": "feat/wiring-scheduler",
+  "date": "2026-09-04T19:50:00+07:00",
+  "files": [
+    "src/App.tsx",
+    "src/sw/notif.ts",
+    "src/engine/notifScheduler.ts",
+    "src/main.tsx"
+  ],
+  "functionality": {
+    "wiring_global": "startDailyScheduler(realRepo) dipanggil di src/App.tsx AppShell useEffect schedulerGuard useRef StrictMode-safe, dynamic import realRepo + notifScheduler, fire-and-forget checkAndNotify + sendDailyRecap, tidak duplikasi di main.tsx",
+    "permission_fallback": "Notification.permission === \"denied\" atau requestPermission ditolak → tidak throw, tetap panggil navigator.setAppBadge badgeCount, return { notified: 0, badgeCount } via checkAndNotify fallback path",
+    "banner": "NotifPermissionBanner di AppShell: deteksi Notification.permission === \"denied\" → tampil div data-testid=\"notif-permission-banner\" role=status Bahasa Indonesia \"Notifikasi dimatikan, badge tetap update\" dismissible Tutup, tidak throw",
+    "notif_ts": "src/sw/notif.ts tambah getNotificationPermission() safe wrapper + requestNotificationPermission tetap return denied tanpa throw, showNotification fallback log jika denied"
+  },
+  "verification": {
+    "bun_test_single": "bun test src/engine/notifScheduler.test.ts → 9 pass 0 fail 41 expect (permission denied → badge tetap update mockSetBadge CalledWith 1)",
+    "bun_test_full": "bun test src → 168 pass 0 fail 631 expect 20 files",
+    "vitest_full": "npx vitest run → 168 pass 20 files 12.30s",
+    "tsc": "npx tsc --noEmit → 0 error",
+    "build": "bun run build → exit 0, dist/manifest.webmanifest + dist/sw.js ada, 483k gzip 134k, 91k css",
+    "grep_leak": "grep -r supabase|firebase src → 0 leak impl; grep -r ocr src → 0; html5-qrcode lazy di /scan allowlist"
+  },
+  "qa_happy": [
+    "mock today 2026-09-02 batch H-3 Dairy [7,3,1] triggers 1 notif via getDueNotifications",
+    "permission denied → checkAndNotify badgeCount 1 notified 0 mockSetBadge CalledWith 1 tidak throw",
+    "permission granted → notified 1 badge 1 push stub tidak throw",
+    "tanpa Notification support → fallback badge only tidak throw",
+    "WA hook stub MUST NOT send hanya console.log [WA hook stub]"
+  ],
+  "qa_failure": [
+    "permission denied → badge tetap update (mockSetBadge 1) + banner \"Notifikasi dimatikan, badge tetap update\" visible + tidak throw",
+    "offline → badge tetap update via checkAndNotify catch fallback, Telegram antre queue dedup rekap+tanggal"
+  ],
+  "governance": {
+    "fresh_branch": "git branch feat/wiring-scheduler dari origin/main 97f4960 FRESH merge-base equals origin/main",
+    "strictmode_safe": "useRef schedulerGuard prevents double startDailyScheduler in StrictMode",
+    "no_duplicate_wiring": "hanya di App.tsx AppShell, tidak duplikasi di main.tsx tanpa guard",
+    "language": "Bahasa Indonesia semua pesan/error, banner \"Notifikasi dimatikan, badge tetap update\"",
+    "no_touch": "tidak ubah schema Dexie, omzet.ts, telegram.ts, crypto.ts, threshold/backup files"
+  }
+}
