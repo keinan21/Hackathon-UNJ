@@ -12,6 +12,7 @@ import { isLoggedIn } from "./features/auth/session";
 import { lazy, Suspense } from "react";
 import { SkuDetailPage } from "./features/sku/SkuDetailPage";
 import { InboundForm } from "./features/inout/InboundForm";
+import { OutboundForm } from "./features/inout/OutboundForm";
 import { Home, Package, ShoppingBag, Settings as SettingsIcon, Shop, Menu, Xmark } from "iconoir-react";
 import { PageHeader } from "./components/ui";
 
@@ -82,6 +83,26 @@ function useInboundRoute() {
   return val;
 }
 
+function useOutboundRoute() {
+  const check = (): { isOutbound: boolean; skuId: string | null } => {
+    if (typeof window === "undefined") return { isOutbound: false, skuId: null };
+    const p = window.location.pathname;
+    const search = new URLSearchParams(window.location.search);
+    const qSku = search.get("skuId") || search.get("sku");
+    if (p === "/keluar" || p === "/outbound" || p === "/sku/keluar") return { isOutbound: true, skuId: qSku };
+    const m = p.match(/^\/sku\/([^/]+)\/keluar$/);
+    if (m) return { isOutbound: true, skuId: m[1] };
+    return { isOutbound: false, skuId: null };
+  };
+  const [val, setVal] = useState(() => check());
+  useEffect(() => {
+    const onPop = () => setVal(check());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  return val;
+}
+
 function useSkuDetailRoute() {
   const getId = () => {
     if (typeof window === "undefined") return null;
@@ -89,6 +110,8 @@ function useSkuDetailRoute() {
     if (!m) return null;
     if (m[1] === "baru") return null;
     if (m[1] === "masuk") return null;
+    if (m[1] === "keluar") return null;
+    if (window.location.pathname.match(/^\/sku\/[^/]+\/keluar$/)) return null;
     return m[1];
   };
   const [skuId, setSkuId] = useState<string | null>(() => getId());
@@ -291,6 +314,7 @@ function AppShell() {
   const isSkuBaru = useSkuBaruRoute();
   const isScan = useScanRoute();
   const isInbound = useInboundRoute();
+  const outbound = useOutboundRoute();
   const skuDetailId = useSkuDetailRoute();
   const [view, setView] = useState<View>(() => {
     if (typeof window === "undefined") return "dashboard";
@@ -341,6 +365,7 @@ function AppShell() {
   let content: React.ReactNode;
   if (historiId) content = <HistoriDetailPage id={historiId} />;
   else if (isInbound) content = <InboundForm />;
+  else if (outbound.isOutbound) content = <OutboundForm skuId={outbound.skuId ?? undefined} />;
   else if (isScan)
     content = (
       <Suspense fallback={<p data-testid="scan-loading" className="text-sm text-[#595959]">Memuat kamera...</p>}>
