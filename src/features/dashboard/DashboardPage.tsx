@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { UrgentList } from "./UrgentList";
 import { PromoAktifList } from "../promo/PromoAktifList";
 import { HistoriList } from "./HistoriList";
-import { WarningCircle, Package } from "iconoir-react";
+import { StatistikTab } from "./StatistikTab";
+import { WarningCircle, Package, StatsReport, Home } from "iconoir-react";
 import { daysToExpiry } from "../../engine/expiry";
 import { realRepo } from "../../db/dexieRepository";
 
@@ -79,6 +80,7 @@ function KritisBanner() {
 export function DashboardPage() {
   const promoRef = useRef<HTMLElement>(null);
   const [skuCount, setSkuCount] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"ringkasan" | "statistik">("ringkasan");
 
   useEffect(() => {
     let cancelled = false;
@@ -105,49 +107,92 @@ export function DashboardPage() {
   return (
     <div data-testid="dashboard-page" className="w-full">
       <KritisBanner />
-      {isEmpty && (
-        <div
-          data-testid="dashboard-empty"
-          role="status"
-          aria-live="polite"
-          className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-8 text-center flex flex-col items-center mb-6"
+      {/* Sub-tab Ringkasan vs Statistik — 48px, iconoir, Bahasa Indonesia */}
+      <div
+        role="tablist"
+        aria-label="Sub-tab Dashboard"
+        className="flex gap-2 mb-6 p-1 bg-base-200 rounded-2xl"
+        data-testid="dashboard-subtabs"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "ringkasan"}
+          data-testid="tab-ringkasan"
+          onClick={() => setActiveTab("ringkasan")}
+          className={[
+            "flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors",
+            activeTab === "ringkasan" ? "bg-[#0F7A4A] text-white shadow-sm" : "bg-transparent text-[#595959] hover:bg-base-100",
+          ].join(" ")}
+          style={{ minHeight: "48px", fontSize: "16px" }}
         >
-          <div className="w-16 h-16 rounded-2xl bg-[#FFF8E1] border border-[#FFE082]/60 flex items-center justify-center text-[#F9A825] mb-4">
-            <Package width={28} height={28} />
-          </div>
-          <h3 className="text-[16px] font-bold text-[#1A1A1A]">Belum ada SKU</h3>
-          <p className="text-sm text-[#595959] mt-1.5 leading-relaxed max-w-sm">Tambah SKU pertama untuk mulai kelola inventaris. Semua data tersimpan lokal di perangkat.</p>
-          <button
-            type="button"
-            data-testid="dashboard-empty-cta"
-            onClick={handleTambahSku}
-            className="btn btn-primary w-full min-h-[48px] mt-5 text-[16px] font-semibold rounded-xl shadow-sm"
-            style={{ minHeight: "48px", fontSize: "16px" }}
-            aria-label="Tambah SKU"
-          >
-            Tambah SKU
-          </button>
-        </div>
+          <Home width={16} height={16} aria-hidden="true" /> Ringkasan
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "statistik"}
+          data-testid="tab-statistik"
+          onClick={() => setActiveTab("statistik")}
+          className={[
+            "flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors",
+            activeTab === "statistik" ? "bg-[#0F7A4A] text-white shadow-sm" : "bg-transparent text-[#595959] hover:bg-base-100",
+          ].join(" ")}
+          style={{ minHeight: "48px", fontSize: "16px" }}
+        >
+          <StatsReport width={16} height={16} aria-hidden="true" /> Statistik
+        </button>
+      </div>
+
+      {activeTab === "ringkasan" ? (
+        <>
+          {isEmpty && (
+            <div
+              data-testid="dashboard-empty"
+              role="status"
+              aria-live="polite"
+              className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-8 text-center flex flex-col items-center mb-6"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-[#FFF8E1] border border-[#FFE082]/60 flex items-center justify-center text-[#F9A825] mb-4">
+                <Package width={28} height={28} />
+              </div>
+              <h3 className="text-[16px] font-bold text-[#1A1A1A]">Belum ada SKU</h3>
+              <p className="text-sm text-[#595959] mt-1.5 leading-relaxed max-w-sm">Tambah SKU pertama untuk mulai kelola inventaris. Semua data tersimpan lokal di perangkat.</p>
+              <button
+                type="button"
+                data-testid="dashboard-empty-cta"
+                onClick={handleTambahSku}
+                className="btn btn-primary w-full min-h-[48px] mt-5 text-[16px] font-semibold rounded-xl shadow-sm"
+                style={{ minHeight: "48px", fontSize: "16px" }}
+                aria-label="Tambah SKU"
+              >
+                Tambah SKU
+              </button>
+            </div>
+          )}
+          {/* Seksi 1: Urgent */}
+          <section data-testid="section-urgent" className="mb-6">
+            <UrgentList onViewSuggestion={() => promoRef.current?.scrollIntoView({ behavior: "smooth" })} />
+          </section>
+
+          <div style={{ height: 24 }} aria-hidden="true" />
+
+          {/* Seksi 2: Promo Aktif */}
+          <section ref={promoRef} data-testid="section-promo" className="mb-6">
+            <PromoAktifList />
+          </section>
+
+          <div style={{ height: 24 }} aria-hidden="true" />
+
+          {/* Seksi 3: Histori */}
+          <section data-testid="section-histori" className="mb-6">
+            <HistoriList />
+            <span className="sr-only" data-testid="histori-count">Menampilkan histori terbaru</span>
+          </section>
+        </>
+      ) : (
+        <StatistikTab />
       )}
-      {/* Seksi 1: Urgent */}
-      <section data-testid="section-urgent" className="mb-6">
-        <UrgentList onViewSuggestion={() => promoRef.current?.scrollIntoView({ behavior: "smooth" })} />
-      </section>
-
-      <div style={{ height: 24 }} aria-hidden="true" />
-
-      {/* Seksi 2: Promo Aktif */}
-      <section ref={promoRef} data-testid="section-promo" className="mb-6">
-        <PromoAktifList />
-      </section>
-
-      <div style={{ height: 24 }} aria-hidden="true" />
-
-      {/* Seksi 3: Histori */}
-      <section data-testid="section-histori" className="mb-6">
-        <HistoriList />
-        <span className="sr-only" data-testid="histori-count">Menampilkan histori terbaru</span>
-      </section>
     </div>
   );
 }
