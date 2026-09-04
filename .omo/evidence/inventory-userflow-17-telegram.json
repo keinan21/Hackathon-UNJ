@@ -1,0 +1,72 @@
+{
+  "task": "17-telegram-adapter-enkripsi-antre-offline",
+  "timestamp": "2026-09-04T16:41:00.623941+07:00",
+  "branch": "feat/telegram-adapter",
+  "references": [
+    "src/lib/crypto.ts",
+    "src/features/auth/pinStore.ts pola API key",
+    "HUMAN.md todo 3"
+  ],
+  "acceptance": {
+    "src/lib/telegram.ts": "exists, sendRecap(token terdekripsi dari settings, chatId) fetch api.telegram.org direct-HTTPS no backend, queue IndexedDB saat offline/gagal, retry 3x backoff 5s/30s/5m, dedup key batchId+tanggal, tidak ada token plaintext di repo",
+    "queue": "IndexedDB via Dexie telegram-queue + localStorage fallback mem, dedup batchId+tanggal, attempts<3, nextRetryAt backoff",
+    "enkripsi": "PBKDF2 100k + AES-GCM salt 16b iv 12b via crypto.ts, ciphertext di localStorage telegram-enc-v1, decrypt via PIN, assertNoPlaintext true",
+    "bahasa": "Indonesia semua error: Bot belum disetting, Chat ID belum disetting, Pesan tidak boleh kosong, PIN tidak boleh kosong"
+  },
+  "qa": {
+    "happy": "mock fetch assert text berisi angka DB omzet 1.250.000 margin cashflow + Susu UHT H-2, url api.telegram.org/bot<token>/sendMessage, chat_id correct",
+    "offline": "navigator.onLine false -> fetch tidak dipanggil, enqueue dedup batch-42+2026-09-04, second call same dedup tidak duplikat",
+    "failure": "token kosong -> throw Bot belum disetting (Bahasa Indonesia), chatId kosong -> Chat ID belum disetting",
+    "retry": "fetch throw Network error -> queued attempts 0 -> processQueue gagal attempts 1 next 5s -> advance 5s retry gagal attempts 2 -> 30s -> attempts 3 failed, sukses setelah 5s advance hapus queue",
+    "dedup": "batchId+tanggal sama tidak duplikat, beda tanggal beda antrean",
+    "enkripsi_roundtrip": "saveTelegramSettings(TOKEN, CHAT_ID, PIN) -> raw tidak contain TOKEN, getDecryptedToken(PIN)==TOKEN, wrong PIN null, sendRecapFromSettings ok",
+    "buildRecapText": "Bahasa Indonesia Rekap YYYY-MM-DD, warna urgency, Omzet/Margin/Cashflow Rp id-ID",
+    "no_backend": "url https://api.telegram.org direct-HTTPS, tidak supabase/firebase"
+  },
+  "tests": {
+    "command": "bun run test -- src/lib/telegram.test.ts",
+    "result": "12 passed 12 total",
+    "file": "src/lib/telegram.test.ts",
+    "cases": [
+      "happy angka DB",
+      "token kosong Bot belum disetting",
+      "chatId kosong",
+      "antre offline dedup",
+      "retry 3x backoff 5s/30s/5m",
+      "retry sukses hapus queue",
+      "dedup beda tanggal",
+      "enkripsi roundtrip",
+      "sendRecapFromSettings kosong",
+      "buildRecapText Bahasa",
+      "enqueue dedup langsung",
+      "no backend api.telegram.org"
+    ]
+  },
+  "build": {
+    "command": "bun run build",
+    "result": "exit 0, dist/manifest.webmanifest + dist/sw.js ada, 436k gzip 124k",
+    "modules": 22
+  },
+  "verification": {
+    "bun_run_test_all": "145 passed 19 files (was 133 before telegram, +12 new)",
+    "bun_run_build": "exit 0",
+    "grep_supabase": "0 di src/lib/telegram.ts (html5-qrcode di ScanPage adalah allowlist ADR-003, bukan leak)",
+    "grep_plaintext": "grep -r 123456789:AA src --exclude *.test.ts => 0 (hanya di test fake)",
+    "grep_api_telegram": "src/lib/telegram.ts dan test mengandung api.telegram.org direct-HTTPS",
+    "tsc": "noEmit clean (tsc --noEmit tidak error)"
+  },
+  "files": {
+    "created": [
+      "src/lib/telegram.ts",
+      "src/lib/telegram.test.ts"
+    ],
+    "modified": [],
+    "evidence": [
+      ".omo/evidence/inventory-userflow-17-telegram.json",
+      ".omo/evidence/inventory-userflow-17-telegram.png"
+    ]
+  },
+  "commit": "feat(notif): Telegram adapter enkripsi + antre",
+  "data_testid_note": "data-testid telegram-chat-id, telegram-send, telegram-status, telegram-error disiapkan untuk UI SettingsPage Wave 5 (di luar src/lib scope task ini)",
+  "notepad": "Append ke .omo/notepads/inventory-userflow-rewrite/learnings.md"
+}
