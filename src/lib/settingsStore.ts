@@ -1,6 +1,6 @@
 // src/lib/settingsStore.ts — Crew A isolated mock, no dexie
 // Threshold per Kategori [7,3,1] generic editable (FRD-02, CONTEXT.md:10-11)
-// Persist via localStorage (FakeRepository-friendly), not Dexie
+// Persist via localStorage (in-memory friendly), not Dexie
 
 export type KategoriSetting = {
   id: string;

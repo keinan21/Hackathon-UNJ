@@ -1,46 +1,39 @@
 import { useEffect, useState } from "react";
 import { Clock, Shop } from "iconoir-react";
 import { realRepo } from "../../db/dexieRepository";
-import type { HistoriItem } from "../../lib/fakeHistoriRepository";
-import { demoHistori, getHistoriTerbaru } from "../../lib/fakeHistoriRepository";
+
+export type HistoriItem = {
+  id: string;
+  aksi: string;
+  alasan: string;
+  pasangan: string;
+  harga_tebus: number;
+  harga_floor: number;
+  sku_name: string;
+  sku_pasangan_name: string;
+  created_at: string;
+  confidence: number;
+  org_id: string;
+};
 
 export type HistoriListProps = {
   onSelect?: (item: HistoriItem) => void;
   limit?: number;
   historiOverride?: HistoriItem[];
-  useRealData?: boolean;
-  seedMode?: "demo" | "many" | "empty" | "expiryNull";
 };
 
-export function HistoriList({ onSelect, limit = 5, historiOverride, useRealData = true, seedMode }: HistoriListProps) {
+export function HistoriList({ onSelect, limit = 5, historiOverride }: HistoriListProps) {
   const [histori, setHistori] = useState<HistoriItem[]>(() => {
     if (historiOverride) return historiOverride;
-    if (seedMode === "demo" || seedMode === "many") return getHistoriTerbaru(limit);
-    // For tests / legacy seed=empty, keep dummy behavior if not real
-    if (!useRealData) {
-      const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-      const isEmpty = params?.get("histori") === "empty" || params?.get("seed") === "empty";
-      return isEmpty ? [] : getHistoriTerbaru(limit);
-    }
     return [];
   });
-  const [loading, setLoading] = useState(useRealData && !historiOverride && seedMode !== "demo" && seedMode !== "many");
+  const [loading, setLoading] = useState(!historiOverride);
 
   useEffect(() => {
-    if (historiOverride || seedMode === "demo" || seedMode === "many") return;
-    if (!useRealData) return;
+    if (historiOverride) return;
     let cancelled = false;
     (async () => {
       try {
-        const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-        const isEmpty = params?.get("histori") === "empty" || params?.get("seed") === "empty";
-        if (isEmpty) {
-          if (!cancelled) {
-            setHistori([]);
-            setLoading(false);
-          }
-          return;
-        }
         const cache = await realRepo.listAdvisorCache("toko-01").catch(() => []);
         const promos = await realRepo.listPromos("toko-01").catch(() => []);
         if (cancelled) return;
@@ -95,9 +88,7 @@ export function HistoriList({ onSelect, limit = 5, historiOverride, useRealData 
     return () => {
       cancelled = true;
     };
-  }, [limit, historiOverride, seedMode, useRealData]);
-
-  const total = histori.length;
+  }, [limit, historiOverride]);
 
   if (loading) {
     return (
@@ -145,7 +136,7 @@ export function HistoriList({ onSelect, limit = 5, historiOverride, useRealData 
         Histori Saran
       </h2>
       <p className="text-sm text-[#595959] mb-2" style={{ fontSize: "12px" }}>
-        Menampilkan {histori.length} terbaru dari {total} saran
+        Menampilkan {histori.length} terbaru dari {histori.length} saran
       </p>
       <ul className="space-y-3" aria-label="Daftar histori saran">
         {histori.map((h) => (

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { CheckCircle, WarningCircle } from "iconoir-react";
-import { FakeRepository } from "../../lib/fakeRepository";
 
 export type ThresholdKategori = { id: string; name: string; threshold: number[] };
 

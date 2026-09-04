@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { CheckCircle, WarningCircle, Xmark, Shop, Timer } from "iconoir-react";
 import ApproveDialog from "./ApproveDialog";
 import type { Promo } from "./promo.types";
-import { createDemoPromos, formatRupiah } from "./promo.types";
+import { formatRupiah } from "./promo.types";
 import { realRepo } from "../../db/dexieRepository";
 import { daysToExpiry } from "../../engine/expiry";
 import { validatePromoUsul } from "../../lib/validation";
@@ -11,11 +11,9 @@ export type PromoAktifListProps = {
   initialPromos?: Promo[];
   forceOffline?: boolean;
   staleCache?: boolean;
-  useRealData?: boolean;
-  seedMode?: "demo" | "many" | "empty" | "expiryNull";
 };
 
-export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRealData = true, seedMode }: PromoAktifListProps) {
+export function PromoAktifList({ initialPromos, forceOffline, staleCache }: PromoAktifListProps) {
   const injectedInitial = useMemo(() => {
     if (typeof window !== "undefined") {
       const w = window as unknown as { __PROMO_INITIAL__?: Promo[]; __OFFLINE_STALE__?: boolean };
@@ -26,28 +24,10 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
 
   const [promos, setPromos] = useState<Promo[]>(() => {
     if (injectedInitial) return injectedInitial;
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("promo") === "guardrailFail") {
-      const bad = createDemoPromos()[0];
-      return [{ ...bad, harga_tebus: 8400, keuntungan_tipis: 8400 - bad.harga_floor }];
-    }
-    if (seedMode === "demo" || seedMode === "many") return createDemoPromos();
-    // For real data, start empty and fetch; for fake, use demo
-    if (!useRealData) {
-      if (typeof window !== "undefined") {
-        const p = new URLSearchParams(window.location.search);
-        if (p.get("promo") === "active") return createDemoPromos().map((pr) => ({ ...pr, status: "active" as const }));
-        if (p.get("promo") === "guardrailFail") {
-          const bad = createDemoPromos()[0];
-          return [{ ...bad, harga_tebus: 8400, keuntungan_tipis: 8400 - bad.harga_floor }];
-        }
-        if (p.get("promo") === "empty") return [];
-      }
-      return createDemoPromos();
-    }
     return [];
   });
 
-  const [loading, setLoading] = useState(useRealData && !injectedInitial);
+  const [loading, setLoading] = useState(!injectedInitial);
   const [selected, setSelected] = useState<Promo | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -66,13 +46,8 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
     return false;
   });
 
-  // Real data fetch
   useEffect(() => {
-    if (injectedInitial || seedMode === "demo" || seedMode === "many") {
-      setLoading(false);
-      return;
-    }
-    if (!useRealData) {
+    if (injectedInitial) {
       setLoading(false);
       return;
     }
@@ -87,16 +62,13 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
           }
           return;
         }
-        // Fetch real promos from Dexie
         const dbPromos = await realRepo.listPromos("toko-01").catch(() => []);
         if (cancelled) return;
         if (dbPromos.length === 0) {
-          // Real data from nol — empty is correct
           setPromos([]);
           setLoading(false);
           return;
         }
-        // Map DB Promo -> UI Promo (join Batch/SKU for display)
         const mapped: Promo[] = [];
         for (const p of dbPromos) {
           const batch = await realRepo.getBatch(p.batch_id).catch(() => undefined);
@@ -104,7 +76,6 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
           const sku = batch ? await realRepo.getSku(batch.sku_id).catch(() => undefined) : undefined;
           const pasanganSku = p.sku_pasangan_id ? await realRepo.getSku(p.sku_pasangan_id).catch(() => undefined) : undefined;
           const days = batch.expiry_date ? daysToExpiry(batch.expiry_date, new Date()) ?? 0 : 0;
-          // Try get advisor cache for alasan
           const cache = await realRepo.getAdvisorCache(p.batch_id, "toko-01").catch(() => undefined);
           const alasan = cache?.suggestion.alasan ?? "Tebus murah untuk stok mepet.";
           const harga_tebus = p.harga_tebus;
@@ -131,7 +102,6 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
           });
         }
         if (!cancelled) {
-          // Sort proposed first, then active, by created_at desc
           mapped.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
           setPromos(mapped);
         }
@@ -145,7 +115,7 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
     return () => {
       cancelled = true;
     };
-  }, [injectedInitial, seedMode, useRealData]);
+  }, [injectedInitial]);
 
   const showOfflineBanner = useMemo(() => {
     if (staleCache) return true;
@@ -191,37 +161,30 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
 
   const handleConfirm = useCallback(async () => {
     if (!selected) return;
-    if (useRealData && !seedMode) {
-      try {
-        const dbPromo = await realRepo.getPromo(selected.id);
-        if (!dbPromo) throw new Error("Promo tidak ditemukan");
-        const batch = await realRepo.getBatch(dbPromo.batch_id);
-        if (!batch) throw new Error("Batch tidak ditemukan");
-        if (batch.qty <= 0) throw new Error("Stok habis, tidak bisa approve tebus murah");
-        const sku = await realRepo.getSku(batch.sku_id);
-        if (!sku) throw new Error("SKU tidak ditemukan");
-        const guard = validatePromoUsul("tebus", { hpp: batch.hpp_snapshot, harga_tebus: dbPromo.harga_tebus, harga_normal: sku.harga_normal });
-        if (!guard.valid) throw new Error(guard.error ?? "Harga tebus tidak valid");
-        await realRepo.updatePromo({ ...dbPromo, status: "active", updated_at: new Date().toISOString() });
-        setPromos((prev) => prev.map((p) => (p.id === selected.id ? { ...p, status: "active" as const } : p)));
-        setDialogOpen(false);
-        setSelected(null);
-        setPromoError(null);
-        setToast("Tebus murah aktif, tampil di Dashboard");
-        return;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "Gagal approve tebus murah";
-        setPromoError(msg);
-        setToast(msg);
-        return;
-      }
+    try {
+      const dbPromo = await realRepo.getPromo(selected.id);
+      if (!dbPromo) throw new Error("Promo tidak ditemukan");
+      const batch = await realRepo.getBatch(dbPromo.batch_id);
+      if (!batch) throw new Error("Batch tidak ditemukan");
+      if (batch.qty <= 0) throw new Error("Stok habis, tidak bisa approve tebus murah");
+      const sku = await realRepo.getSku(batch.sku_id);
+      if (!sku) throw new Error("SKU tidak ditemukan");
+      const guard = validatePromoUsul("tebus", { hpp: batch.hpp_snapshot, harga_tebus: dbPromo.harga_tebus, harga_normal: sku.harga_normal });
+      if (!guard.valid) throw new Error(guard.error ?? "Harga tebus tidak valid");
+      await realRepo.updatePromo({ ...dbPromo, status: "active", updated_at: new Date().toISOString() });
+      setPromos((prev) => prev.map((p) => (p.id === selected.id ? { ...p, status: "active" as const } : p)));
+      setDialogOpen(false);
+      setSelected(null);
+      setPromoError(null);
+      setToast("Tebus murah aktif, tampil di Dashboard");
+      return;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Gagal approve tebus murah";
+      setPromoError(msg);
+      setToast(msg);
+      return;
     }
-    setPromos((prev) => prev.map((p) => (p.id === selected.id ? { ...p, status: "active" as const } : p)));
-    setDialogOpen(false);
-    setSelected(null);
-    setPromoError(null);
-    setToast("Tebus murah aktif, tampil di Dashboard");
-  }, [selected, useRealData, seedMode]);
+  }, [selected]);
 
   const handleCancel = useCallback(() => {
     setDialogOpen(false);
@@ -230,16 +193,14 @@ export function PromoAktifList({ initialPromos, forceOffline, staleCache, useRea
   }, []);
 
   const handleTolak = useCallback(async (promo: Promo) => {
-    if (useRealData && !seedMode) {
-      try {
-        const dbPromo = await realRepo.getPromo(promo.id);
-        if (dbPromo) await realRepo.deletePromo(dbPromo.id);
-      } catch {}
-    }
+    try {
+      const dbPromo = await realRepo.getPromo(promo.id);
+      if (dbPromo) await realRepo.deletePromo(dbPromo.id);
+    } catch {}
     setPromos((prev) => prev.filter((p) => p.id !== promo.id));
     setToast("Usulan ditolak");
     setPromoError(null);
-  }, [useRealData, seedMode]);
+  }, []);
 
   const dismissToast = useCallback(() => {
     setToastVisible(false);

@@ -1,5 +1,5 @@
 /**
- * TASK-16 [FRD-03] — Halaman khusus kritis
+ * TASK-16 [FRD-03] — Halaman khusus kritis — real Dexie only
  *
  * Definisi kritis: days_to_expiry <= max(threshold_h_minus) kategori induk SKU-nya.
  * Contoh: kategori [14,7,3] → kritis jika H<=14; badge warna dinamis:
@@ -7,10 +7,6 @@
  *   H <= nilai tengah (7)   → oranye #EF6C00
  *   H <= nilai terbesar (14) → kuning #F9A825
  * Default [7,3,1] mapping tetap 1 merah, 3 oranye, 7 kuning.
- *
- * List per-batch kritis (nama SKU, sisa qty, H-remaining, urgensi), tap → /sku/:id
- * Dashboard hanya badge/banner (di DashboardPage), bukan daftar lengkap.
- * Threshold baca dari DB kategori.threshold_h_minus, tidak hardcode.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -18,13 +14,9 @@ import { WarningCircle, Package, ArrowLeft } from "iconoir-react";
 import { daysToExpiry, urgencyScore } from "../../engine/expiry";
 import { realRepo } from "../../db/dexieRepository";
 import { seedDefaultKategoris } from "../../db/seed";
-import { FakeRepository, type UrgentBatch as FakeUrgentBatch } from "../../lib/fakeRepository";
-import { PageHeader, EmptyState } from "../../components/ui";
+import { PageHeader } from "../../components/ui";
 
-export type KritisPageProps = {
-  useRealData?: boolean;
-  batchesOverride?: FakeUrgentBatch[];
-};
+export type KritisPageProps = Record<string, never>;
 
 type KritisBatch = {
   id: string;
@@ -43,8 +35,6 @@ type KritisBatch = {
 };
 
 function badgeStyleForKategori(days: number, threshold: number[]): { bg: string; color: string } {
-  // threshold expected descending e.g. [14,7,3] or [7,3,1]
-  // sort descending to be safe
   const sorted = [...threshold].sort((a, b) => b - a);
   const max = sorted[0] ?? 7;
   const mid = sorted[1] ?? max;
@@ -59,40 +49,12 @@ function toSkuDetailUrl(skuId: string) {
   return `/sku/${skuId}`;
 }
 
-export function KritisPage({ useRealData = true, batchesOverride }: KritisPageProps) {
+export function KritisPage(_props: KritisPageProps) {
   const [loading, setLoading] = useState(true);
   const [kritisBatches, setKritisBatches] = useState<KritisBatch[]>([]);
-  const [fakeRepo] = useState(() => new FakeRepository());
   const today = useMemo(() => new Date(), []);
 
   useEffect(() => {
-    if (batchesOverride) {
-      const mapped: KritisBatch[] = (batchesOverride as unknown as KritisBatch[]).sort((a, b) => a.daysToExpiry - b.daysToExpiry);
-      setKritisBatches(mapped);
-      setLoading(false);
-      return;
-    }
-
-    if (!useRealData) {
-      const win = typeof window !== "undefined" ? (window as unknown as { __FAKE_SEED_MODE?: string }) : null;
-      const mode = win?.__FAKE_SEED_MODE;
-      if (mode === "many") fakeRepo.seedManyUrgent(60, today);
-      else if (mode === "demo") fakeRepo.seedUrgentDemo(today);
-      else if (mode === "empty") { fakeRepo.clear(); }
-      const urgent = fakeRepo.getUrgentBatches(today, "expiry") as unknown as KritisBatch[];
-      // enrich threshold_h_minus from kategoris
-      const kategoriMap = new Map(fakeRepo.kategoris.map((k) => [k.id, k.threshold_h_minus]));
-      for (const b of urgent) {
-        const thr = kategoriMap.get(b.kategori_id) ?? [7, 3, 1];
-        (b as KritisBatch).threshold_h_minus = thr;
-      }
-      // filter already done by getUrgentBatches (days <= max), but ensure sorted expiry asc
-      urgent.sort((a, b) => a.daysToExpiry - b.daysToExpiry || a.urgencyScore - b.urgencyScore);
-      setKritisBatches(urgent);
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
     (async () => {
       try {
@@ -100,30 +62,6 @@ export function KritisPage({ useRealData = true, batchesOverride }: KritisPagePr
         if (existingKategoris.length === 0) {
           await seedDefaultKategoris(realRepo as unknown as import("../../db/db").InventoryRepository).catch(() => {});
         }
-
-        const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-        const urlSeed = params?.get("seed");
-        if (urlSeed === "empty") {
-          if (!cancelled) { setKritisBatches([]); setLoading(false); }
-          return;
-        }
-        if (urlSeed === "expiryNull") {
-          if (!cancelled) { setKritisBatches([]); setLoading(false); }
-          return;
-        }
-        if (urlSeed === "demo" || urlSeed === "many") {
-          // For e2e, use fake even in real mode so threshold per kategori is predictable
-          if (urlSeed === "demo") fakeRepo.seedUrgentDemo(today);
-          else fakeRepo.seedManyUrgent(60, today);
-          const urgent = fakeRepo.getUrgentBatches(today, "expiry") as unknown as KritisBatch[];
-          const kategoriMap = new Map(fakeRepo.kategoris.map((k) => [k.id, k.threshold_h_minus]));
-          for (const b of urgent) (b as KritisBatch).threshold_h_minus = kategoriMap.get((b as unknown as { kategori_id: string }).kategori_id) ?? [7, 3, 1];
-          urgent.sort((a, b) => a.daysToExpiry - b.daysToExpiry || a.urgencyScore - b.urgencyScore);
-          if (!cancelled) { setKritisBatches(urgent); setLoading(false); }
-          return;
-        }
-
-        // Real Dexie path
         const batches = await realRepo.listBatchesExpiring("toko-01");
         const kategoris = await realRepo.listKategoris("toko-01");
         const kategoriMap = new Map(kategoris.map((k) => [k.id, k]));
@@ -147,7 +85,6 @@ export function KritisPage({ useRealData = true, batchesOverride }: KritisPagePr
           const kategori = sku ? kategoriMap.get(sku.kategori_id) : undefined;
           const threshold = kategori?.threshold_h_minus ?? [7, 3, 1];
           const maxThreshold = Math.max(...threshold);
-          // Definisi kritis: days <= max threshold
           if (days > maxThreshold) continue;
           const avg = avgMap.get(b.sku_id) ?? 1;
           const score = urgencyScore(b.qty, days, avg);
@@ -180,8 +117,10 @@ export function KritisPage({ useRealData = true, batchesOverride }: KritisPagePr
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
-  }, [today, useRealData, batchesOverride, fakeRepo]);
+    return () => {
+      cancelled = true;
+    };
+  }, [today]);
 
   const handleLihatDetail = (skuId: string) => {
     window.history.pushState({}, "", toSkuDetailUrl(skuId));
