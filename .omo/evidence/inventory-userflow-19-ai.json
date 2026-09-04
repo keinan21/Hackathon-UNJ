@@ -1,0 +1,30 @@
+{
+  "task": "19. AI assist multi-jenis promo + guardrail per-jenis",
+  "branch": "feat/advisor-multi-promo",
+  "commit": "feat(advisor): AI assist multi-promo + guardrail",
+  "verification": {
+    "bun_single": "bun test src/advisor/guardrail.test.ts → 17 pass (6 existing + 11 per-jenis)",
+    "bun_pair": "bun test src/advisor/guardrail.test.ts src/advisor/geminiAdvisor.test.ts → 26 pass 0 fail",
+    "bun_full": "bun test src → 164 pass 0 fail 20 files (153+11)",
+    "vitest_full": "bun run test (vitest) → 164 pass 20 files",
+    "tsc": "npx tsc --noEmit → 0",
+    "build": "bun run build → exit 0, dist/manifest.webmanifest + dist/sw.js ada"
+  },
+  "files_modified": [
+    "src/lib/validation.ts — tambah PromoJenis + PromoUsulParams + validatePromoUsul per-jenis (tebus/diskon floor HPP*0.85, bundling ΣHPP*0.85, bogo harga_normal/2 >= floor, cashback margin-cashback>=0 + floor tetap), preserve validateHargaTebus existing",
+    "src/advisor/LangChainGeminiAdvisor.ts — import validatePromoUsul, guardrail tebus sebelum cache + before LLM, tambah buildHargaForJenis + suggestForBatchWithJenis untuk 5 jenis, prompt LLM tetap angka DB hpp_snapshot/harga_normal/qty/days, guardrail sebelum advisorCache TTL 24h",
+    "src/advisor/guardrail.test.ts — 11 case baru isolation-safe (fake-indexeddb + localStorage polyfill + fetch/onLine/timers save-restore): tebus/diskon/bundling/bogo/cashback tiap lolos+tolak + ngarang ditolak, floor exact Rp 8.500/10.200/15.300"
+  ],
+  "guardrail_details": {
+    "tebus": "harga >= HPP*0.85 (Rp floor exact), pesan Bahasa Indonesia",
+    "diskon": "harga >= HPP*0.85",
+    "bundling": "total_paket >= ΣHPP*0.85 (Rp 15.300 untuk [10000,8000])",
+    "bogo": "harga_normal/2 >= HPP*0.85 (20000/2=10000 lolos, 16000/2=8000 tolak floor 8500)",
+    "cashback": "margin − cashback >=0 + floor HPP*0.85 tetap",
+    "ngarang": "harga di bawah floor walau LLM ngarang → tolak + pesan floor",
+    "cache_TTL": "24h via isCacheValid(created_at), tidak ubah schema advisorCache"
+  },
+  "isolation": "fake-indexeddb inject TOP + fetch/onLine/timers save-restore + localStorage polyfill guarded (pola src/lib/telegram.test.ts:24-141), single-file + full-suite di kedua runner hijau",
+  "language": "Bahasa Indonesia semua pesan/error",
+  "tdd": "red → green: guardrail.test.ts 11 fail → implement validation.ts → hijau"
+}
