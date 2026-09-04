@@ -151,24 +151,24 @@ test.describe("SKU Detail 1-halaman + grafik mini arus 14d", () => {
     await expect(page.getByTestId("histori-item-trx-keluar-13")).toBeVisible();
     await expect(page.getByTestId("histori-item-trx-keluar-0")).toBeVisible();
 
-    // grafik 14 titik
+    // grafik ChartArus (Chart.js lazy)
     await expect(page.getByTestId("sku-detail-grafik")).toBeVisible();
-    await expect(page.getByTestId("grafik-svg")).toBeVisible();
-    for (let i = 0; i < 14; i++) {
-      await expect(page.getByTestId(`grafik-point-${i}`)).toBeVisible();
-    }
-    // masuk hijau & keluar merah rect ada di DOM (height 0 tetap attached tapi hidden di beberapa hari ganjil)
-    await expect(page.getByTestId("grafik-masuk-0")).toBeAttached();
-    await expect(page.getByTestId("grafik-keluar-0")).toBeAttached();
-    await expect(page.getByTestId("grafik-keluar-0")).toHaveAttribute("height", /[1-9]/);
+    await expect(page.getByTestId("chart-arus-wrapper")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("chart-arus-container")).toBeVisible();
+    // canvas Chart.js
+    const canvas = page.locator('[data-testid="chart-arus-container"] canvas');
+    await expect(canvas).toBeVisible({ timeout: 10_000 });
+    // legenda Bahasa Indonesia
+    await expect(page.getByTestId("chart-arus-wrapper")).toContainText("Masuk");
+    await expect(page.getByTestId("chart-arus-wrapper")).toContainText("Keluar");
+    await expect(page.getByTestId("chart-arus-wrapper")).toContainText("BEP");
 
-    // BEP marker hijau #16a34a
+    // BEP marker amber #F59E0B (beda dari hijau #16a34a)
     const bepMarker = page.getByTestId("bep-marker");
     await expect(bepMarker).toBeVisible();
-    await expect(bepMarker).toHaveAttribute("fill", "#16a34a");
-    await expect(page.getByTestId("bep-label")).toContainText("BEP tercapai H+");
-    // sumbu tanggal labels are rendered as text inside svg (check first label exists)
-    await expect(page.getByTestId("grafik-svg")).toContainText("-");
+    // amber background via inline style
+    await expect(bepMarker).toHaveCSS("background-color", "rgb(245, 158, 11)");
+    await expect(page.getByTestId("chart-bep-label")).toContainText("BEP tercapai H+");
 
     // screenshot evidence optional
     // back button
@@ -213,9 +213,9 @@ test.describe("SKU Detail 1-halaman + grafik mini arus 14d", () => {
     await expect(page.getByTestId("grafik-empty")).toContainText("Belum ada transaksi 14 hari terakhir");
     await expect(page.getByTestId("histori-empty")).toBeVisible();
     await expect(page.getByTestId("histori-empty")).toContainText("Belum ada transaksi 14 hari terakhir");
-    // ensure no 14 points rendered in empty mode
     await expect(page.getByTestId("bep-marker")).toHaveCount(0);
-    await expect(page.getByTestId("grafik-svg")).toHaveCount(0);
+    await expect(page.getByTestId("chart-arus-container")).toHaveCount(0);
+    await expect(page.getByTestId("chart-bep-label")).toHaveCount(0);
   });
 
   test("deep-link guard + pushState popstate konsisten", async ({ page }) => {
