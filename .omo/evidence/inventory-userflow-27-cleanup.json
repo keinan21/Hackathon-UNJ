@@ -1,0 +1,61 @@
+{
+  "task": "27. Sync docs + .omo + verifikasi mock bersih",
+  "branch": "feat/cleanup-verifikasi-mock",
+  "head": "4d24828",
+  "origin_main": "4d24828",
+  "merge_base": "4d24828",
+  "fresh_from_origin_main": true,
+  "timestamp": "2026-09-04T20:10:48.939964+07:00",
+  "timezone": "Asia/Jakarta",
+  "verifikasi_mock_bersih": {
+    "src_lib_fakeRepository_exists": "PASS",
+    "src_lib_fakeHistoriRepository_exists": "PASS",
+    "grep_FakeRepository_src_count": 0,
+    "grep_fakeHistori_src_count": 0,
+    "grep_fakeHistoriRepository_src_count": 0,
+    "kesimpulan": "mock bersih via task 21, verifikasi saja — tidak ada sisa import fake di src produksi",
+    "e2e_FakeRepository_allowed": true,
+    "e2e_note": "e2e/ boleh pakai FakeRepository (badge.spec, full-flow) — allowlist test-only, src tidak"
+  },
+  "docs_sync": {
+    "git_status_docs_dirty_count": 0,
+    "git_status_docs_output": "(clean)",
+    "kesimpulan": "docs/** sinkron clean"
+  },
+  "omo_sync": {
+    "evidence_local_count_inventory_userflow": 40,
+    "evidence_committed_origin_main_count": 40,
+    "plan_x_count": 29,
+    "plan_todo_remaining": 5,
+    "plan_file": ".omo/plans/inventory-userflow-rewrite.md",
+    "kesimpulan": "evidence ter-commit per PR, plan akan jadi 30/34 setelah task 27"
+  },
+  "qa_gates": {
+    "tsc_noEmit_exit": 0,
+    "tsc_pass": true,
+    "bun_test_src": "168/168 pass (dual-runner wajib hijau)",
+    "vitest": "168/168 pass 20 files",
+    "build": "exit 0 + dist/manifest.webmanifest + dist/sw.js ada",
+    "grep_supabase_firebase_prod": 0,
+    "grep_supabase_note": "2 hits di telegram.test.ts hanya string expect, bukan leak — prod 0"
+  },
+  "governance": {
+    "branch_fresh": true,
+    "commit_msg": "chore(cleanup): verifikasi mock bersih + sync docs",
+    "includes": [
+      "plan-x [x] 27",
+      "evidence json",
+      "notepad append"
+    ],
+    "no_direct_merge": true,
+    "one_reviewer_squash": true
+  },
+  "acceptance": {
+    "grep_FakeRepository_tsx_0": true,
+    "docs_clean": true,
+    "omo_evidence_synced": true,
+    "verdict": "PASS — verifikasi mock bersih + docs sinkron + .omo ter-commit"
+  },
+  "evidence_path": ".omo/evidence/inventory-userflow-27-cleanup.json",
+  "commit": "chore(cleanup): verifikasi mock bersih + sync docs"
+}
