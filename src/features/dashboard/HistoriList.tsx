@@ -41,33 +41,48 @@ export function HistoriList({ onSelect, limit = 5, historiOverride, useRealData 
           }
           return;
         }
-        // Real: fetch advisorCache from Dexie
         const cache = await realRepo.listAdvisorCache("toko-01").catch(() => []);
+        const promos = await realRepo.listPromos("toko-01").catch(() => []);
         if (cancelled) return;
-        if (cache.length === 0) {
-          // Real data from nol — empty histori is correct, not dummy
+        if (cache.length === 0 && promos.length === 0) {
           setHistori([]);
         } else {
-          // Map AdvisorCacheEntry -> HistoriItem
-          const mapped: HistoriItem[] = cache
-            .map((c) => {
-              const s = c.suggestion;
-              return {
-                id: c.batch_id,
-                aksi: s.aksi,
-                alasan: s.alasan,
-                pasangan: s.pasangan_tebus_murah ?? "-",
-                harga_tebus: s.harga_tebus,
-                harga_floor: Math.round((s.harga_tebus - s.estimasi_margin) * 0.85),
-                sku_name: s.batch_id,
-                sku_pasangan_name: s.pasangan_tebus_murah ?? "-",
-                created_at: s.created_at,
-                confidence: s.confidence === "Tinggi" ? 0.92 : s.confidence === "Sedang" ? 0.75 : 0.6,
-                org_id: c.org_id,
-              } as unknown as HistoriItem;
-            })
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .slice(0, limit);
+          const fromCache: HistoriItem[] = cache.map((c) => {
+            const s = c.suggestion;
+            return {
+              id: c.batch_id,
+              aksi: s.aksi,
+              alasan: s.alasan,
+              pasangan: s.pasangan_tebus_murah ?? "-",
+              harga_tebus: s.harga_tebus,
+              harga_floor: Math.round((s.harga_tebus - s.estimasi_margin) * 0.85),
+              sku_name: s.batch_id,
+              sku_pasangan_name: s.pasangan_tebus_murah ?? "-",
+              created_at: s.created_at,
+              confidence: s.confidence === "Tinggi" ? 0.92 : s.confidence === "Sedang" ? 0.75 : 0.6,
+              org_id: c.org_id,
+            } as unknown as HistoriItem;
+          });
+          const fromPromos: HistoriItem[] = promos.map((p) => ({
+            id: p.id,
+            aksi: `Tebus Murah ${p.batch_id}`,
+            alasan: "Promo tebus murah",
+            pasangan: p.sku_pasangan_id ?? "-",
+            harga_tebus: p.harga_tebus,
+            harga_floor: 0,
+            sku_name: p.batch_id,
+            sku_pasangan_name: p.sku_pasangan_id ?? "-",
+            created_at: p.created_at,
+            confidence: 0.9,
+            org_id: p.org_id,
+          } as unknown as HistoriItem));
+          const merged = [...fromCache, ...fromPromos];
+          const dedup = new Map<string, HistoriItem>();
+          for (const h of merged) {
+            const existing = dedup.get(h.id);
+            if (!existing || new Date(h.created_at).getTime() > new Date(existing.created_at).getTime()) dedup.set(h.id, h);
+          }
+          const mapped = [...dedup.values()].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, limit);
           setHistori(mapped);
         }
       } catch (e) {

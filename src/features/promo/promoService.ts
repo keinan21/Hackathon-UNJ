@@ -1,6 +1,6 @@
 import type { InventoryRepository } from '../../db/repository';
 import type { Promo, AdvisorSuggestion } from '../../db/types';
-import { validateHargaTebus } from '../../lib/validation';
+import { validateHargaTebus, validatePromoUsul } from '../../lib/validation';
 import type { AdvisorPort } from '../../advisor/AdvisorPort';
 
 export interface CreatePromoInput {
@@ -79,6 +79,36 @@ export class PromoService {
 
   async getActivePromos(orgId: string): Promise<Promo[]> {
     return this.repo.listPromos(orgId, 'active');
+  }
+
+  async approvePromo(promoId: string, orgId = 'toko-01'): Promise<Promo> {
+    const promo = await this.repo.getPromo(promoId);
+    if (!promo) throw new Error('Promo tidak ditemukan');
+    if (promo.status !== 'proposed') throw new Error('Hanya proposed bisa di-approve');
+    if (promo.org_id !== orgId) throw new Error('Promo tidak ditemukan');
+    const batch = await this.repo.getBatch(promo.batch_id);
+    if (!batch) throw new Error('Batch tidak ditemukan');
+    if (batch.qty <= 0) throw new Error('Stok habis, tidak bisa approve tebus murah');
+    const sku = await this.repo.getSku(batch.sku_id);
+    if (!sku) throw new Error('SKU tidak ditemukan');
+    const guard = validatePromoUsul('tebus', { hpp: batch.hpp_snapshot, harga_tebus: promo.harga_tebus, harga_normal: sku.harga_normal });
+    if (!guard.valid) throw new Error(guard.error ?? 'Harga tebus tidak valid');
+    const active: Promo = { ...promo, status: 'active', updated_at: new Date().toISOString() };
+    await this.repo.updatePromo(active);
+    return active;
+  }
+
+  async rejectPromo(promoId: string, orgId = 'toko-01'): Promise<void> {
+    const promo = await this.repo.getPromo(promoId);
+    if (!promo) throw new Error('Promo tidak ditemukan');
+    if (promo.status !== 'proposed') throw new Error('Hanya proposed bisa ditolak');
+    if (promo.org_id !== orgId) throw new Error('Promo tidak ditemukan');
+    await this.repo.deletePromo(promo.id);
+  }
+
+  async getHistoriTerbaru(orgId = 'toko-01', limit = 5): Promise<Promo[]> {
+    const all = await this.repo.listPromos(orgId);
+    return [...all].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, limit);
   }
 }
 
