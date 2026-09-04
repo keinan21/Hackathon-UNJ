@@ -1,0 +1,14 @@
+{
+  "task": "11. Detail SKU 1-halaman + grafik mini arus 14d",
+  "branch": "feat/sku-detail",
+  "verification": {
+    "code_read": "SkuDetailPage.tsx 490 lines + App route + e2e spec — logic verified",
+    "e2e_cli": "3 passed (render lengkap + empty + deep-link guard)",
+    "bun_test_src": "119 pass",
+    "build": "exit 0",
+    "mcp_qa": "seeded Susu QA via repo hooks; /sku/:id renders header+stok+batch kritis+grafik 14 titik+BEP H+1+histori; console 0 errors",
+    "margin_fallback": "transaksi tanpa batch link pakai sku.hpp (documented)"
+  },
+  "files": ["src/features/sku/SkuDetailPage.tsx", "src/App.tsx", "e2e/sku-detail.spec.ts"],
+  "note": "BatchDetailPage dummy lama dibiarkan orphan (tidak diimport); penghapusan final di task 27 verify"
+}

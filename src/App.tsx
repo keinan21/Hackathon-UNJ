@@ -10,6 +10,7 @@ import { SkuForm } from "./features/sku/SkuForm";
 import { LoginPage, getProfilToko } from "./features/auth/LoginPage";
 import { isLoggedIn } from "./features/auth/session";
 import { lazy, Suspense } from "react";
+import { SkuDetailPage } from "./features/sku/SkuDetailPage";
 const ScanPage = lazy(() => import("./features/scan/ScanPage"));
 
 type View = "dashboard" | "promo" | "settings" | "sku";
@@ -65,10 +66,28 @@ function useScanRoute() {
   return isScan;
 }
 
+function useSkuDetailRoute() {
+  const getId = () => {
+    if (typeof window === "undefined") return null;
+    const m = window.location.pathname.match(/^\/sku\/([^/]+)/);
+    if (!m) return null;
+    if (m[1] === "baru") return null;
+    return m[1];
+  };
+  const [skuId, setSkuId] = useState<string | null>(() => getId());
+  useEffect(() => {
+    const onPop = () => setSkuId(getId());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  return skuId;
+}
+
 function AppShell() {
   const historiId = useHistoriRoute();
   const isSkuBaru = useSkuBaruRoute();
   const isScan = useScanRoute();
+  const skuDetailId = useSkuDetailRoute();
   const [view, setView] = useState<View>(() => {
     if (typeof window === "undefined") return "dashboard";
     const p = new URLSearchParams(window.location.search);
@@ -179,6 +198,45 @@ function AppShell() {
         </header>
         <main style={{ maxWidth: 480, margin: "0 auto", padding: 16, paddingBottom: 80 }}>
           <SkuForm />
+        </main>
+        <nav aria-label="Navigasi utama" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#FFFFFF", borderTop: "1px solid #D9D9D9", display: "flex", justifyContent: "space-around", padding: "8px 0", maxWidth: 480, margin: "0 auto" }}>
+          {[
+            { id: "dashboard" as View, label: "Dashboard" },
+            { id: "sku" as View, label: "SKU" },
+            { id: "promo" as View, label: "Promo" },
+            { id: "settings" as View, label: "Pengaturan" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              aria-current={view === tab.id ? "page" : undefined}
+              aria-label={tab.label}
+              onClick={() => {
+                window.history.pushState({}, "", "/");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+                setView(tab.id);
+              }}
+              data-testid={`nav-${tab.id}`}
+              style={{ minHeight: 48, padding: "8px 16px", border: "none", background: "transparent", color: view === tab.id ? "#0F7A4A" : "#595959", fontSize: 14, fontWeight: view === tab.id ? 600 : 400, cursor: "pointer" }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+        <InstallPrompt />
+      </div>
+    );
+  }
+
+  if (skuDetailId) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#F5F5F0", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
+        <header style={{ background: "#0F7A4A", color: "#FFFFFF", padding: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h1 data-testid="header-title" style={{ margin: 0, fontSize: 20, fontWeight: 700, lineHeight: 1.25, color: "#FFFFFF" }}>{headerTitle}</h1>
+          <span style={{ fontSize: 12, background: "rgba(255,255,255,0.2)", padding: "4px 8px", borderRadius: 8, color: "#FFFFFF" }}>PWA</span>
+        </header>
+        <main style={{ maxWidth: 480, margin: "0 auto", padding: 16, paddingBottom: 80 }}>
+          <SkuDetailPage id={skuDetailId} />
         </main>
         <nav aria-label="Navigasi utama" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#FFFFFF", borderTop: "1px solid #D9D9D9", display: "flex", justifyContent: "space-around", padding: "8px 0", maxWidth: 480, margin: "0 auto" }}>
           {[
