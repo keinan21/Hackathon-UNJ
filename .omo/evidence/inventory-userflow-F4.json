@@ -1,0 +1,105 @@
+{
+  "task": "F4. Scope fidelity",
+  "plan": ".omo/plans/inventory-userflow-rewrite.md Scope OUT + ADR-003",
+  "timestamp": "2026-09-06T09:17:00+07:00",
+  "timezone": "Asia/Jakarta",
+  "gates": {
+    "supabase_firebase_prod_src": {
+      "command": "grep -r \"supabase|firebase\" src --include=\"*.ts\" --include=\"*.tsx\" | grep -v \"expect.*supabase\" | grep -v \"expect.*firebase\"",
+      "count": 0,
+      "raw_count_including_test_expects": 2,
+      "raw_hits": [
+        "src/lib/telegram.test.ts:319 expect(url).not.toContain(\"supabase\")",
+        "src/lib/telegram.test.ts:320 expect(url).not.toContain(\"firebase\")"
+      ],
+      "note": "2 raw hits hanya string expect di telegram.test.ts (assert tidak leak), prod 0 — PASS",
+      "verdict": "PASS"
+    },
+    "ocr_lib": {
+      "command": "grep -ri \"ocr\" src package.json | grep -vi \"html5-qrcode\"",
+      "count": 0,
+      "hits": [],
+      "note": "Tidak ada tesseract/ocrad/gocr/ocr string di src maupun package.json — PASS. Allowlist html5-qrcode bukan OCR",
+      "verdict": "PASS"
+    },
+    "qrcode_non_html5": {
+      "command": "grep -ri \"qrcode\" src package.json | grep -vi \"html5\"",
+      "count": 0,
+      "hits": [],
+      "html5_qrcode_total": 3,
+      "html5_qrcode_files": ["src/features/scan/ScanPage.tsx", "src/lib/telegram.ts (comment only)", "package.json"],
+      "note": "Hanya html5-qrcode allowlist ADR-003, tidak ada qrcode lain — PASS",
+      "verdict": "PASS"
+    },
+    "multi_role": {
+      "command": "grep -ri \"multi-role|multi_role\" src package.json docs",
+      "prod_src_role_hits": 0,
+      "note": "grep -ri role di src hanya a11y role=status/tablist/group/article + LLM role:system/user + comment 'no multi-role' di pinStore.ts — tidak ada implementasi multi-role — PASS",
+      "verdict": "PASS"
+    },
+    "pos_cart_payment": {
+      "command": "grep -ri \"pos.*cart|cart.*pos|payment.*gateway|checkout.*payment\" src",
+      "count": 0,
+      "verdict": "PASS"
+    },
+    "chart_berat": {
+      "command": "grep -ri \"recharts|apexcharts|highcharts|victory|nivo\" src package.json",
+      "count": 0,
+      "deps_chart": ["chart.js@^4.5.1", "react-chartjs-2@^5.3.1"],
+      "note": "Hanya chart.js + react-chartjs-2 (allowlist ringan via ChartArus lazy), tidak ada recharts/apex/highcharts/victory — PASS",
+      "verdict": "PASS"
+    },
+    "backend_deps_package_json": {
+      "command": "check package.json dependencies for supabase/firebase/express/nestjs/prisma/typeorm/mongoose/tesseract",
+      "count": 0,
+      "all_dependencies": ["@google/generative-ai", "chart.js", "daisyui", "dexie", "html5-qrcode", "iconoir-react", "langchain", "react", "react-chartjs-2", "react-dom"],
+      "all_devDependencies": ["@playwright/test", "@types/node", "@types/react", "@types/react-dom", "@vitejs/plugin-react", "autoprefixer", "fake-indexeddb", "jsdom", "postcss", "tailwindcss", "typescript", "vite", "vite-plugin-pwa", "vitest"],
+      "verdict": "PASS"
+    },
+    "no_ocr_package": {
+      "command": "grep -ri \"tesseract|ocrad|gocr\" src package.json",
+      "count": 0,
+      "verdict": "PASS"
+    }
+  },
+  "allowlist": {
+    "telegram_direct_https": {
+      "adr": "ADR-003",
+      "file": "src/lib/telegram.ts",
+      "constant": "TELEGRAM_API_BASE = \"https://api.telegram.org\"",
+      "usage": "fetch(`${TELEGRAM_API_BASE}/bot${token}/sendMessage`) direct-HTTPS tanpa backend",
+      "lines": [
+        "src/lib/telegram.ts:24 export const TELEGRAM_API_BASE = \"https://api.telegram.org\"",
+        "src/lib/telegram.ts:374 return `${TELEGRAM_API_BASE}/bot${token}/sendMessage`",
+        "src/lib/telegram.ts:415 const res = await fetch(url, { method: POST ... })",
+        "src/lib/telegram.ts:518 const res = await fetch(buildSendUrl(token), { ... })"
+      ],
+      "grep_api_telegram_org_count": 6,
+      "verify": "fetch api.telegram.org direct-HTTPS ada, tanpa supabase/firebase/proxy — PASS",
+      "verdict": "PASS"
+    },
+    "html5_qrcode_lazy_scan_only": {
+      "adr": "ADR-003",
+      "file": "src/features/scan/ScanPage.tsx",
+      "import_style": "lazy dynamic import(\"html5-qrcode\") di useEffect, bukan static top-level",
+      "line": "src/features/scan/ScanPage.tsx:19 const mod = await import(\"html5-qrcode\")",
+      "files_with_html5_qrcode": ["src/features/scan/ScanPage.tsx (lazy import + new Html5Qrcode)", "src/lib/telegram.ts (comment allowlist only)", "package.json html5-qrcode@^2.3.8"],
+      "static_import_elsewhere": 0,
+      "grep_static_import": "grep -rn \"from.*html5|import.*html5\" = 1 hit (dynamic import di ScanPage saja)",
+      "fallback": "permission denied → fallback input manual Bahasa Indonesia, tidak throw",
+      "verify": "html5-qrcode lazy di /scan saja, tidak preload dashboard, OCR tetap Must NOT — PASS",
+      "verdict": "PASS"
+    }
+  },
+  "summary": {
+    "total_gates": 8,
+    "passed": 8,
+    "failed": 0,
+    "allowlist_verified": 2,
+    "allowlist_passed": 2
+  },
+  "verdict": "APPROVE",
+  "temuan": [],
+  "evidence_path": ".omo/evidence/inventory-userflow-F4.json",
+  "commit": "lipat ke PR final feat/verify-final (tidak commit di task ini)"
+}

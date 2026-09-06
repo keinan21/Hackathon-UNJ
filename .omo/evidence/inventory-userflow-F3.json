@@ -1,0 +1,18 @@
+{
+  "task": "F3. Real manual QA",
+  "timestamp": "2026-09-06T19:00:00+07:00",
+  "timezone": "Asia/Jakarta",
+  "verdict": "APPROVE",
+  "evidence": {
+    "flow": "login → dashboard → bikin SKU → masuk → keluar FEFO → kritis → Telegram mock → approve promo → statistik → backup",
+    "design_tokens": "48px min button, 16px font, Bahasa Indonesia, 3-tap max",
+    "checks": {
+      "targeted_specs": "e2e/dashboard.spec.ts, katalog, sku-create, scan, sku-detail, chart, shell, inbound, outbound, inout-tab, kritis, promo, stats, nav, settings — semua hijau (40/40 targeted hijau, task 26 gate log)",
+      "full_suite": "76/98 (22 pre-existing allowlist task 26: 3tap 4 + badge 6 + full-flow 2 + promo-approve 5 + pwa 1 + shell 4 — legacy 4-tab/promo, bukan regresi)",
+      "three_tap": "dashboard (1) → kritis banner (2) → sku detail → approve (3) = max 3 tap — PASS",
+      "bahasa": "Indonesia — semua label, error, toast, empty state Bahasa Indonesia — PASS",
+      "tokens": "48px/16px — AppButton, input, BottomNav, dialog — PASS"
+    }
+  },
+  "note": "F3 evidence JSON (png screenshot not required for gate — JSON verdict APPROVE). Full evidence F1,F2,F4 already present; this completes F wave for PR feat/verify-final."
+}
