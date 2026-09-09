@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Batch Details &amp; Category Config</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "surface-container": "#eceef0",
+                            "surface-dim": "#d8dadc",
+                            "on-tertiary": "#ffffff",
+                            "error-container": "#ffdad6",
+                            "surface-tint": "#545f73",
+                            "error": "#ba1a1a",
+                            "background": "#f7f9fb",
+                            "border-subtle": "#E2E8F0",
+                            "slate-gray": "#64748B",
+                            "tertiary-container": "#00301e",
+                            "secondary-container": "#fea619",
+                            "tertiary": "#00190e",
+                            "tertiary-fixed-dim": "#4edea3",
+                            "surface-variant": "#e0e3e5",
+                            "on-tertiary-fixed": "#002113",
+                            "on-secondary-fixed": "#2a1700",
+                            "on-background": "#191c1e",
+                            "inverse-surface": "#2d3133",
+                            "primary-container": "#1e293b",
+                            "on-surface": "#191c1e",
+                            "on-primary": "#ffffff",
+                            "on-secondary-fixed-variant": "#653e00",
+                            "surface-container-low": "#f2f4f6",
+                            "outline": "#75777d",
+                            "on-primary-container": "#8590a6",
+                            "surface-bright": "#f7f9fb",
+                            "on-tertiary-container": "#00a472",
+                            "on-error": "#ffffff",
+                            "secondary": "#855300",
+                            "critical-red": "#EF4444",
+                            "surface": "#f7f9fb",
+                            "primary-fixed-dim": "#bcc7de",
+                            "secondary-fixed": "#ffddb8",
+                            "primary": "#091426",
+                            "on-primary-fixed-variant": "#3c475a",
+                            "on-secondary": "#ffffff",
+                            "outline-variant": "#c5c6cd",
+                            "primary-fixed": "#d8e3fb",
+                            "tertiary-fixed": "#6ffbbe",
+                            "on-error-container": "#93000a",
+                            "secondary-fixed-dim": "#ffb95f",
+                            "on-primary-fixed": "#111c2d",
+                            "surface-container-high": "#e6e8ea",
+                            "surface-container-highest": "#e0e3e5",
+                            "surface-container-lowest": "#ffffff",
+                            "inverse-primary": "#bcc7de",
+                            "on-tertiary-fixed-variant": "#005236",
+                            "on-secondary-container": "#684000",
+                            "on-surface-variant": "#45474c",
+                            "inverse-on-surface": "#eff1f3"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "0.125rem",
+                            "lg": "0.25rem",
+                            "xl": "0.5rem",
+                            "full": "0.75rem"
+                    },
+                    "spacing": {
+                            "xs": "4px",
+                            "xl": "32px",
+                            "md": "16px",
+                            "unit": "4px",
+                            "margin-mobile": "16px",
+                            "sm": "8px",
+                            "lg": "24px",
+                            "gutter-mobile": "12px"
+                    },
+                    "fontFamily": {
+                            "headline-md": ["Inter"],
+                            "data-mono": ["Inter"],
+                            "body-md": ["Inter"],
+                            "headline-lg-mobile": ["Inter"],
+                            "label-caps": ["Inter"],
+                            "body-lg": ["Inter"],
+                            "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                            "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                            "data-mono": ["14px", { "lineHeight": "20px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                            "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                            "headline-lg-mobile": ["22px", { "lineHeight": "28px", "fontWeight": "700" }],
+                            "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                            "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                            "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1;
+        }
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 16px); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md font-body-md pt-16 safe-area-bottom min-h-screen">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-container-lowest text-primary dark:text-primary-fixed border-b border-border-subtle dark:border-outline-variant fixed top-0 left-0 w-full z-50 flex items-center justify-between px-margin-mobile h-16">
+<button class="text-primary hover:bg-surface-container-low transition-colors p-2 rounded-full -ml-2">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary dark:text-primary-fixed tracking-tight truncate flex-1 text-center pr-10">Tebus Murah</h1>
+<!-- Trailing icon omitted for focused screen as per rules, or keeping as requested -->
+</header>
+<main class="max-w-3xl mx-auto px-margin-mobile py-lg space-y-lg">
+<!-- Header Section -->
+<section class="mb-lg">
+<div class="flex items-start justify-between mb-sm">
+<div>
+<span class="font-label-caps text-label-caps text-slate-gray uppercase tracking-wider block mb-1">Batch ID</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">B-20231024-DAIRY-01</h2>
+</div>
+<div class="bg-surface-container-lowest border border-border-subtle rounded px-2 py-1 shadow-sm flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-critical-red animate-pulse"></span>
+<span class="font-data-mono text-data-mono text-critical-red">Urgent</span>
+</div>
+</div>
+</section>
+<!-- Bento Grid: Batch Details -->
+<section class="grid grid-cols-2 gap-sm">
+<div class="col-span-2 md:col-span-1 bg-surface-container-lowest border border-border-subtle p-md rounded-xl shadow-sm">
+<span class="font-label-caps text-label-caps text-slate-gray block mb-xs">SKU</span>
+<p class="font-body-lg text-body-lg text-on-surface font-semibold">Fresh Milk 1L - Ultra</p>
+<div class="mt-xs inline-flex items-center gap-1 bg-surface-container-low px-2 py-1 rounded text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="category">category</span> Kategori: Dairy
+                </div>
+</div>
+<div class="bg-surface-container-lowest border border-border-subtle p-md rounded-xl shadow-sm flex flex-col justify-between">
+<span class="font-label-caps text-label-caps text-slate-gray block mb-xs">Total Qty</span>
+<div class="flex items-end gap-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">1,250</span>
+<span class="text-on-surface-variant font-body-md text-body-md mb-1">units</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-border-subtle p-md rounded-xl shadow-sm">
+<span class="font-label-caps text-label-caps text-slate-gray block mb-xs">Received Date</span>
+<p class="font-body-md text-body-md text-on-surface">24 Oct 2023</p>
+</div>
+<div class="bg-surface-container-lowest border border-border-subtle p-md rounded-xl shadow-sm">
+<span class="font-label-caps text-label-caps text-slate-gray block mb-xs">HPP (Unit)</span>
+<p class="font-data-mono text-data-mono text-on-surface">Rp 12.500</p>
+</div>
+</section>
+<!-- Threshold Configuration -->
+<section class="bg-surface-container-lowest border border-border-subtle rounded-xl shadow-sm overflow-hidden mt-xl">
+<div class="p-md border-b border-border-subtle bg-surface-bright">
+<h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary-container" data-icon="settings_suggest">settings_suggest</span>
+                    Category Config: Dairy
+                </h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Adjust notification triggers for this category.</p>
+</div>
+<div class="p-md space-y-md">
+<!-- H-7 -->
+<div class="flex items-center justify-between">
+<div>
+<label class="font-data-mono text-data-mono text-on-surface block">H-7 Warning</label>
+<span class="text-xs text-slate-gray">Days before expiry</span>
+</div>
+<input class="w-20 text-center font-data-mono text-data-mono bg-surface border border-border-subtle rounded-lg py-2 focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none transition-shadow" type="number" value="7"/>
+</div>
+<hr class="border-border-subtle"/>
+<!-- H-3 -->
+<div class="flex items-center justify-between">
+<div>
+<label class="font-data-mono text-data-mono text-on-surface block">H-3 Alert</label>
+<span class="text-xs text-slate-gray">Days before expiry</span>
+</div>
+<input class="w-20 text-center font-data-mono text-data-mono bg-surface border border-border-subtle rounded-lg py-2 focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none transition-shadow" type="number" value="3"/>
+</div>
+<hr class="border-border-subtle"/>
+<!-- H-1 -->
+<div class="flex items-center justify-between">
+<div>
+<label class="font-data-mono text-data-mono text-on-surface block">H-1 Critical</label>
+<span class="text-xs text-slate-gray">Days before expiry</span>
+</div>
+<input class="w-20 text-center font-data-mono text-data-mono bg-error-container text-error border-error border rounded-lg py-2 focus:border-error focus:ring-1 focus:ring-error outline-none transition-shadow" type="number" value="1"/>
+</div>
+<div class="pt-sm space-y-3">
+<div class="flex items-center justify-between bg-surface-container p-3 rounded-lg">
+<span class="font-body-md text-body-md font-semibold">Push Notifications</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-slate-gray peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tertiary-container"></div>
+</label>
+</div>
+<div class="flex items-center justify-between bg-surface-container p-3 rounded-lg">
+<span class="font-body-md text-body-md font-semibold">WhatsApp Notifications</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-slate-gray peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tertiary-container"></div>
+</label>
+</div>
+</div>
+</div>
+<div class="p-md bg-surface-container-low border-t border-border-subtle">
+<button class="w-full bg-primary-container text-on-primary h-12 rounded-lg font-data-mono text-data-mono shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="save">save</span> Save Configuration
+                </button>
+</div>
+</section>
+<!-- History Log -->
+<section class="mt-xl">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-md">Change Log</h3>
+<div class="relative border-l-2 border-border-subtle ml-3 space-y-md">
+<div class="relative pl-6">
+<div class="absolute w-3 h-3 bg-surface border-2 border-primary-container rounded-full -left-[7px] top-1"></div>
+<p class="font-body-sm text-xs text-slate-gray mb-1">Today, 09:41 AM</p>
+<div class="bg-surface-container-lowest border border-border-subtle p-3 rounded-lg shadow-sm">
+<p class="font-body-md text-body-md text-on-surface">System marked batch as <span class="text-secondary-container font-semibold">Warning (H-3)</span>.</p>
+</div>
+</div>
+<div class="relative pl-6">
+<div class="absolute w-3 h-3 bg-surface border-2 border-slate-gray rounded-full -left-[7px] top-1"></div>
+<p class="font-body-sm text-xs text-slate-gray mb-1">24 Oct 2023, 14:20 PM</p>
+<div class="bg-surface-container-lowest border border-border-subtle p-3 rounded-lg shadow-sm">
+<p class="font-body-md text-body-md text-on-surface">Supervisor <span class="font-semibold">Budi S.</span> received initial batch.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Suppressed as this is a detail/task-focused screen with a back button -->
+</body></html>

@@ -10,10 +10,10 @@
  * - Transaksi (src/db/types.ts & src/db/db.ts):
  *   id, sku_id, qty_sold, sold_at (ISO), org_id, jenis? ("masuk"|"keluar"|"opname" default "keluar"),
  *   harga_jual_snapshot?, pengirim, penerima, catatan
- *   → TIDAK ada field hpp_snapshot / harga_beli di Transaksi di schema existing.
+ *   → TIDAK ada field modal_snapshot / harga_beli di Transaksi di schema existing.
  *
- * - Batch (src/db/types.ts): id, sku_id, qty, expiry_date, received_at (ISO), hpp_snapshot, org_id
- *   → hpp_snapshot adalah harga beli per pcs saat batch masuk (copy dari SKU.hpp atau harga_beli explicit).
+ * - Batch (src/db/types.ts): id, sku_id, qty, expiry_date, received_at (ISO), modal_snapshot, org_id
+ *   → modal_snapshot adalah harga beli per pcs saat batch masuk (copy dari SKU.hpp atau harga_beli explicit).
  *
  * Rumus deterministik (Bahasa Indonesia, Rp):
  * - omzet  = Σ harga_jual_snapshot × qty_sold  untuk transaksi jenis="keluar" dalam window 14 hari
@@ -22,18 +22,18 @@
  * - cashflow = omzet − belanja
  *
  * Cara dapat HPP_terjual / harga_beli_masuk tanpa ubah schema:
- * - Untuk keluar: transaksi boleh membawa enrichment `hpp_snapshot` (atau `harga_beli`/`hpp`) sebagai field
+ * - Untuk keluar: transaksi boleh membawa enrichment `modal_snapshot` (atau `harga_beli`/`hpp`) sebagai field
  *   optional tambahan (casting `as any`). Jika tidak ada, coba cari batch matching
- *   (sku_id sama, received_at ≈ sold_at, qty sama) untuk ambil hpp_snapshot. Jika tetap tidak
+ *   (sku_id sama, received_at ≈ sold_at, qty sama) untuk ambil modal_snapshot. Jika tetap tidak
  *   ketemu, fallback 0 agar margin tetap deterministik tanpa hallucinate.
- * - Untuk masuk (belanja): prioritas (1) transaksi.hpp_snapshot / harga_beli jika ada,
- *   (2) cari batch matching recieved_at ≈ sold_at + sku+qty, ambil batch.hpp_snapshot,
+ * - Untuk masuk (belanja): prioritas (1) transaksi.modal_snapshot / harga_beli jika ada,
+ *   (2) cari batch matching recieved_at ≈ sold_at + sku+qty, ambil batch.modal_snapshot,
  *   (3) fallback 0.
  * - Matching window 5 detik karena inboundForm menyimpan batch + transaksi dengan nowIso yang sama
  *   dalam satu transaksi Dexie (src/features/inout/InboundForm.tsx:146-168).
  *
  * Window 14 hari:
- * - Kalender Asia/Jakarta (tanpa DST, offset +7). Hari dibulatkan ke startOfDay Asia/Jakarta via Intl.
+ * - Kalender Asia/Jakarta (tanpa DST, offset +7). Hari dibulatkan ke awalHari Asia/Jakarta via Intl.
  * - Window 14 hari inklusif: [todayJakarta 00:00 -13 hari , todayJakarta 00:00 tomorrow ) — 14 tanggal YYYY-MM-DD.
  * - Transaksi dikelompokkan via sold_at → tanggal Jakarta YYYY-MM-DD, cek ada di Set 14 hari.
  * - Data di luar window (misal 20 hari lalu) dipotong, tidak dihitung.
@@ -85,7 +85,7 @@ export type OmzetInputTransaksi = {
   jenis?: string; // "masuk" | "keluar"
   harga_jual_snapshot?: number | null;
   // enrichment optional — tidak ada di schema Dexie, tapi boleh diisi untuk deterministik
-  hpp_snapshot?: number | null;
+  modal_snapshot?: number | null;
   harga_beli?: number | null;
   hpp?: number | null;
   org_id?: string;
@@ -95,7 +95,7 @@ export type OmzetInputBatch = {
   id: number | string;
   sku_id: number | string;
   qty: number;
-  hpp_snapshot: number;
+  modal_snapshot: number;
   received_at: string; // ISO
   expiry_date: string | null;
   org_id: string;
@@ -150,8 +150,8 @@ export function calcOmzet14(
       // belanja = harga_beli × qty
       let hargaBeli: number | null = null;
       const enriched = t as unknown as Record<string, unknown>;
-      if (typeof enriched.hpp_snapshot === "number" && Number.isFinite(enriched.hpp_snapshot as number)) {
-        hargaBeli = enriched.hpp_snapshot as number;
+      if (typeof enriched.modal_snapshot === "number" && Number.isFinite(enriched.modal_snapshot as number)) {
+        hargaBeli = enriched.modal_snapshot as number;
       } else if (typeof enriched.harga_beli === "number" && Number.isFinite(enriched.harga_beli as number)) {
         hargaBeli = enriched.harga_beli as number;
       } else if (typeof enriched.hpp === "number" && Number.isFinite(enriched.hpp as number)) {
@@ -190,7 +190,7 @@ export function calcOmzet14(
           // hanya pakai jika diff < 60s (masih masuk akal untuk inbound pair)
           if (best && bestDiff < 60_000) found = best;
         }
-        if (found) hargaBeli = found.hpp_snapshot;
+        if (found) hargaBeli = found.modal_snapshot;
       }
       if (hargaBeli !== null && Number.isFinite(hargaBeli) && hargaBeli > 0) {
         belanja += hargaBeli * qty;
@@ -206,8 +206,8 @@ export function calcOmzet14(
       // HPP terjual
       let hpp: number | null = null;
       const enriched = t as unknown as Record<string, unknown>;
-      if (typeof enriched.hpp_snapshot === "number" && Number.isFinite(enriched.hpp_snapshot as number)) {
-        hpp = enriched.hpp_snapshot as number;
+      if (typeof enriched.modal_snapshot === "number" && Number.isFinite(enriched.modal_snapshot as number)) {
+        hpp = enriched.modal_snapshot as number;
       } else if (typeof enriched.harga_beli === "number" && Number.isFinite(enriched.harga_beli as number)) {
         hpp = enriched.harga_beli as number;
       } else if (typeof enriched.hpp === "number" && Number.isFinite(enriched.hpp as number)) {

@@ -9,7 +9,7 @@ if (!g.indexedDB) {
 
 const { InventoryDB } = await import("./db");
 const { buildKodePrefix, computeNextKode, regenerateKodesForKategori } = await import("./kode");
-const { consumeFEFO } = await import("./consume");
+const { consumeKeluarTercepat } = await import("./consume");
 
 function uniqueName() {
   return `test-consume-${crypto.randomUUID()}`;
@@ -90,7 +90,7 @@ describe("kode helper — computeKode + regenerate", () => {
   });
 });
 
-describe("consumeFEFO — FEFO potong batch expiry terdekat dulu", () => {
+describe("consumeKeluarTercepat — FEFO potong batch expiry terdekat dulu", () => {
   test("happy 2 batch 5+10 keluar 7 → 0+8 + transaksi tercatat harga snapshot", async () => {
     const dbName = uniqueName();
     const db = new InventoryDB(dbName);
@@ -99,10 +99,10 @@ describe("consumeFEFO — FEFO potong batch expiry terdekat dulu", () => {
     const k = await repo.createKategori({ nama: "Dairy", threshold_h_minus: [7, 3, 1] });
     const sku = await repo.createSKU({ nama: "Susu UHT", kategori_id: k.id!, hpp: 12000, harga_normal: 15000 });
     // batch 1 expiry paling dekat qty 5, batch2 qty 10
-    await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-03", hpp_snapshot: 12000 });
-    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-10", hpp_snapshot: 12000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-03", modal_snapshot: 12000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-10", modal_snapshot: 12000 });
 
-    const result = await consumeFEFO(sku.id!, 7, "toko-01", db as unknown as import("./db").InventoryDB);
+    const result = await consumeKeluarTercepat(sku.id!, 7, "toko-01", db as unknown as import("./db").InventoryDB);
     expect(result.qtyConsumed).toBe(7);
     expect(result.details).toHaveLength(2);
     expect(result.details[0].taken).toBe(5);
@@ -137,9 +137,9 @@ describe("consumeFEFO — FEFO potong batch expiry terdekat dulu", () => {
     const repo = new DexieRepository(db as unknown as import("./db").InventoryDB);
     const k = await repo.createKategori({ nama: "Dairy", threshold_h_minus: [7, 3, 1] });
     const sku = await repo.createSKU({ nama: "Susu", kategori_id: k.id!, hpp: 1000, harga_normal: 2000 });
-    await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-03", hpp_snapshot: 1000 });
-    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-10", hpp_snapshot: 1000 });
-    const r = await consumeFEFO(sku.id!, 15, "toko-01", db as unknown as import("./db").InventoryDB);
+    await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-03", modal_snapshot: 1000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-10", modal_snapshot: 1000 });
+    const r = await consumeKeluarTercepat(sku.id!, 15, "toko-01", db as unknown as import("./db").InventoryDB);
     expect(r.details.every((d) => d.remaining === 0)).toBe(true);
     const batches = await db.batches.where("sku_id").equals(sku.id!).toArray() as Array<{ qty: number }>;
     expect(batches.every((b) => b.qty === 0)).toBe(true);
@@ -153,10 +153,10 @@ describe("consumeFEFO — FEFO potong batch expiry terdekat dulu", () => {
     const repo = new DexieRepository(db as unknown as import("./db").InventoryDB);
     const k = await repo.createKategori({ nama: "Dairy", threshold_h_minus: [7, 3, 1] });
     const sku = await repo.createSKU({ nama: "Susu", kategori_id: k.id!, hpp: 1000, harga_normal: 2000 });
-    await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-03", hpp_snapshot: 1000 });
-    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-10", hpp_snapshot: 1000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-03", modal_snapshot: 1000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-10", modal_snapshot: 1000 });
 
-    await expect(consumeFEFO(sku.id!, 20, "toko-01", db as unknown as import("./db").InventoryDB)).rejects.toThrow(
+    await expect(consumeKeluarTercepat(sku.id!, 20, "toko-01", db as unknown as import("./db").InventoryDB)).rejects.toThrow(
       "Stok tidak cukup"
     );
     // pastikan tidak ada perubahan
@@ -173,11 +173,11 @@ describe("consumeFEFO — FEFO potong batch expiry terdekat dulu", () => {
     const repo = new DexieRepository(db as unknown as import("./db").InventoryDB);
     const k = await repo.createKategori({ nama: "Dairy", threshold_h_minus: [7, 3, 1] });
     const sku = await repo.createSKU({ nama: "Susu", kategori_id: k.id!, hpp: 1000, harga_normal: 2000 });
-    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-05", hpp_snapshot: 1000 });
-    await expect(consumeFEFO(sku.id!, 0, "toko-01", db as unknown as import("./db").InventoryDB)).rejects.toThrow(
+    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-05", modal_snapshot: 1000 });
+    await expect(consumeKeluarTercepat(sku.id!, 0, "toko-01", db as unknown as import("./db").InventoryDB)).rejects.toThrow(
       "Qty harus lebih dari 0"
     );
-    await expect(consumeFEFO(sku.id!, -3, "toko-01", db as unknown as import("./db").InventoryDB)).rejects.toThrow(
+    await expect(consumeKeluarTercepat(sku.id!, -3, "toko-01", db as unknown as import("./db").InventoryDB)).rejects.toThrow(
       "Qty harus lebih dari 0"
     );
     db.close();
@@ -191,15 +191,15 @@ describe("consumeFEFO — FEFO potong batch expiry terdekat dulu", () => {
     const k = await repo.createKategori({ nama: "Beras", threshold_h_minus: [7, 3, 1] });
     const sku = await repo.createSKU({ nama: "Beras 5kg", kategori_id: k.id!, hpp: 60000, harga_normal: 72000 });
     // satu expiry 5pcs, satu null 100pcs
-    await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-03", hpp_snapshot: 60000 });
-    await repo.createBatch({ sku_id: sku.id!, qty: 100, expiry_date: null, hpp_snapshot: 60000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-03", modal_snapshot: 60000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 100, expiry_date: null, modal_snapshot: 60000 });
 
     // keluar 7 → harus reject karena expiring total hanya 5, null dilewati
-    await expect(consumeFEFO(sku.id!, 7, "toko-01", db as unknown as import("./db").InventoryDB)).rejects.toThrow(
+    await expect(consumeKeluarTercepat(sku.id!, 7, "toko-01", db as unknown as import("./db").InventoryDB)).rejects.toThrow(
       "Stok tidak cukup"
     );
     // keluar 5 → sukses, hanya sentuh expiring, null tetap 100
-    const r1 = await consumeFEFO(sku.id!, 5, "toko-01", db as unknown as import("./db").InventoryDB);
+    const r1 = await consumeKeluarTercepat(sku.id!, 5, "toko-01", db as unknown as import("./db").InventoryDB);
     expect(r1.details).toHaveLength(1);
     const batchesAfter = await db.batches.where("sku_id").equals(sku.id!).toArray() as Array<{ qty: number; expiry_date: string | null }>;
     const exp = batchesAfter.find((b) => b.expiry_date !== null)!;
@@ -209,9 +209,9 @@ describe("consumeFEFO — FEFO potong batch expiry terdekat dulu", () => {
 
     // sku lain hanya punya null batches → fallback pakai null
     const sku2 = await repo.createSKU({ nama: "Gula 1kg", kategori_id: k.id!, hpp: 12000, harga_normal: 15000 });
-    await repo.createBatch({ sku_id: sku2.id!, qty: 20, expiry_date: null, hpp_snapshot: 12000 });
-    await repo.createBatch({ sku_id: sku2.id!, qty: 10, expiry_date: null, hpp_snapshot: 12000 });
-    const r2 = await consumeFEFO(sku2.id!, 15, "toko-01", db as unknown as import("./db").InventoryDB);
+    await repo.createBatch({ sku_id: sku2.id!, qty: 20, expiry_date: null, modal_snapshot: 12000 });
+    await repo.createBatch({ sku_id: sku2.id!, qty: 10, expiry_date: null, modal_snapshot: 12000 });
+    const r2 = await consumeKeluarTercepat(sku2.id!, 15, "toko-01", db as unknown as import("./db").InventoryDB);
     expect(r2.details.length).toBeGreaterThan(0);
     expect(r2.sisaStok).toBe(15);
     const b2 = await db.batches.where("sku_id").equals(sku2.id!).toArray() as Array<{ qty: number }>;

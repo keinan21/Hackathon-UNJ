@@ -55,17 +55,8 @@ test.describe("Statistik 14d — rank + kecepatan + omzet real Dexie", () => {
 
   test("happy: rank masuk/keluar + kecepatan per SKU/kategori + histori + omzet Rp exact 40000/19000", async ({ page }) => {
     await seedStats(page);
-    await page.goto("/");
+    await page.goto("/statistik");
     await page.waitForTimeout(600);
-    await expect(page.getByTestId("dashboard-page")).toBeVisible({ timeout: 10_000 });
-    // click Statistik tab — 48px, Bahasa Indonesia
-    const tab = page.getByTestId("tab-statistik");
-    await expect(tab).toBeVisible();
-    await expect(tab).toContainText("Statistik");
-    await expect(tab).toHaveCSS("min-height", "48px");
-    await expect(tab).toHaveCSS("font-size", "16px");
-    await tab.click();
-    await page.waitForTimeout(800);
     await expect(page.getByTestId("statistik-tab")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId("stats-header")).toBeVisible();
     await expect(page.getByText("Statistik 14 Hari")).toBeVisible();
@@ -113,13 +104,8 @@ test.describe("Statistik 14d — rank + kecepatan + omzet real Dexie", () => {
   });
 
   test("tanpa transaksi → empty Belum ada transaksi + header tetap + Rp 0", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/statistik");
     await page.waitForTimeout(600);
-    await expect(page.getByTestId("dashboard-page")).toBeVisible();
-    const tab = page.getByTestId("tab-statistik");
-    await expect(tab).toBeVisible();
-    await tab.click();
-    await page.waitForTimeout(800);
     await expect(page.getByTestId("statistik-tab")).toBeVisible();
     await expect(page.getByTestId("stats-header")).toBeVisible();
     await expect(page.getByText("Statistik 14 Hari")).toBeVisible();
@@ -130,15 +116,16 @@ test.describe("Statistik 14d — rank + kecepatan + omzet real Dexie", () => {
     await expect(page.getByTestId("stats-margin-value")).toContainText("Rp0");
   });
 
-  test("tab Statistik 48px Bahasa Indonesia + responsive 375 no h-scroll", async ({ page }) => {
+  test("tombol hub Statistik 16px Bahasa Indonesia + responsive 375 no h-scroll", async ({ page }) => {
     await seedStats(page);
     await page.setViewportSize({ width: 375, height: 800 });
     await page.goto("/");
     await page.waitForTimeout(600);
-    const tab = page.getByTestId("tab-statistik");
-    await expect(tab).toBeVisible();
-    await expect(tab).toHaveCSS("min-height", "48px");
-    await tab.click();
+    const btn = page.getByTestId("hub-statistik");
+    await expect(btn).toBeVisible();
+    await expect(btn).toContainText("Statistik");
+    await expect(btn).toHaveCSS("font-size", "16px");
+    await btn.click();
     await page.waitForTimeout(800);
     await expect(page.getByTestId("statistik-tab")).toBeVisible();
     const hasHScroll = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);

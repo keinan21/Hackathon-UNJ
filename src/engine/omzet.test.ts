@@ -137,11 +137,11 @@ describe("omzet engine — TASK-18 pure deterministik", () => {
     expect(result.omzet).toBe(75000);
   });
 
-  it("margin = omzet − Σ HPP terjual (hpp_snapshot × qty)", () => {
+  it("margin = omzet − Σ HPP terjual (modal_snapshot × qty)", () => {
     const today = new Date("2026-09-04T07:00:00+07:00");
     const transaksis = [
-      { sku_id: 1, qty_sold: 2, sold_at: jakartaISO("2026-09-03"), jenis: "keluar", harga_jual_snapshot: 15000, hpp_snapshot: 10000 },
-      { sku_id: 1, qty_sold: 1, sold_at: jakartaISO("2026-09-04"), jenis: "keluar", harga_jual_snapshot: 20000, hpp_snapshot: 12000 },
+      { sku_id: 1, qty_sold: 2, sold_at: jakartaISO("2026-09-03"), jenis: "keluar", harga_jual_snapshot: 15000, modal_snapshot: 10000 },
+      { sku_id: 1, qty_sold: 1, sold_at: jakartaISO("2026-09-04"), jenis: "keluar", harga_jual_snapshot: 20000, modal_snapshot: 12000 },
     ];
     const result = calcOmzet14(transaksis as any, [], today);
     // omzet = 2*15000 +1*20000=50000, hppTerjual=2*10000+1*12000=32000, margin=18000
@@ -149,15 +149,15 @@ describe("omzet engine — TASK-18 pure deterministik", () => {
     expect(result.margin).toBe(18000);
   });
 
-  it("cashflow = omzet − Σ harga_beli masuk (dari batch hpp_snapshot fallback)", () => {
+  it("cashflow = omzet − Σ harga_beli masuk (dari batch modal_snapshot fallback)", () => {
     const today = new Date("2026-09-04T07:00:00+07:00");
     const nowIso = jakartaISO("2026-09-03", "09:00:00");
     const batches = [
-      { id: 1, sku_id: 1, qty: 10, hpp_snapshot: 8000, received_at: nowIso, expiry_date: "2026-09-10", org_id: "toko-01" },
+      { id: 1, sku_id: 1, qty: 10, modal_snapshot: 8000, received_at: nowIso, expiry_date: "2026-09-10", org_id: "toko-01" },
     ];
     const transaksis = [
       { sku_id: 1, qty_sold: 10, sold_at: nowIso, jenis: "masuk" } as any,
-      { sku_id: 1, qty_sold: 2, sold_at: jakartaISO("2026-09-03"), jenis: "keluar", harga_jual_snapshot: 15000, hpp_snapshot: 8000 },
+      { sku_id: 1, qty_sold: 2, sold_at: jakartaISO("2026-09-03"), jenis: "keluar", harga_jual_snapshot: 15000, modal_snapshot: 8000 },
     ];
     const result = calcOmzet14(transaksis as any, batches as any, today);
     // belanja =10*8000=80000, omzet=2*15000=30000, cashflow=30000-80000=-50000
@@ -190,10 +190,10 @@ describe("omzet engine — TASK-18 pure deterministik", () => {
     expect(result.omzet).toBe(50000);
   });
 
-  it("masuk enrichment langsung hpp_snapshot tanpa batches tetap hitung belanja", () => {
+  it("masuk enrichment langsung modal_snapshot tanpa batches tetap hitung belanja", () => {
     const today = new Date("2026-09-04T07:00:00+07:00");
     const transaksis = [
-      { sku_id: 1, qty_sold: 4, sold_at: jakartaISO("2026-09-02"), jenis: "masuk", hpp_snapshot: 5000 } as any,
+      { sku_id: 1, qty_sold: 4, sold_at: jakartaISO("2026-09-02"), jenis: "masuk", modal_snapshot: 5000 } as any,
       { sku_id: 1, qty_sold: 1, sold_at: jakartaISO("2026-09-02"), jenis: "keluar", harga_jual_snapshot: 10000 } as any,
     ];
     const result = calcOmzet14(transaksis as any, [], today);
@@ -204,8 +204,8 @@ describe("omzet engine — TASK-18 pure deterministik", () => {
   it("campur keluar+masuk 14d batas inklusif hari ini", () => {
     const today = new Date("2026-09-04T07:00:00+07:00");
     const transaksis = [
-      { sku_id: 1, qty_sold: 1, sold_at: jakartaISO("2026-09-04"), jenis: "keluar", harga_jual_snapshot: 12000, hpp_snapshot: 10000 },
-      { sku_id: 2, qty_sold: 2, sold_at: jakartaISO("2026-09-04"), jenis: "masuk", hpp_snapshot: 6000 } as any,
+      { sku_id: 1, qty_sold: 1, sold_at: jakartaISO("2026-09-04"), jenis: "keluar", harga_jual_snapshot: 12000, modal_snapshot: 10000 },
+      { sku_id: 2, qty_sold: 2, sold_at: jakartaISO("2026-09-04"), jenis: "masuk", modal_snapshot: 6000 } as any,
     ];
     const result = calcOmzet14(transaksis as any, [], today);
     expect(result.omzet).toBe(12000);

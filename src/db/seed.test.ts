@@ -79,7 +79,7 @@ describe("seedDefaultKategoris", () => {
       qty: 1,
       expiry_date: "2026-09-05",
       received_at: "2026-09-03T00:00:00.000Z",
-      hpp_snapshot: 1000,
+      modal_snapshot: 1000,
       org_id: "toko-01",
     });
 
@@ -113,7 +113,7 @@ describe("seedDefaultKategoris", () => {
     const cat = list.find((k) => k.nama === "Makanan Basah")!;
     expect(cat).toBeDefined();
 
-    const updated = await repo.updateKategoriThreshold(cat.id!, [14, 7, 3]);
+    const updated = await repo.aturIngatanBasi(cat.id!, [14, 7, 3]);
     expect(updated.threshold_h_minus).toEqual([14, 7, 3]);
 
     const got = await repo.getKategori(cat.id!);
@@ -124,15 +124,15 @@ describe("seedDefaultKategoris", () => {
     await seedDefaultKategoris(repo);
     const list = await repo.listKategoris();
     const cat = list.find((k) => k.nama === "Makanan Kering")!;
-    await expect(repo.updateKategoriThreshold(cat.id!, [3, 3, 1])).rejects.toThrow(ValidationError);
-    await expect(repo.updateKategoriThreshold(cat.id!, [3, 3, 1])).rejects.toThrow("tidak boleh sama");
+    await expect(repo.aturIngatanBasi(cat.id!, [3, 3, 1])).rejects.toThrow(ValidationError);
+    await expect(repo.aturIngatanBasi(cat.id!, [3, 3, 1])).rejects.toThrow("tidak boleh sama");
   });
 
   test("edit to [] rejects (tidak boleh kosong)", async () => {
     await seedDefaultKategoris(repo);
     const list = await repo.listKategoris();
     const cat = list.find((k) => k.nama === "Sembako")!;
-    await expect(repo.updateKategoriThreshold(cat.id!, [])).rejects.toThrow(ValidationError);
-    await expect(repo.updateKategoriThreshold(cat.id!, [])).rejects.toThrow("tidak boleh kosong");
+    await expect(repo.aturIngatanBasi(cat.id!, [])).rejects.toThrow(ValidationError);
+    await expect(repo.aturIngatanBasi(cat.id!, [])).rejects.toThrow("tidak boleh kosong");
   });
 });

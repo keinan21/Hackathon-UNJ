@@ -1,7 +1,7 @@
 /**
  * TASK-07 [FRD-02] acceptance tests
  *
- * - (a) create batch qty 10 expiry 2026-09-05 passes + hpp_snapshot copy
+ * - (a) create batch qty 10 expiry 2026-09-05 passes + modal_snapshot copy
  * - (b) create batch expiry null passes but not returned by listBatchesExpiring
  * - (c) qty 0 rejects
  * - (d) 3 batches diff expiry -> list sorted asc (lihat src/db/db.test.ts pattern)
@@ -37,7 +37,7 @@ beforeEach(async () => {
 });
 
 describe("batchService — Batch Lot CRUD (TASK-07 FRD-02)", () => {
-  test("(a) create batch qty 10 expiry 2026-09-05 passes + hpp_snapshot copy dari SKU.hpp", async () => {
+  test("(a) create batch qty 10 expiry 2026-09-05 passes + modal_snapshot copy dari SKU.hpp", async () => {
     const kategori = await skuService.createKategori({
       nama: "Dairy",
       threshold_h_minus: [7, 3, 1],
@@ -49,7 +49,7 @@ describe("batchService — Batch Lot CRUD (TASK-07 FRD-02)", () => {
       harga_normal: 15000,
     });
 
-    // createBatch tanpa hpp_snapshot → copy dari SKU.hpp (12000)
+    // createBatch tanpa modal_snapshot → copy dari SKU.hpp (12000)
     const batch = await batchService.createBatch({
       sku_id: sku.id!,
       qty: 10,
@@ -60,7 +60,7 @@ describe("batchService — Batch Lot CRUD (TASK-07 FRD-02)", () => {
     expect(batch.sku_id).toBe(sku.id);
     expect(batch.qty).toBe(10);
     expect(batch.expiry_date).toBe("2026-09-05");
-    expect(batch.hpp_snapshot).toBe(12000);
+    expect(batch.modal_snapshot).toBe(12000);
     expect(batch.received_at).toBeTruthy();
     // ISO datetime
     expect(() => new Date(batch.received_at)).not.toThrow();
@@ -87,7 +87,7 @@ describe("batchService — Batch Lot CRUD (TASK-07 FRD-02)", () => {
     });
     expect(batchNull.id).toBeDefined();
     expect(batchNull.expiry_date).toBeNull();
-    expect(batchNull.hpp_snapshot).toBe(60000); // copy dari SKU
+    expect(batchNull.modal_snapshot).toBe(60000); // copy dari SKU
     expect(batchNull.org_id).toBe("toko-01");
 
     // Batch dengan expiry valid
@@ -95,7 +95,7 @@ describe("batchService — Batch Lot CRUD (TASK-07 FRD-02)", () => {
       sku_id: sku.id!,
       qty: 5,
       expiry_date: "2026-09-05",
-      hpp_snapshot: 60000, // explicit
+      modal_snapshot: 60000, // explicit
     });
     expect(batchExp.expiry_date).toBe("2026-09-05");
 
@@ -183,19 +183,19 @@ describe("batchService — Batch Lot CRUD (TASK-07 FRD-02)", () => {
       sku_id: sku.id!,
       qty: 10,
       expiry_date: "2026-09-10",
-      hpp_snapshot: 12000,
+      modal_snapshot: 12000,
     });
     await batchService.createBatch({
       sku_id: sku.id!,
       qty: 5,
       expiry_date: "2026-09-03",
-      hpp_snapshot: 12000,
+      modal_snapshot: 12000,
     });
     await batchService.createBatch({
       sku_id: sku.id!,
       qty: 8,
       expiry_date: "2026-09-07",
-      hpp_snapshot: 12000,
+      modal_snapshot: 12000,
     });
 
     const batches = await batchService.listBatchesBySKU(sku.id!);

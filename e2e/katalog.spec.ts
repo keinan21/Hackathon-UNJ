@@ -74,7 +74,7 @@ test.describe("Katalog real + search + filter kategori/tag", () => {
     await expect(page.getByTestId("katalog-empty")).toBeVisible();
   });
 
-  test("search debounce 300ms nama/kode/barcode/tag + chips Semua kategori tag", async ({ page }) => {
+  test("search debounce 300ms nama/kode/barcode/tag + dropdown Semua kategori tag", async ({ page }) => {
     const kodeSusu = `SUS-${Date.now().toString().slice(-4)}`;
     await page.evaluate(
       async ({ kode }) => {
@@ -116,26 +116,31 @@ test.describe("Katalog real + search + filter kategori/tag", () => {
     await expect(search).toHaveCSS("min-height", "48px");
     await expect(search).toHaveCSS("font-size", "16px");
 
-    await expect(page.getByTestId("chip-semua")).toBeVisible();
-    await expect(page.getByTestId("chip-semua")).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByTestId("chip-kategori-k-dairy-katalog")).toBeVisible();
-    await expect(page.getByTestId("chip-kategori-k-snack-katalog")).toBeVisible();
-    await expect(page.getByTestId("chip-tag-tag-promo")).toBeVisible();
+    const kategoriSelect = page.getByTestId("filter-kategori");
+    await expect(kategoriSelect).toBeVisible();
+    await expect(kategoriSelect).toHaveValue("");
+    await expect(kategoriSelect).toHaveCSS("min-height", "48px");
+    await expect(kategoriSelect).toHaveCSS("font-size", "16px");
+    await expect(kategoriSelect.locator("option")).toHaveCount(3);
 
-    await page.getByTestId("chip-kategori-k-dairy-katalog").click();
+    await kategoriSelect.selectOption("k-dairy-katalog");
     await expect(page.getByTestId("sku-card-sku-susu")).toBeVisible();
     await expect(page.getByTestId("sku-card-sku-roti")).toHaveCount(0);
-    await expect(page.getByTestId("chip-kategori-k-dairy-katalog")).toHaveAttribute("aria-pressed", "true");
+    await expect(kategoriSelect).toHaveValue("k-dairy-katalog");
 
-    await page.getByTestId("chip-semua").click();
-    await expect(page.getByTestId("chip-semua")).toHaveAttribute("aria-pressed", "true");
+    await kategoriSelect.selectOption("");
     await expect(page.getByTestId("sku-card-sku-roti")).toBeVisible();
 
-    await page.getByTestId("chip-tag-tag-promo").click();
+    const tagSelect = page.getByTestId("filter-tag");
+    await expect(tagSelect).toBeVisible();
+    await tagSelect.selectOption("tag-promo");
     await expect(page.getByTestId("sku-card-sku-susu")).toBeVisible();
     await expect(page.getByTestId("sku-card-sku-roti")).toHaveCount(0);
 
-    await page.getByTestId("chip-semua").click();
+    await page.getByTestId("filter-reset").click();
+    await expect(kategoriSelect).toHaveValue("");
+    await expect(tagSelect).toHaveValue("");
+    await expect(page.getByTestId("sku-card-sku-roti")).toBeVisible();
 
     await search.fill("susu");
     await page.waitForTimeout(150);
@@ -171,6 +176,16 @@ test.describe("Katalog real + search + filter kategori/tag", () => {
     await expect(page.getByTestId("sku-card-sku-susu")).toBeVisible();
     await expect(page.getByTestId("sku-card-sku-roti")).toBeVisible();
     await expect(page.getByTestId("sku-card-sku-beras")).toBeVisible();
+
+    await page.getByTestId("btn-barang-masuk").click();
+    await expect(page).toHaveURL(/\/masuk/);
+    await expect(page.getByTestId("inbound-page")).toBeVisible({ timeout: 10_000 });
+    await page.goBack();
+    await expect(page.getByTestId("katalog-page")).toBeVisible({ timeout: 10_000 });
+
+    await page.getByTestId("sku-open-sku-susu").click();
+    await expect(page).toHaveURL(/\/sku\/sku-susu/);
+    await expect(page.getByTestId("sku-detail-page")).toBeVisible({ timeout: 10_000 });
   });
 
   test("badge kritis ikut threshold kategori max via engine expiry", async ({ page }) => {
@@ -242,14 +257,14 @@ test.describe("Katalog real + search + filter kategori/tag", () => {
     await page.reload();
     await page.getByTestId("nav-sku").click();
     await expect(page.getByTestId("sku-card-sku-expand")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId("batch-rows-sku-expand")).toHaveCount(0);
-    await page.getByTestId("sku-expand-sku-expand").click();
-    await expect(page.getByTestId("batch-rows-sku-expand")).toBeVisible();
+    await page.getByTestId("sku-open-sku-expand").click();
+    await expect(page).toHaveURL(/\/sku\/sku-expand/);
+    await expect(page.getByTestId("sku-detail-page")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId("batch-row-batch-exp-1")).toBeVisible();
     await expect(page.getByTestId("batch-row-batch-exp-2")).toBeVisible();
     await expect(page.getByTestId("batch-row-batch-exp-2")).toContainText("Tanpa kadaluarsa");
-    await page.getByTestId("sku-expand-sku-expand").click();
-    await expect(page.getByTestId("batch-rows-sku-expand")).toHaveCount(0);
+    await page.goBack();
+    await expect(page.getByTestId("katalog-page")).toBeVisible({ timeout: 10_000 });
     const tambahBtn = page.getByTestId("btn-tambah-sku");
     await expect(tambahBtn).toBeVisible();
     await expect(tambahBtn).toHaveCSS("min-height", "48px");

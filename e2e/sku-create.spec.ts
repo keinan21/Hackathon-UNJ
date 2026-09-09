@@ -122,7 +122,7 @@ test.describe("SKU create form — barcode, tag, preview, warning", () => {
     await expect(page.getByTestId("sku-baru-page")).toBeVisible();
   });
 
-  test("harga di bawah HPP → warning kuning tampil dan tetap boleh simpan", async ({ page }) => {
+  test("harga di bawah HPP → warning kuning + modal konfirmasi, Yakin baru simpan", async ({ page }) => {
     await seedKategoriViaRepo(page, { id: "k-sembako", nama: "Sembako", threshold: [60, 30, 14] });
     await page.reload();
     await page.getByTestId("nav-sku").click();
@@ -137,6 +137,9 @@ test.describe("SKU create form — barcode, tag, preview, warning", () => {
     await expect(page.getByTestId("warning-harga")).toContainText("di bawah HPP");
 
     await page.getByTestId("btn-simpan-sku").click();
+    await expect(page.getByTestId("confirm-rugi-dialog")).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId("confirm-rugi-text")).toContainText("rugi Rp10.000");
+    await page.getByTestId("btn-rugi-yakin").click();
     await expect(page.getByTestId("form-toast")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId("form-toast")).toContainText("berhasil");
 

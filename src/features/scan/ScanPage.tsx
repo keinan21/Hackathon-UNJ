@@ -2,13 +2,27 @@ import { useEffect, useRef, useState } from "react";
 import { PageHeader, AppButton } from "../../components/ui";
 import { ScanBarcode, WarningCircle, ArrowLeft } from "iconoir-react";
 
+type ScannerCtl = {
+  stop: () => Promise<void>;
+  clear: () => void;
+  isScanning?: boolean;
+  getRunningTrackCapabilities?: () => MediaTrackCapabilities;
+  applyVideoConstraints?: (c: MediaTrackConstraints) => Promise<void>;
+};
+
 export function ScanPage() {
   const readerRef = useRef<HTMLDivElement>(null);
-  const scannerRef = useRef<{ stop: () => Promise<void>; clear: () => void } | null>(null);
+  const scannerRef = useRef<ScannerCtl | null>(null);
   const stoppedRef = useRef(false);
+  const frameCountRef = useRef(0);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [manualBarcode, setManualBarcode] = useState("");
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [framesChecked, setFramesChecked] = useState(0);
+  const [engine, setEngine] = useState<string>("");
+  const manualInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -19,6 +33,10 @@ export function ScanPage() {
         const mod = await import("html5-qrcode");
         if (cancelled) return;
         const Html5Qrcode = mod.Html5Qrcode;
+        // html5-qrcode (nama historis) memindai barcode 1D produk juga via
+        // zxing + BarcodeDetector. Daftar format 1D ditaruh di constructor —
+        // start() tidak menerima formatsToSupport (ada di tipenya).
+        const Formats = mod.Html5QrcodeSupportedFormats;
         const el = document.getElementById(readerId);
         if (!el) {
           if (!cancelled) {
@@ -27,12 +45,31 @@ export function ScanPage() {
           }
           return;
         }
-        const scanner = new Html5Qrcode(readerId);
-        scannerRef.current = scanner as unknown as { stop: () => Promise<void>; clear: () => void };
+        const scanner = new Html5Qrcode(readerId, {
+          formatsToSupport: [
+            Formats.EAN_13,
+            Formats.EAN_8,
+            Formats.UPC_A,
+            Formats.UPC_E,
+            Formats.CODE_128,
+            Formats.CODE_39,
+            Formats.ITF,
+            Formats.QR_CODE,
+          ],
+          // Pakai BarcodeDetector bawaan browser bila ada (lebih cepat),
+          // otomatis fallback ke zxing bila tidak didukung.
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          verbose: false,
+        });
+        scannerRef.current = scanner as unknown as ScannerCtl;
         try {
           await scanner.start(
             { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
+            {
+              fps: 10,
+              // Tanpa qrbox: seluruh frame video dipindai otomatis,
+              // tidak perlu mengarahkan barcode ke kotak bidik.
+            },
             (decodedText: string) => {
               if (stoppedRef.current) return;
               stoppedRef.current = true;
@@ -53,9 +90,26 @@ export function ScanPage() {
                   window.dispatchEvent(new PopStateEvent("popstate"));
                 });
             },
-            () => {},
+            () => {
+              // Tiap frame gagal dihitung — membuktikan loop pindai hidup.
+              frameCountRef.current += 1;
+              if (frameCountRef.current % 15 === 0) setFramesChecked(frameCountRef.current);
+            },
           );
-          if (!cancelled) setLoading(false);
+          if (!cancelled) {
+            setLoading(false);
+            setEngine(typeof window !== "undefined" && "BarcodeDetector" in window ? "detektor bawaan HP" : "zxing");
+            // Dorong autofocus kontinu + deteksi dukungan lampu, best-effort.
+            try {
+              await scanner.applyVideoConstraints({
+                advanced: [{ focusMode: "continuous" }],
+              } as unknown as MediaTrackConstraints);
+            } catch {}
+            try {
+              const caps = scanner.getRunningTrackCapabilities() as MediaTrackCapabilities & { torch?: boolean };
+              if (caps && "torch" in caps) setTorchSupported(true);
+            } catch {}
+          }
         } catch (err: unknown) {
           const msg =
             err instanceof Error ? err.message : String(err ?? "");
@@ -97,6 +151,17 @@ export function ScanPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!loading) return;
+    const id = setTimeout(() => {
+      setError("Kamera tidak ketemu, tulis manual saja Bu");
+      setTimeout(() => {
+        document.getElementById("scan-input-manual")?.focus();
+      }, 100);
+    }, 8000);
+    return () => clearTimeout(id);
+  }, [loading]);
+
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const val = manualBarcode.trim();
@@ -120,6 +185,16 @@ export function ScanPage() {
     } catch {}
     window.history.pushState({}, "", "/sku/baru");
     window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
+  const handleTorch = async () => {
+    const s = scannerRef.current;
+    if (!s?.applyVideoConstraints) return;
+    const next = !torchOn;
+    try {
+      await s.applyVideoConstraints({ advanced: [{ torch: next }] } as unknown as MediaTrackConstraints);
+      setTorchOn(next);
+    } catch {}
   };
 
   const handleBack = () => {
@@ -169,8 +244,27 @@ export function ScanPage() {
           className="w-full rounded-xl overflow-hidden border border-base-300 bg-black"
           style={{ minHeight: "280px" }}
         />
-        <p className="text-xs text-[#595959] text-center mt-2">Posisikan barcode di tengah kotak. Pencahayaan cukup membantu hasil.</p>
+        <p className="text-xs text-base-content/70 text-center mt-2">Arahkan kamera ke barcode — terbaca otomatis di mana saja dalam gambar.</p>
       </div>
+
+      {!loading && !error && (
+        <p data-testid="scan-status" role="status" className="text-sm text-base-content/70 text-center">
+          Memindai otomatis… ({framesChecked} frame dicek){engine ? ` • Mesin ${engine}` : ""}
+        </p>
+      )}
+
+      {torchSupported && !error && (
+        <AppButton
+          type="button"
+          variant={torchOn ? "primary" : "outline"}
+          onClick={handleTorch}
+          data-testid="scan-torch"
+          fullWidth
+          className="rounded-xl"
+        >
+          {torchOn ? "Matikan Lampu" : "Nyalakan Lampu"}
+        </AppButton>
+      )}
 
       {/* Manual fallback — always visible */}
       <form onSubmit={handleManualSubmit} className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-5 space-y-3" noValidate>

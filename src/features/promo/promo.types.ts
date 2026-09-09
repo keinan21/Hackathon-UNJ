@@ -11,7 +11,7 @@ export type Promo = {
   daysToExpiry: number;
   qty: number;
   // pricing — numbers from DB via Repository, MUST NOT be calculated by LLM or UI logic beyond view margin
-  modal: number; // hpp_snapshot display "Modal"
+  modal: number; // modal_snapshot display "Modal"
   harga_normal: number;
   harga_tebus: number;
   harga_floor: number; // HPP * 0.85 from Repository view

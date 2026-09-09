@@ -5,16 +5,17 @@ import { verifyPin, setPin } from "../auth/pinStore";
 import { realRepo, dexieV2 } from "../../db/dexieRepository";
 import { exportEncryptedBackup, importEncryptedBackup, buildBackupFilename, triggerDownload } from "../backup/backupService";
 import { AppButton, PageHeader } from "../../components/ui";
+import { presetUntukThreshold, THRESHOLD_PRESETS, FALLBACK_KATEGORI_PRESET } from "../../db/thresholdPresets";
 
 const PROFILE_KEY = "profil_toko_v1";
 export type ThresholdKategori = { id: string; name: string; threshold: number[] };
 
 // Fallback jika Dexie kosong
-const FALLBACK_KATEGORI: ThresholdKategori[] = [
-  { id: "k-dairy", name: "Dairy", threshold: [7, 3, 1] },
-  { id: "k-snack", name: "Snack", threshold: [7, 3, 1] },
-  { id: "k-beras", name: "Beras", threshold: [7, 3, 1] },
-];
+const FALLBACK_KATEGORI: ThresholdKategori[] = FALLBACK_KATEGORI_PRESET.map((p) => ({
+  id: p.id,
+  name: p.name,
+  threshold: p.threshold,
+}));
 
 function saveNamaToko(nama: string): void {
   try {
@@ -63,6 +64,7 @@ export function SettingsPage() {
   const [backupLoading, setBackupLoading] = useState(false);
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState<Record<string, boolean>>({});
   const fileRef = useRef<HTMLInputElement | null>(null);
   const hppExample = 10000;
   const floor = Math.round(hppExample * 0.85);
@@ -138,7 +140,7 @@ export function SettingsPage() {
     }
   };
 
-  // Threshold save via updateKategoriThreshold
+  // Threshold save via aturIngatanBasi
   const handleSaveThreshold = async (kat: ThresholdKategori) => {
     const input = inputs[kat.id] ?? "";
     const v = validateThresholdInput(input);
@@ -147,7 +149,7 @@ export function SettingsPage() {
       return;
     }
     try {
-      await realRepo.updateKategoriThreshold(kat.id, v.value!);
+      await realRepo.aturIngatanBasi(kat.id, v.value!);
       setErrors((prev) => { const n = { ...prev }; delete n[kat.id]; return n; });
       setKategoriList((prev) => prev.map((k) => k.id === kat.id ? { ...k, threshold: v.value! } : k));
       showToast(`Threshold ${kat.name} disimpan: ${v.value!.join(",")}`);
@@ -169,9 +171,21 @@ export function SettingsPage() {
     }
   };
 
+  const handlePresetClick = async (kat: ThresholdKategori, preset: { emoji: string; label: string; threshold: number[] }) => {
+    try {
+      await realRepo.aturIngatanBasi(kat.id, preset.threshold);
+      setKategoriList((prev) => prev.map((k) => k.id === kat.id ? { ...k, threshold: [...preset.threshold] } : k));
+      setInputs((prev) => ({ ...prev, [kat.id]: preset.threshold.join(",") }));
+      showToast(`Ingatan basi ${kat.name} disimpan`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Gagal simpan preset";
+      setErrors((prev) => ({ ...prev, [kat.id]: msg }));
+    }
+  };
+
   // Backup export
   const handleBackupExport = async () => {
-    if (!backupPin) { setBackupMsg("PIN tidak boleh kosong"); return; }
+    if (!backupPin) { setBackupMsg("Isi PIN dulu Bu"); return; }
     const ok = await verifyPin(backupPin).catch(() => false);
     if (!ok) { setBackupMsg("PIN salah, tidak bisa backup"); return; }
     setBackupLoading(true);
@@ -252,14 +266,14 @@ export function SettingsPage() {
   }, []);
 
   return (
-    <div data-testid="settings-page" className="w-full max-w-[720px] mx-auto px-4 py-4 space-y-6">
+    <div data-testid="settings-page" className="w-full max-w-3xl space-y-6">
       <PageHeader title="Pengaturan" subtitle="Kelola profil toko, PIN, backup, dan threshold kategori — semua 48px, Bahasa Indonesia." icon={<SettingsIcon width={20} height={20} />} testId="settings-header" />
 
       {/* Profil Toko */}
-      <section className="bg-white border border-[#D9D9D9] rounded-[12px] p-4" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} data-testid="section-profil">
-        <h3 className="text-[16px] font-bold text-[#1A1A1A] flex items-center gap-2" style={{ fontSize: "16px" }}><Shop width={18} height={18} className="text-[#0F7A4A]" /> Profil Toko</h3>
-        <p className="text-[12px] text-[#595959] mt-1" style={{ fontSize: "12px" }}>Nama tampil di header. Disimpan lokal, ikut backup v2.</p>
-        <label htmlFor="input-nama-toko-setting" className="block text-[14px] font-semibold text-[#1A1A1A] mt-3 mb-1" style={{ fontSize: "14px" }}>Nama Toko</label>
+      <section className="card card-border bg-base-100 p-4" data-testid="section-profil">
+        <h3 className="text-base font-bold flex items-center gap-2"><Shop width={18} height={18} className="text-[#0F7A4A]" /> Profil Toko</h3>
+        <p className="text-sm text-base-content/70 mt-1">Nama tampil di header. Disimpan lokal, ikut backup v2.</p>
+        <label htmlFor="input-nama-toko-setting" className="block text-base font-semibold mt-3 mb-1">Nama Toko</label>
         <input
           id="input-nama-toko-setting"
           data-testid="input-nama-toko-setting"
@@ -271,100 +285,128 @@ export function SettingsPage() {
           className="input input-bordered w-full min-h-[48px] text-base border-[#D9D9D9] rounded-xl"
           style={{ minHeight: "48px", fontSize: "16px" }}
         />
-        <p className="text-[12px] text-[#595959] mt-1" style={{ fontSize: "12px" }} data-testid="profil-current">Tersimpan: {profilNama || "-"}</p>
+        <p className="text-sm text-base-content/70 mt-1" data-testid="profil-current">Tersimpan: {profilNama || "-"}</p>
         <AppButton data-testid="btn-simpan-profil" onClick={handleSaveProfil} fullWidth className="mt-3">Simpan Profil</AppButton>
       </section>
 
       {/* Ganti PIN */}
-      <section className="bg-white border border-[#D9D9D9] rounded-[12px] p-4" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} data-testid="section-pin">
-        <h3 className="text-[16px] font-bold text-[#1A1A1A] flex items-center gap-2" style={{ fontSize: "16px" }}><Lock width={18} height={18} className="text-[#0F7A4A]" /> Ganti PIN</h3>
-        <p className="text-[12px] text-[#595959] mt-1" style={{ fontSize: "12px" }}>PIN disimpan hash PBKDF2 100k, tanpa plaintext. Verifikasi PIN lama dulu.</p>
-        <label htmlFor="input-pin-lama" className="block text-[14px] font-semibold text-[#1A1A1A] mt-3 mb-1" style={{ fontSize: "14px" }}>PIN Lama</label>
-        <input id="input-pin-lama" data-testid="input-pin-lama" type="password" inputMode="numeric" value={pinLama} onChange={(e) => setPinLama(e.target.value)} placeholder="PIN lama" className="input input-bordered w-full min-h-[48px] text-base border-[#D9D9D9] rounded-xl" style={{ minHeight: "48px", fontSize: "16px" }} />
-        <label htmlFor="input-pin-baru" className="block text-[14px] font-semibold text-[#1A1A1A] mt-3 mb-1" style={{ fontSize: "14px" }}>PIN Baru</label>
-        <input id="input-pin-baru" data-testid="input-pin-baru" type="password" inputMode="numeric" value={pinBaru} onChange={(e) => setPinBaru(e.target.value)} placeholder="Minimal 4 digit" className="input input-bordered w-full min-h-[48px] text-base border-[#D9D9D9] rounded-xl" style={{ minHeight: "48px", fontSize: "16px" }} />
-        <label htmlFor="input-pin-konfirm" className="block text-[14px] font-semibold text-[#1A1A1A] mt-3 mb-1" style={{ fontSize: "14px" }}>Konfirmasi PIN Baru</label>
-        <input id="input-pin-konfirm" data-testid="input-pin-konfirm" type="password" inputMode="numeric" value={pinKonfirm} onChange={(e) => setPinKonfirm(e.target.value)} placeholder="Ulangi PIN baru" className="input input-bordered w-full min-h-[48px] text-base border-[#D9D9D9] rounded-xl" style={{ minHeight: "48px", fontSize: "16px" }} />
-        {pinError ? <div role="alert" data-testid="pin-error" className="alert alert-error mt-3 py-2 px-3 text-[14px] flex items-center gap-2" style={{ fontSize: "14px", backgroundColor: "#FFEBEE", color: "#C62828", borderColor: "#C62828" }}><WarningCircle width={16} height={16} /> {pinError}</div> : null}
+      <section className="card card-border bg-base-100 p-4" data-testid="section-pin">
+        <h3 className="text-base font-bold flex items-center gap-2"><Lock width={18} height={18} className="text-[#0F7A4A]" /> Ganti PIN</h3>
+        <p className="text-sm text-base-content/70 mt-1">PIN disimpan hash PBKDF2 100k, tanpa plaintext. Verifikasi PIN lama dulu.</p>
+        <label htmlFor="input-pin-lama" className="block text-base font-semibold mt-3 mb-1">PIN Lama</label>
+        <input id="input-pin-lama" data-testid="input-pin-lama" type="password" inputMode="numeric" value={pinLama} onChange={(e) => setPinLama(e.target.value)} placeholder="PIN lama" className="input input-bordered w-full min-h-12 text-base" />
+        <label htmlFor="input-pin-baru" className="block text-base font-semibold mt-3 mb-1">PIN Baru</label>
+        <input id="input-pin-baru" data-testid="input-pin-baru" type="password" inputMode="numeric" value={pinBaru} onChange={(e) => setPinBaru(e.target.value)} placeholder="Minimal 4 digit" className="input input-bordered w-full min-h-12 text-base" />
+        <label htmlFor="input-pin-konfirm" className="block text-base font-semibold mt-3 mb-1">Konfirmasi PIN Baru</label>
+        <input id="input-pin-konfirm" data-testid="input-pin-konfirm" type="password" inputMode="numeric" value={pinKonfirm} onChange={(e) => setPinKonfirm(e.target.value)} placeholder="Ulangi PIN baru" className="input input-bordered w-full min-h-12 text-base" />
+        {pinError ? <div role="alert" data-testid="pin-error" className="alert alert-error mt-3 py-2 px-3 text-[16px] flex items-center gap-2" style={{ fontSize: "14px", backgroundColor: "#FFEBEE", color: "#C62828", borderColor: "#C62828" }}><WarningCircle width={16} height={16} /> {pinError}</div> : null}
         <AppButton data-testid="btn-ganti-pin" onClick={handleGantiPin} loading={pinLoading} fullWidth className="mt-3">Ganti PIN</AppButton>
       </section>
 
-      {/* Backup v2 */}
-      <section className="bg-white border border-[#D9D9D9] rounded-[12px] p-4" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} data-testid="section-backup">
-        <h3 className="text-[16px] font-bold text-[#1A1A1A] flex items-center gap-2" style={{ fontSize: "16px" }}><Download width={18} height={18} className="text-[#0F7A4A]" /> Backup & Restore v2</h3>
-        <p className="text-[12px] text-[#595959] mt-1" style={{ fontSize: "12px" }}>Format .json.enc v2 mencakup kode/tags/transaksis/hpp_history. Terenkripsi AES-GCM via PIN.</p>
+      {/* Backup & Restore */}
+      <section className="card card-border bg-base-100 p-4" data-testid="section-backup">
+        <h3 className="text-base font-bold flex items-center gap-2"><Download width={18} height={18} className="text-[#0F7A4A]" /> Cadangan & Pulihkan</h3>
+        <p className="text-sm text-base-content/70 mt-1">Cadangan berisi semua data toko, terkunci pakai PIN.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
           <div className="border border-[#E0E0E0] rounded-xl p-3">
-            <p className="text-[14px] font-semibold text-[#1A1A1A]" style={{ fontSize: "14px" }}>Backup</p>
-            <label htmlFor="input-backup-pin" className="block text-[13px] font-medium text-[#595959] mt-2 mb-1">PIN untuk enkripsi</label>
-            <input id="input-backup-pin" data-testid="input-backup-pin" type="password" inputMode="numeric" value={backupPin} onChange={(e) => setBackupPin(e.target.value)} placeholder="Masukkan PIN" className="input input-bordered w-full min-h-[48px] text-base border-[#D9D9D9] rounded-xl" style={{ minHeight: "48px", fontSize: "16px" }} />
-            <AppButton data-testid="btn-backup-export" onClick={handleBackupExport} loading={backupLoading} fullWidth className="mt-3"><Download width={16} height={16} /> Export Backup</AppButton>
+            <p className="text-[16px] font-semibold text-[#1A1A1A]" style={{ fontSize: "14px" }}>Backup</p>
+            <label htmlFor="input-backup-pin" className="block text-[16px] font-medium text-[#595959] mt-2 mb-1">PIN</label>
+            <input id="input-backup-pin" data-testid="input-backup-pin" type="password" inputMode="numeric" value={backupPin} onChange={(e) => setBackupPin(e.target.value)} placeholder="Masukkan PIN" className="input input-bordered w-full min-h-12 text-base" />
+            <AppButton data-testid="btn-backup-export" onClick={handleBackupExport} loading={backupLoading} fullWidth className="mt-3"><Download width={16} height={16} /> Unduh Cadangan</AppButton>
           </div>
           <div className="border border-[#E0E0E0] rounded-xl p-3">
-            <p className="text-[14px] font-semibold text-[#1A1A1A]" style={{ fontSize: "14px" }}>Restore</p>
-            <label htmlFor="input-restore-file" className="block text-[13px] font-medium text-[#595959] mt-2 mb-1">File .json.enc</label>
+            <p className="text-[16px] font-semibold text-[#1A1A1A]" style={{ fontSize: "14px" }}>Pulihkan</p>
+            <label htmlFor="input-restore-file" className="block text-[16px] font-medium text-[#595959] mt-2 mb-1">Pilih file cadangan</label>
             <input id="input-restore-file" data-testid="input-restore-file" ref={fileRef} type="file" accept=".json.enc,.json,application/json" className="file-input file-input-bordered w-full min-h-[48px] text-sm" style={{ minHeight: "48px" }} />
-            <label htmlFor="input-restore-pin" className="block text-[13px] font-medium text-[#595959] mt-2 mb-1">PIN untuk dekripsi</label>
-            <input id="input-restore-pin" data-testid="input-restore-pin" type="password" inputMode="numeric" value={restorePin} onChange={(e) => setRestorePin(e.target.value)} placeholder="Masukkan PIN" className="input input-bordered w-full min-h-[48px] text-base border-[#D9D9D9] rounded-xl" style={{ minHeight: "48px", fontSize: "16px" }} />
-            <AppButton data-testid="btn-restore-import" onClick={handleRestore} loading={restoreLoading} fullWidth variant="outline" className="mt-3"><Upload width={16} height={16} /> Restore</AppButton>
+            <label htmlFor="input-restore-pin" className="block text-[16px] font-medium text-[#595959] mt-2 mb-1">PIN</label>
+            <input id="input-restore-pin" data-testid="input-restore-pin" type="password" inputMode="numeric" value={restorePin} onChange={(e) => setRestorePin(e.target.value)} placeholder="Masukkan PIN" className="input input-bordered w-full min-h-12 text-base" />
+            <AppButton data-testid="btn-restore-import" onClick={handleRestore} loading={restoreLoading} fullWidth variant="outline" className="mt-3"><Upload width={16} height={16} /> Pulihkan dari File</AppButton>
           </div>
         </div>
-        {backupMsg ? <div data-testid="backup-msg" role="status" className="mt-3 text-[14px] px-3 py-2 rounded-xl border" style={{ fontSize: "14px", backgroundColor: backupMsg.includes("berhasil") ? "#E8F5E9" : "#FFEBEE", color: backupMsg.includes("berhasil") ? "#0F7A4A" : "#C62828", borderColor: backupMsg.includes("berhasil") ? "#0F7A4A" : "#C62828" }}>{backupMsg}</div> : null}
+        {backupMsg ? <div data-testid="backup-msg" role="status" className="mt-3 text-[16px] px-3 py-2 rounded-xl border" style={{ fontSize: "14px", backgroundColor: backupMsg.includes("berhasil") ? "#E8F5E9" : "#FFEBEE", color: backupMsg.includes("berhasil") ? "#0F7A4A" : "#C62828", borderColor: backupMsg.includes("berhasil") ? "#0F7A4A" : "#C62828" }}>{backupMsg}</div> : null}
       </section>
 
       {/* Guardrail floor HPP*0.85 */}
       <div className="bg-[#E8F5E9] border border-[#0F7A4A] rounded-[12px] p-3 flex items-start gap-2" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
         <CheckCircle width={18} height={18} aria-hidden="true" className="text-[#0F7A4A] shrink-0 mt-0.5" />
         <div>
-          <p className="text-[14px] font-semibold text-[#1A1A1A]" style={{ fontSize: "14px" }}>Guardrail harga: HPP x 0.85</p>
-          <p className="text-[14px] text-[#595959]" style={{ fontSize: "14px" }}>Contoh HPP Rp{hppExample.toLocaleString("id-ID")} → floor Rp{floor.toLocaleString("id-ID")}. Harga tebus tidak boleh di bawah floor.</p>
+          <p className="text-[16px] font-semibold text-[#1A1A1A]" style={{ fontSize: "14px" }}>Guardrail harga: HPP x 0.85</p>
+          <p className="text-[16px] text-[#595959]" style={{ fontSize: "14px" }}>Contoh HPP Rp{hppExample.toLocaleString("id-ID")} → floor Rp{floor.toLocaleString("id-ID")}. Harga tebus tidak boleh di bawah floor.</p>
         </div>
       </div>
 
-      {/* Threshold per kategori di bawah */}
       <section data-testid="section-threshold" className="space-y-4">
         <div>
-          <h3 className="text-[16px] font-bold text-[#1A1A1A]" style={{ fontSize: "16px" }}>Threshold per Kategori</h3>
-          <p className="text-[12px] text-[#595959] mt-1" style={{ fontSize: "12px" }}>Edit threshold H- per kategori. Format menurun pisah koma, contoh 7,3,1. Via updateKategoriThreshold.</p>
+          <h3 className="text-[16px] font-bold text-[#1A1A1A]" style={{ fontSize: "16px" }}>Ingatan Basi per Kategori</h3>
+          <p className="text-sm text-base-content/70 mt-1">Pilih cepat berapa lama barang bertahan sebelum diingatkan. Via aturIngatanBasi.</p>
         </div>
-        {loadingKategori ? <p className="text-[14px] text-[#595959]" style={{ fontSize: "14px" }}>Memuat kategori...</p> : null}
-        {!loadingKategori && kategoriList.map((kat) => (
-          <div key={kat.id} className="bg-white border border-[#D9D9D9] rounded-[12px] p-4" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} data-testid={`kategori-${kat.id}`}>
-            <label htmlFor={`threshold-${kat.id}`} className="block text-[16px] font-semibold text-[#1A1A1A] mb-1" style={{ fontSize: "16px" }}>
-              Threshold {kat.name}
+        {loadingKategori ? <p className="text-[16px] text-[#595959]" style={{ fontSize: "14px" }}>Memuat kategori...</p> : null}
+        {!loadingKategori && kategoriList.map((kat) => {
+          const currentPreset = presetUntukThreshold(kat.threshold);
+          return (
+          <div key={kat.id} className="card card-border bg-base-100 p-4" data-testid={`kategori-${kat.id}`}>
+            <label className="block text-[16px] font-semibold text-[#1A1A1A] mb-2" style={{ fontSize: "16px" }}>
+              {kat.name}
             </label>
-            <p className="text-[12px] text-[#595959] mb-2" style={{ fontSize: "12px" }}>Format: angka menurun pisah koma, contoh 7,3,1</p>
-            <input
-              id={`threshold-${kat.id}`}
-              type="text"
-              value={inputs[kat.id] ?? ""}
-              onChange={(e) => handleInputChange(kat.id, e.target.value)}
-              aria-label={`Threshold ${kat.name}`}
-              aria-invalid={!!errors[kat.id]}
-              aria-describedby={errors[kat.id] ? `error-${kat.id}` : undefined}
-              placeholder="7,3,1"
-              className={`input input-bordered w-full min-h-[48px] text-base ${errors[kat.id] ? "border-[#C62828]" : "border-[#D9D9D9]"}`}
-              style={{ minHeight: "48px", fontSize: "16px", borderWidth: errors[kat.id] ? "2px" : "1px" }}
-              data-testid={`input-threshold-${kat.id}`}
-            />
-            {errors[kat.id] ? (
-              <div id={`error-${kat.id}`} role="alert" className="alert alert-error mt-2 py-2 px-3 text-[14px] flex items-center gap-2" style={{ fontSize: "14px", backgroundColor: "#FFEBEE", color: "#C62828", borderColor: "#C62828", borderWidth: "2px" }} data-testid={`error-${kat.id}`}>
-                <WarningCircle width={16} height={16} aria-hidden="true" /> {errors[kat.id]}
+            <div className="flex flex-wrap gap-2 mb-2" role="radiogroup" aria-label={`Ingatan basi ${kat.name}`}>
+              {THRESHOLD_PRESETS.map((p) => (
+                <button
+                  type="button"
+                  key={p.label}
+                  role="radio"
+                  aria-checked={currentPreset.label === p.label}
+                  onClick={() => handlePresetClick(kat, p)}
+                  className={`min-h-[48px] px-4 py-2 rounded-xl border text-[16px] font-semibold transition-colors ${
+                    currentPreset.label === p.label
+                      ? "border-[#0F7A4A] bg-[#E8F5E9] text-[#0F7A4A]"
+                      : "border-[#D9D9D9] bg-base-100 text-[#1A1A1A] hover:border-[#0F7A4A]"
+                  }`}
+                  data-testid={`preset-${kat.id}-${p.emoji}`}
+                >
+                  {p.emoji} {p.label}
+                </button>
+              ))}
+            </div>
+            <details
+              data-testid={`manual-${kat.id}`}
+              className="card card-border bg-base-100"
+              open={manualOpen[kat.id] ?? false}
+            >
+              <summary
+                className="cursor-pointer min-h-[48px] flex items-center px-4 text-[16px] font-semibold text-[#595959]"
+                onClick={() => setManualOpen((prev) => ({ ...prev, [kat.id]: !prev[kat.id] }))}
+              >
+                Atur angka manual
+              </summary>
+              <div className="px-4 pb-4 space-y-3">
+                <input
+                  id={`manual-threshold-${kat.id}`}
+                  type="text"
+                  value={inputs[kat.id] ?? ""}
+                  onChange={(e) => handleInputChange(kat.id, e.target.value)}
+                  placeholder="7,3,1"
+                  aria-label={`Atur angka manual ${kat.name}`}
+                  className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl px-3"
+                  style={{ minHeight: "48px" }}
+                  data-testid={`input-manual-${kat.id}`}
+                />
+                {errors[kat.id] ? (
+                  <p role="alert" data-testid={`error-${kat.id}`} className="text-[16px] text-[#C62828]">{errors[kat.id]}</p>
+                ) : null}
+                <AppButton type="button" onClick={() => handleSaveThreshold(kat)} fullWidth data-testid={`save-${kat.id}`}>
+                  Simpan Angka Manual
+                </AppButton>
               </div>
-            ) : (
-              <p className="text-[12px] text-[#595959] mt-1" style={{ fontSize: "12px" }}>Tersimpan: {kat.threshold.join(",")}</p>
-            )}
-            <AppButton type="button" onClick={() => handleSaveThreshold(kat)} fullWidth className="mt-3" data-testid={`save-${kat.id}`}>
-              Simpan Threshold {kat.name}
-            </AppButton>
+            </details>
+            <p className="text-sm text-base-content/70 mt-2">Ingatan: <span className="font-semibold">{currentPreset.emoji} {currentPreset.label}</span></p>
           </div>
-        ))}
+        );})}
       </section>
 
       {/* Avg fallback info */}
-      <div className="bg-white border border-[#D9D9D9] rounded-[12px] p-4" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} data-testid="avg-fallback-info">
+      <div className="card card-border bg-base-100 p-4" data-testid="avg-fallback-info">
         <h3 className="text-[16px] font-semibold text-[#1A1A1A]" style={{ fontSize: "16px" }}>Rata-rata Harian</h3>
-        <p className="text-[14px] text-[#595959] mt-1" style={{ fontSize: "14px" }}>Jika histori &lt;14 hari, pakai input manual. Rumus urgencyScore = qty * days / max(avg,1).</p>
+        <p className="text-[16px] text-[#595959] mt-1" style={{ fontSize: "14px" }}>Jika histori &lt;14 hari, pakai input manual. Rumus peringkat = qty * days / max(avg,1).</p>
       </div>
 
       {toast && (

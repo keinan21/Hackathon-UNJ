@@ -107,10 +107,10 @@ export function ApproveDialog({ open, promo, onConfirm, onCancel }: ApproveDialo
         {/* Pricing review — read-only view */}
         <div className="bg-[#F5F5F0] rounded-[12px] p-3 mb-4 border border-[#D9D9D9]">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[14px] text-[#595959]" style={{ fontSize: "14px" }}>
+            <span className="text-[16px] text-[#595959]" style={{ fontSize: "14px" }}>
               Modal {formatRupiah(promo.modal)}
             </span>
-            <span className="text-[14px] text-[#595959]">{modalFormatted} • Harga normal {formatRupiah(promo.harga_normal)}</span>
+            <span className="text-[16px] text-[#595959]">{modalFormatted} • Harga normal {formatRupiah(promo.harga_normal)}</span>
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-[18px] font-semibold text-[#0F7A4A]" style={{ fontSize: "18px", fontWeight: 600 }}>
@@ -118,7 +118,7 @@ export function ApproveDialog({ open, promo, onConfirm, onCancel }: ApproveDialo
             </span>
             <span
               title={`HPP*0.85=${floorFormatted}`}
-              className="text-[12px] text-[#595959] inline-flex items-center gap-1"
+              className="text-[16px] text-[#595959] inline-flex items-center gap-1"
               style={{ fontSize: "12px" }}
             >
               <CheckCircle width={12} height={12} aria-hidden="true" className="text-[#0F7A4A]" />
@@ -126,15 +126,15 @@ export function ApproveDialog({ open, promo, onConfirm, onCancel }: ApproveDialo
             </span>
           </div>
           {isGuardrailFail ? (
-            <p className="text-[14px] text-[#C62828] mt-2" role="alert" style={{ fontSize: "14px" }}>
+            <p className="text-[16px] text-[#C62828] mt-2" role="alert" style={{ fontSize: "14px" }}>
               Harga tebus tidak boleh di bawah HPP x 0.85 (Rp {floorFormatted}). Naikkan harga.
             </p>
           ) : (
-            <p className="text-[12px] text-[#595959] mt-1" style={{ fontSize: "12px" }}>
+            <p className="text-[16px] text-[#595959] mt-1" style={{ fontSize: "12px" }}>
               Lolos guardrail — floor Rp {floorFormatted} (HPP*0.85)
             </p>
           )}
-          <div className="mt-2 text-[14px] text-[#1A1A1A]" style={{ fontSize: "14px" }}>
+          <div className="mt-2 text-[16px] text-[#1A1A1A]" style={{ fontSize: "14px" }}>
             <span className="font-semibold">Pasangan:</span> {promo.sku_pasangan_name} • {promo.alasan}
           </div>
         </div>

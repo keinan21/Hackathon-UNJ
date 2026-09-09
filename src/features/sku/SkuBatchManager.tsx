@@ -102,14 +102,14 @@ export function SkuBatchManager() {
       if (!sku) throw new Error("SKU tidak ditemukan");
       let expiry: string | null = bf.tanpaExpiry ? null : bf.expiry_date || null;
       if (!bf.tanpaExpiry && !expiry) throw new Error("Tanggal kadaluarsa wajib diisi atau centang Tanpa kadaluarsa");
-      // hpp_snapshot copy dari SKU
+      // modal_snapshot copy dari SKU
       const batch: Batch = {
         id: `batch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         sku_id: skuId,
         qty,
         expiry_date: expiry,
         received_at: new Date().toISOString(),
-        hpp_snapshot: sku.hpp,
+        modal_snapshot: sku.hpp,
         org_id: "toko-01",
       };
       await realRepo.createBatch(batch);
@@ -131,7 +131,7 @@ export function SkuBatchManager() {
 
   if (loading) {
     return (
-      <div className="w-full max-w-[480px] mx-auto px-4">
+      <div className="w-full max-w-3xl">
         <p className="text-base text-[#595959]" style={{ fontSize: "16px" }}>
           Memuat SKU...
         </p>
@@ -140,18 +140,18 @@ export function SkuBatchManager() {
   }
 
   return (
-    <div data-testid="sku-page" className="w-full max-w-[480px] mx-auto px-4 space-y-6">
+    <div data-testid="sku-page" className="w-full max-w-3xl space-y-6">
       <h2 className="text-[20px] font-bold text-[#1A1A1A]" style={{ fontSize: "20px" }}>
         SKU & Batch
       </h2>
 
       {error && (
-        <div role="alert" className="bg-[#FFEBEE] border border-[#C62828] text-[#C62828] rounded-[12px] px-3 py-3 text-[14px]" style={{ fontSize: "14px" }}>
+        <div role="alert" className="bg-[#FFEBEE] border border-[#C62828] text-[#C62828] rounded-[12px] px-3 py-3 text-[16px]" style={{ fontSize: "16px" }}>
           {error}
         </div>
       )}
       {toast && (
-        <div role="status" className="bg-[#E8F5E9] border border-[#0F7A4A] text-[#0F7A4A] rounded-[12px] px-3 py-3 text-[14px]" style={{ fontSize: "14px" }}>
+        <div role="status" className="bg-[#E8F5E9] border border-[#0F7A4A] text-[#0F7A4A] rounded-[12px] px-3 py-3 text-[16px]" style={{ fontSize: "16px" }}>
           {toast}
         </div>
       )}
@@ -163,7 +163,7 @@ export function SkuBatchManager() {
         </h3>
         <div className="space-y-3">
           <div>
-            <label className="block text-[14px] font-semibold text-[#1A1A1A] mb-1" style={{ fontSize: "14px" }}>
+            <label className="block text-[16px] font-semibold text-[#1A1A1A] mb-1" style={{ fontSize: "14px" }}>
               Nama SKU *
             </label>
             <input
@@ -177,7 +177,7 @@ export function SkuBatchManager() {
             />
           </div>
           <div>
-            <label className="block text-[14px] font-semibold text-[#1A1A1A] mb-1" style={{ fontSize: "14px" }}>
+            <label className="block text-[16px] font-semibold text-[#1A1A1A] mb-1" style={{ fontSize: "14px" }}>
               Kategori *
             </label>
             <select
@@ -196,7 +196,7 @@ export function SkuBatchManager() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[14px] font-semibold text-[#1A1A1A] mb-1" style={{ fontSize: "14px" }}>
+              <label className="block text-[16px] font-semibold text-[#1A1A1A] mb-1" style={{ fontSize: "14px" }}>
                 HPP *
               </label>
               <input
@@ -210,7 +210,7 @@ export function SkuBatchManager() {
               />
             </div>
             <div>
-              <label className="block text-[14px] font-semibold text-[#1A1A1A] mb-1" style={{ fontSize: "14px" }}>
+              <label className="block text-[16px] font-semibold text-[#1A1A1A] mb-1" style={{ fontSize: "14px" }}>
                 Harga Normal *
               </label>
               <input
@@ -225,7 +225,7 @@ export function SkuBatchManager() {
             </div>
           </div>
           <div>
-            <label className="block text-[14px] font-semibold text-[#1A1A1A] mb-1" style={{ fontSize: "14px" }}>
+            <label className="block text-[16px] font-semibold text-[#1A1A1A] mb-1" style={{ fontSize: "14px" }}>
               Barcode (opsional)
             </label>
             <input
@@ -271,15 +271,15 @@ export function SkuBatchManager() {
                   <p className="font-semibold text-[#1A1A1A]" style={{ fontSize: "16px" }}>
                     {s.nama}
                   </p>
-                  <p className="text-[14px] text-[#595959]" style={{ fontSize: "14px" }}>
+                  <p className="text-[16px] text-[#595959]" style={{ fontSize: "14px" }}>
                     HPP Rp{s.hpp.toLocaleString("id-ID")} • Harga Rp{s.harga_normal.toLocaleString("id-ID")} • {kategoris.find((k) => k.id === s.kategori_id)?.nama}
                   </p>
                   {batches.length > 0 && (
                     <ul className="mt-2 space-y-1">
                       {batches.map((b) => (
-                        <li key={b.id} className="text-[14px] text-[#1A1A1A] flex justify-between" style={{ fontSize: "14px" }}>
+                        <li key={b.id} className="text-[16px] text-[#1A1A1A] flex justify-between" style={{ fontSize: "14px" }}>
                           <span>
-                            {b.qty} pcs • exp {b.expiry_date ?? "Tanpa kadaluarsa"} • HPP Rp{b.hpp_snapshot.toLocaleString("id-ID")}
+                            {b.qty} pcs • exp {b.expiry_date ?? "Tanpa kadaluarsa"} • HPP Rp{b.modal_snapshot.toLocaleString("id-ID")}
                           </span>
                           <span className="text-[#595959]">#{b.id.slice(-4)}</span>
                         </li>
@@ -305,7 +305,7 @@ export function SkuBatchManager() {
                       style={{ minHeight: "48px", fontSize: "16px" }}
                       data-testid={`batch-expiry-${s.id}`}
                     />
-                    <label className="flex items-center gap-1 text-[12px] text-[#595959]" style={{ fontSize: "12px" }}>
+                    <label className="flex items-center gap-1 text-[16px] text-[#595959]" style={{ fontSize: "12px" }}>
                       <input type="checkbox" checked={bf.tanpaExpiry} onChange={(e) => setBatchForm((prev) => ({ ...prev, [s.id]: { ...bf, tanpaExpiry: e.target.checked } }))} data-testid={`batch-tanpa-${s.id}`} /> Tanpa
                     </label>
                   </div>

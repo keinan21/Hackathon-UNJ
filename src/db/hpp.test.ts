@@ -100,7 +100,7 @@ describe("applyHargaBeli — HPP timpa + riwayat + validasi", () => {
     db.close();
   });
 
-  test("hpp_snapshot batch = harga_beli yang dipakai", async () => {
+  test("modal_snapshot batch = harga_beli yang dipakai", async () => {
     const dbName = uniqueName();
     const db = new InventoryDB(dbName);
     const { DexieRepository } = await import("./db");
@@ -111,14 +111,14 @@ describe("applyHargaBeli — HPP timpa + riwayat + validasi", () => {
     // simulasi batch masuk dengan harga_beli = 12000
     const hargaBeli = 12000;
     await applyHargaBeli(sku.id!, hargaBeli, "toko-01", db as unknown as import("./db").InventoryDB);
-    const batch = await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-10", hpp_snapshot: hargaBeli });
-    expect(batch.hpp_snapshot).toBe(12000);
+    const batch = await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-10", modal_snapshot: hargaBeli });
+    expect(batch.modal_snapshot).toBe(12000);
     // sku.hpp sudah tertimpa
     expect((await db.skus.get(sku.id!))?.hpp).toBe(12000);
     db.close();
   });
 
-  test("batch tanpa harga_beli → hpp_snapshot = sku.hpp lama, tidak timpa", async () => {
+  test("batch tanpa harga_beli → modal_snapshot = sku.hpp lama, tidak timpa", async () => {
     const dbName = uniqueName();
     const db = new InventoryDB(dbName);
     const { DexieRepository } = await import("./db");
@@ -126,15 +126,15 @@ describe("applyHargaBeli — HPP timpa + riwayat + validasi", () => {
     const k = await repo.createKategori({ nama: "Dairy", threshold_h_minus: [7, 3, 1] });
     const sku = await repo.createSKU({ nama: "Susu", kategori_id: k.id!, hpp: 10000, harga_normal: 15000 });
 
-    // batch tanpa harga_beli: hpp_snapshot default = sku.hpp (10000)
-    const batch = await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-10", hpp_snapshot: sku.hpp });
-    expect(batch.hpp_snapshot).toBe(10000);
+    // batch tanpa harga_beli: modal_snapshot default = sku.hpp (10000)
+    const batch = await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-10", modal_snapshot: sku.hpp });
+    expect(batch.modal_snapshot).toBe(10000);
     expect((await db.skus.get(sku.id!))?.hpp).toBe(10000);
     expect(await db.hpp_history.count()).toBe(0);
     db.close();
   });
 
-  test("guardrail promo tetap pakai hpp_snapshot batch bukan sku.hpp", async () => {
+  test("guardrail promo tetap pakai modal_snapshot batch bukan sku.hpp", async () => {
     const dbName = uniqueName();
     const db = new InventoryDB(dbName);
     const { DexieRepository } = await import("./db");
@@ -143,15 +143,15 @@ describe("applyHargaBeli — HPP timpa + riwayat + validasi", () => {
     const k = await repo.createKategori({ nama: "Dairy", threshold_h_minus: [7, 3, 1] });
     const sku = await repo.createSKU({ nama: "Susu UHT", kategori_id: k.id!, hpp: 10000, harga_normal: 15000 });
     // batch lama snapshot 10000
-    const batchLama = await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-10", hpp_snapshot: 10000 });
+    const batchLama = await repo.createBatch({ sku_id: sku.id!, qty: 5, expiry_date: "2026-09-10", modal_snapshot: 10000 });
     // timpa sku.hpp ke 12000
     await applyHargaBeli(sku.id!, 12000, "toko-01", db as unknown as import("./db").InventoryDB);
     const skuBaru = await db.skus.get(sku.id!);
     expect(skuBaru?.hpp).toBe(12000);
-    // guardrail untuk batch lama harus pakai hpp_snapshot 10000, bukan 12000
+    // guardrail untuk batch lama harus pakai modal_snapshot 10000, bukan 12000
     // floor lama = 8500, floor baru = 10200
     // harga 9000 valid terhadap 10000 tapi tidak terhadap 12000
-    const rLama = validateHargaTebus(batchLama.hpp_snapshot, 9000);
+    const rLama = validateHargaTebus(batchLama.modal_snapshot, 9000);
     expect(rLama.valid).toBe(true);
     const rBaru = validateHargaTebus(skuBaru!.hpp, 9000);
     expect(rBaru.valid).toBe(false);

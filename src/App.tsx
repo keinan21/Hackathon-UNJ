@@ -12,7 +12,10 @@ import { lazy, Suspense } from "react";
 import { SkuDetailPage } from "./features/sku/SkuDetailPage";
 import { InboundForm } from "./features/inout/InboundForm";
 import { OutboundForm } from "./features/inout/OutboundForm";
+import { KasirPage } from "./features/inout/KasirPage";
 import { KritisPage } from "./features/expiry/KritisPage";
+import { PromoPage } from "./features/promo/PromoPage";
+import { StatistikTab } from "./features/dashboard/StatistikTab";
 import { Home, Package, Settings as SettingsIcon, Shop, Menu, Xmark } from "iconoir-react";
 import { PageHeader } from "./components/ui";
 
@@ -136,6 +139,32 @@ function useKritisRoute() {
   return isKritis;
 }
 
+function usePromoRoute() {
+  const [isPromo, setIsPromo] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.location.pathname === "/promo";
+  });
+  useEffect(() => {
+    const onPop = () => setIsPromo(window.location.pathname === "/promo");
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  return isPromo;
+}
+
+function useStatistikRoute() {
+  const [isStatistik, setIsStatistik] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.location.pathname === "/statistik";
+  });
+  useEffect(() => {
+    const onPop = () => setIsStatistik(window.location.pathname === "/statistik");
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  return isStatistik;
+}
+
 /**
  * Banner kecil permission fallback — TASK 25 wiring global scheduler + permission fallback
  * Jika Notification.permission === "denied" → tidak throw, tetap tampil badge via checkAndNotify,
@@ -166,12 +195,12 @@ function NotifPermissionBanner() {
   return (
     <div
       data-testid="notif-permission-banner"
-      role="status"
+      role="alert"
       aria-live="polite"
-      className="flex items-center justify-between gap-3 rounded-2xl border border-[#FFE082] bg-[#FFF8E1] px-4 py-3 mb-4 shadow-sm"
+      className="alert alert-warning flex items-center justify-between gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 mb-4 shadow-sm"
     >
       <div className="flex items-center gap-2 min-w-0">
-        <span className="text-[16px] leading-tight text-[#8D6E63]">Notifikasi dimatikan, badge tetap update</span>
+        <span className="text-[16px] leading-tight text-base-content/80">Notifikasi dimatikan, badge tetap update</span>
       </div>
       <button
         type="button"
@@ -216,6 +245,15 @@ function WarungShell({
     [setView, closeDrawer],
   );
 
+  useEffect(() => {
+    const onWarungNavigate = (e: Event) => {
+      const v = (e as CustomEvent<{ view: View }>).detail?.view;
+      if (v === "dashboard" || v === "sku" || v === "settings") navigate(v);
+    };
+    window.addEventListener("warung-navigate", onWarungNavigate as EventListener);
+    return () => window.removeEventListener("warung-navigate", onWarungNavigate as EventListener);
+  }, [navigate]);
+
   const menu = [
     { id: "dashboard" as View, label: "Dashboard", icon: <Home width={20} height={20} /> },
     { id: "sku" as View, label: "SKU", icon: <Package width={20} height={20} /> },
@@ -223,33 +261,37 @@ function WarungShell({
   ];
 
   return (
-    <div className="drawer lg:drawer-open min-h-screen bg-[#F5F5F0]">
+    <div className="drawer lg:drawer-open min-h-screen bg-base-200">
       <input id="drawer-toggle" data-testid="drawer-toggle" type="checkbox" className="drawer-toggle" />
       {/* Content */}
-      <div className="drawer-content flex flex-col min-h-screen bg-[#F5F5F0]">
-        {/* Top bar — single header-title visible at all breakpoints (mobile hamburger + desktop subtle) */}
-        <header className="sticky top-0 z-20 flex items-center gap-3 bg-[#0F7A4A] text-white px-4 lg:px-8 py-3 shadow-sm">
-          <label
-            htmlFor="drawer-toggle"
-            className="btn btn-ghost btn-square text-white hover:bg-white/10 min-h-[48px] min-w-[48px] drawer-button lg:hidden"
-            aria-label="Buka menu"
-            data-testid="hamburger-button"
-          >
-            <Menu width={22} height={22} />
-          </label>
-          <div className="hidden lg:flex w-9 h-9 rounded-xl bg-white/20 text-white items-center justify-center">
-            <Shop width={18} height={18} />
+      <div className="drawer-content flex flex-col min-h-screen bg-base-200">
+        {/* Top bar — navbar daisyUI: navbar-start / center / end */}
+        <header className="navbar sticky top-0 z-20 bg-primary text-primary-content px-4 lg:px-8 py-3 shadow-sm min-h-[56px]">
+          <div className="navbar-start gap-3">
+            <label
+              htmlFor="drawer-toggle"
+              className="btn btn-ghost btn-square text-primary-content hover:bg-primary-content/10 min-h-[48px] min-w-[48px] drawer-button lg:hidden"
+              aria-label="Buka menu"
+              data-testid="hamburger-button"
+            >
+              <Menu width={22} height={22} />
+            </label>
+            <div className="hidden lg:flex w-9 h-9 rounded-xl bg-primary-content/20 text-primary-content items-center justify-center">
+              <Shop width={18} height={18} />
+            </div>
+            <h1 data-testid="header-title" className="text-[18px] font-bold leading-tight truncate">
+              {headerTitle}
+            </h1>
           </div>
-          <h1 data-testid="header-title" className="text-[18px] font-bold leading-tight truncate flex-1">
-            {headerTitle}
-          </h1>
-          <span className="badge badge-sm bg-white/20 text-white border-none font-semibold">PWA</span>
+          <div className="navbar-end">
+            <span className="badge badge-sm bg-primary-content/20 text-primary-content border-none font-semibold">PWA</span>
+          </div>
         </header>
 
         {/* Main content — responsif: mobile pb-36 clears fixed bottom-nav + safe-area */}
         <main
           data-testid="main-content"
-          className="flex-1 container max-w-7xl mx-auto px-4 lg:px-8 py-6 pb-36 lg:pb-8"
+          className="flex-1 mx-auto w-full max-w-7xl px-4 lg:px-8 py-6 pb-36 lg:pb-10"
         >
           {/* Primitif contoh — PageHeader dipakai shell untuk view dashboard */}
           {view === "dashboard" ? (
@@ -259,10 +301,8 @@ function WarungShell({
               icon={<Shop width={20} height={20} />}
             />
           ) : null}
-          {/* Grid responsif wrapper untuk konten: 1 kolom mobile → 2-3 kolom desktop bila child pakai grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-12">{children}</div>
-          </div>
+          {/* Konten halaman — tiap halaman atur lebarnya sendiri, shell hanya kasih padding */}
+          <div className="w-full">{children}</div>
           {/* sentinel paling bawah untuk no-overlap test — pastikan tidak tertutup nav */}
           <div data-testid="content-end-sentinel" aria-hidden className="h-2 w-full mt-8" />
         </main>
@@ -284,11 +324,11 @@ function WarungShell({
               data-testid={`bottom-nav-${tab.id}`}
               className={[
                 "flex flex-col items-center justify-center gap-0.5 min-h-[56px] min-w-[64px] px-2 rounded-xl font-semibold transition-colors",
-                view === tab.id ? "text-[#0F7A4A] bg-[#0F7A4A]/10" : "text-[#595959] hover:bg-base-200",
+                view === tab.id ? "text-primary bg-primary/10" : "text-base-content/70 hover:bg-base-200",
               ].join(" ")}
               style={{ minHeight: "48px", fontSize: "16px" }}
             >
-              <span className={view === tab.id ? "text-[#0F7A4A]" : ""}>{tab.icon}</span>
+              <span className={view === tab.id ? "text-primary" : ""}>{tab.icon}</span>
               {tab.label}
             </button>
           ))}
@@ -302,9 +342,9 @@ function WarungShell({
         <label htmlFor="drawer-toggle" aria-label="close sidebar" className="drawer-overlay" data-testid="drawer-overlay" />
         <aside className="min-h-full w-72 bg-base-100 border-r border-base-300 flex flex-col shadow-xl lg:shadow-none">
           {/* Brand header — hangat khas warung */}
-          <div className="bg-[#0F7A4A] text-white p-6 flex flex-col gap-4">
+          <div className="bg-primary text-primary-content p-6 flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-white text-[#0F7A4A] flex items-center justify-center shadow-sm">
+              <div className="w-11 h-11 rounded-2xl bg-base-100 text-primary flex items-center justify-center shadow-sm">
                 <Shop width={22} height={22} />
               </div>
               <div className="min-w-0">
@@ -319,7 +359,7 @@ function WarungShell({
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs opacity-90">
-              <span className="badge badge-sm bg-white/20 text-white border-none">Offline siap</span>
+              <span className="badge badge-sm bg-primary-content/20 text-primary-content border-none">Offline siap</span>
               <span className="opacity-70">•</span>
               <span>3 tap sampai approve</span>
             </div>
@@ -338,14 +378,14 @@ function WarungShell({
                   className={[
                     "flex items-center gap-3 rounded-xl px-3 py-3 text-[16px] font-medium min-h-[48px]",
                     view === tab.id
-                      ? "bg-[#0F7A4A] text-white active:bg-[#0F7A4A] shadow-sm"
+                      ? "bg-primary text-primary-content active:bg-primary shadow-sm"
                       : "text-neutral hover:bg-base-200",
                   ].join(" ")}
                 >
                   {tab.icon}
                   {tab.label}
                   {view === tab.id ? (
-                    <span className="ml-auto w-2 h-2 rounded-full bg-white/90" aria-hidden />
+                    <span className="ml-auto w-2 h-2 rounded-full bg-primary-content/90" aria-hidden />
                   ) : null}
                 </button>
               </li>
@@ -354,9 +394,9 @@ function WarungShell({
 
           {/* Footer kecil — Bahasa sederhana */}
           <div className="p-4 border-t border-base-200">
-            <div className="card bg-[#FFF8E1] border border-[#FFE082]/50 rounded-2xl p-3">
-              <p className="text-xs font-semibold text-[#8D6E63]">Butuh bantuan?</p>
-              <p className="text-xs text-[#595959] leading-relaxed mt-0.5">Semua data tersimpan di perangkat. Backup di Pengaturan.</p>
+            <div className="card bg-warning/10 border border-warning/20 rounded-2xl p-3">
+              <p className="text-xs font-semibold text-base-content/80">Butuh bantuan?</p>
+              <p className="text-xs text-base-content/70 leading-relaxed mt-0.5">Semua data tersimpan di perangkat. Backup di Pengaturan.</p>
             </div>
             {/* Close button visible only mobile */}
             <label
@@ -381,6 +421,8 @@ function AppShell() {
   const outbound = useOutboundRoute();
   const skuDetailId = useSkuDetailRoute();
   const isKritis = useKritisRoute();
+  const isPromo = usePromoRoute();
+  const isStatistik = useStatistikRoute();
   const [view, setView] = useState<View>(() => {
     if (typeof window === "undefined") return "dashboard";
     const p = new URLSearchParams(window.location.search);
@@ -436,11 +478,14 @@ function AppShell() {
   let content: React.ReactNode;
   if (historiId) content = <HistoriDetailPage id={historiId} />;
   else if (isKritis) content = <KritisPage />;
+  else if (isPromo) content = <PromoPage />;
+  else if (isStatistik) content = <StatistikTab />;
   else if (isInbound) content = <InboundForm />;
-  else if (outbound.isOutbound) content = <OutboundForm skuId={outbound.skuId ?? undefined} />;
+  else if (outbound.isOutbound)
+    content = outbound.skuId ? <OutboundForm skuId={outbound.skuId} /> : <KasirPage />;
   else if (isScan)
     content = (
-      <Suspense fallback={<p data-testid="scan-loading" className="text-sm text-[#595959]">Memuat kamera...</p>}>
+      <Suspense fallback={<p data-testid="scan-loading" className="text-sm text-base-content/70">Memuat kamera...</p>}>
         <ScanPage />
       </Suspense>
     );
@@ -473,7 +518,7 @@ function AuthGuard() {
       const p = new URLSearchParams(window.location.search);
       const hasSeed = p.has("seed") || p.has("prototype") || p.has("empty") || p.has("histori");
       const isKritisRoute = window.location.pathname === "/kritis";
-      if ((hasSeed || isKritisRoute) && !isLoggedIn()) {
+      if ((hasSeed || isKritisRoute) && !isLoggedIn() && import.meta.env.DEV) {
         try { setLoggedIn(); } catch {}
       }
     } catch {}
@@ -491,8 +536,8 @@ function AuthGuard() {
 
   if (!checked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F0]">
-        <p className="text-[16px] text-[#595959]">Memuat...</p>
+      <div className="min-h-screen flex items-center justify-center bg-base-200">
+        <p className="text-[16px] text-base-content/70">Memuat...</p>
       </div>
     );
   }
@@ -515,8 +560,8 @@ export default function App() {
 
   if (showFallback && isOffline) {
     return (
-      <div className="min-h-screen bg-white">
-        <header className="bg-[#0F7A4A] text-white p-4">
+      <div className="min-h-screen bg-base-100">
+        <header className="bg-primary text-primary-content p-4">
           <h1 className="m-0 text-xl font-bold">Inventaris Tebus Murah</h1>
         </header>
         <OfflineFallback />

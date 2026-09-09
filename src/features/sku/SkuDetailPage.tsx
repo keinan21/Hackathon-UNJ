@@ -3,7 +3,7 @@
  *
  * Agregasi dipindah ke src/engine/arus.ts (build14DaysJakarta, aggregateArus14, bep helper)
  * Grafik: ChartArus via React.lazy (chunk terpisah), bar ganda masuk #16a34a / keluar #dc2626,
- * sumbu-x DD-MM, sumbu-y qty+grid, tooltip Bahasa Indonesia, garis BEP amber #F59E0B.
+ * sumbu-x DD-MM, sumbu-y qty+grid, tooltip Bahasa Indonesia, garis Balik Modal amber #F59E0B.
  */
 
 import { useEffect, useState, lazy, Suspense } from "react";
@@ -131,7 +131,7 @@ function InoutMasukPane({ sku, onDone }: { sku: SKU; onDone: () => void }) {
           qty: qtyNum,
           expiry_date,
           received_at: nowIso,
-          hpp_snapshot: hppNum,
+          modal_snapshot: hppNum,
           org_id: "toko-01",
         });
         await dexieV2.transaksis.put({
@@ -167,7 +167,7 @@ function InoutMasukPane({ sku, onDone }: { sku: SKU; onDone: () => void }) {
         <span className="text-sm font-semibold text-neutral truncate" data-testid="inout-masuk-sku">
           {sku.nama} • {sku.kode ?? sku.id.slice(0, 6)}
         </span>
-        <span className="ml-auto text-xs text-[#595959]">Rp{sku.hpp.toLocaleString("id-ID")}</span>
+        <span className="ml-auto text-[16px] text-[#595959]">Rp{sku.hpp.toLocaleString("id-ID")}</span>
       </div>
       <div>
         <label htmlFor="inout-qty-masuk" className="block text-[16px] font-semibold text-neutral mb-2">
@@ -301,7 +301,7 @@ function InoutKeluarPane({ sku, batches, onDone }: { sku: SKU; batches: Batch[];
   const stokTotal = batches.reduce((a, b) => a + b.qty, 0);
   const expiring = batches.filter((b) => b.expiry_date !== null && b.qty > 0).sort((a, b) => (a.expiry_date as string).localeCompare(b.expiry_date as string));
   const nonPerish = batches.filter((b) => b.expiry_date === null && b.qty > 0);
-  const stokFEFO = expiring.length > 0 ? expiring.reduce((a, b) => a + b.qty, 0) : nonPerish.reduce((a, b) => a + b.qty, 0);
+  const stokKeluarTercepat = expiring.length > 0 ? expiring.reduce((a, b) => a + b.qty, 0) : nonPerish.reduce((a, b) => a + b.qty, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -362,17 +362,17 @@ function InoutKeluarPane({ sku, batches, onDone }: { sku: SKU; batches: Batch[];
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="rounded-xl bg-[#F5F5F0] border border-base-300/40 px-3 py-2.5">
-        <p data-testid="outbound-stok-info" className="text-xs text-[#595959]">
-          Stok total: {stokTotal} pcs • Stok siap FEFO: {stokFEFO} pcs {expiring.length > 0 ? `• ${expiring.length} batch expiring` : "(non-perishable)"}
+        <p data-testid="outbound-stok-info" className="text-[16px] text-[#595959]">
+          Stok total: {stokTotal} pcs • Stok siap keluar cepat: {stokKeluarTercepat} pcs {expiring.length > 0 ? `• ${expiring.length} tumpukan perlu perhatian` : "(non-perishable)"}
         </p>
         {expiring.length > 0 && (
-          <div data-testid="outbound-fefo-preview" className="mt-2">
-            <p className="text-xs font-semibold text-neutral uppercase tracking-wide">FEFO terdekat</p>
+          <div data-testid="outbound-keluar-tercepat-preview" className="mt-2">
+            <p className="text-[16px] font-semibold text-neutral uppercase tracking-wide">Yang dekat basi dulu</p>
             <ul className="mt-1 flex flex-col gap-1">
               {expiring.slice(0, 3).map((b) => (
-                <li key={b.id} data-testid={`fefo-row-${b.id}`} className="text-xs text-[#595959] flex justify-between">
+                <li key={b.id} data-testid={`keluar-row-${b.id}`} className="text-[16px] text-[#595959] flex justify-between">
                   <span>exp {b.expiry_date} • {b.qty} pcs</span>
-                  <span>Rp{b.hpp_snapshot.toLocaleString("id-ID")}</span>
+                  <span>Rp{b.modal_snapshot.toLocaleString("id-ID")}</span>
                 </li>
               ))}
             </ul>
@@ -498,7 +498,7 @@ export function SkuDetailPage({ id }: { id: string }) {
 
   if (loading) {
     return (
-      <div data-testid="sku-detail-page" className="w-full max-w-[720px] mx-auto">
+      <div data-testid="sku-detail-page" className="w-full max-w-3xl">
         <p data-testid="sku-detail-loading" className="text-[16px] text-[#595959]" role="status">
           Memuat detail SKU...
         </p>
@@ -508,7 +508,7 @@ export function SkuDetailPage({ id }: { id: string }) {
 
   if (!sku) {
     return (
-      <div data-testid="sku-detail-page" className="w-full max-w-[720px] mx-auto space-y-4">
+      <div data-testid="sku-detail-page" className="w-full max-w-3xl space-y-4">
         <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-8 text-center">
           <div className="w-16 h-16 rounded-2xl bg-[#FFEBEE] border border-[#FFCDD2]/60 flex items-center justify-center text-[#C62828] mx-auto mb-4">
             <WarningCircle width={28} height={28} />
@@ -570,7 +570,7 @@ export function SkuDetailPage({ id }: { id: string }) {
   };
 
   return (
-    <div data-testid="sku-detail-page" className="w-full max-w-[720px] mx-auto space-y-5">
+    <div data-testid="sku-detail-page" className="w-full max-w-3xl space-y-5">
       <AppButton
         type="button"
         variant="ghost"
@@ -598,7 +598,7 @@ export function SkuDetailPage({ id }: { id: string }) {
               Kategori: {kategori?.nama ?? "-"} • Threshold: [{kategori?.threshold_h_minus.join(",") ?? "7,3,1"}]
             </p>
             {tags.length > 0 && (
-              <p data-testid="sku-detail-tags" className="text-xs text-[#595959] mt-2 flex items-center gap-1.5 flex-wrap">
+              <p data-testid="sku-detail-tags" className="text-[16px] text-[#595959] mt-2 flex items-center gap-1.5 flex-wrap">
                 <Hashtag width={12} height={12} className="text-[#0F7A4A]" />
                 {tags.map((t) => `#${t.nama}`).join(" ")}
               </p>
@@ -611,7 +611,7 @@ export function SkuDetailPage({ id }: { id: string }) {
       <div data-testid="sku-detail-ringkas" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard label="Stok total" value={`${stokTotal} pcs`} icon={<Box width={18} height={18} />} variant="neutral" className="sm:col-span-1" />
         <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-4 sm:col-span-2">
-          <p className="text-xs font-semibold tracking-wide opacity-70 uppercase">Harga & Margin</p>
+          <p className="text-[16px] font-semibold tracking-wide opacity-70 uppercase">Harga & Margin</p>
           <p data-testid="sku-detail-stok-total" className="sr-only">Stok total: {stokTotal} pcs</p>
           <p data-testid="sku-detail-hpp" className="text-sm text-neutral mt-2 leading-relaxed">
             HPP: Rp{sku.hpp.toLocaleString("id-ID")} • Harga: Rp{sku.harga_normal.toLocaleString("id-ID")} • Margin: <span className="font-bold text-[#0F7A4A]">Rp{marginPerPcs.toLocaleString("id-ID")}/pcs</span>
@@ -626,7 +626,7 @@ export function SkuDetailPage({ id }: { id: string }) {
         </h3>
         {batches.length === 0 ? (
           <p data-testid="sku-detail-batch-empty" className="text-sm text-[#595959] mt-3">
-            Belum ada batch — tambah stok untuk melihat kadaluarsa.
+            Belum ada tumpukan — tambah stok untuk melihat kadaluarsa.
           </p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2" aria-label="Daftar batch">
@@ -643,7 +643,7 @@ export function SkuDetailPage({ id }: { id: string }) {
                   ].join(" ")}
                 >
                   <span data-testid={`batch-info-${b.id}`} className="text-sm">
-                    {b.qty} pcs • exp {b.expiry_date ?? "Tanpa kadaluarsa"} {daysExp !== null ? `(H-${daysExp})` : ""} • Rp{b.hpp_snapshot.toLocaleString("id-ID")}
+                    {b.qty} pcs • exp {b.expiry_date ?? "Tanpa kadaluarsa"} {daysExp !== null ? `(H-${daysExp})` : ""} • Rp{b.modal_snapshot.toLocaleString("id-ID")}
                   </span>
                   {isKritis && (
                     <span
@@ -655,7 +655,7 @@ export function SkuDetailPage({ id }: { id: string }) {
                     </span>
                   )}
                   {b.expiry_date === null && (
-                    <span data-testid={`batch-tanpa-${b.id}`} className="text-xs text-[#595959] shrink-0">
+                    <span data-testid={`batch-tanpa-${b.id}`} className="text-[16px] text-[#595959] shrink-0">
                       Tanpa kadaluarsa
                     </span>
                   )}

@@ -21,7 +21,7 @@ export class FakeInventoryRepository implements InventoryRepository {
   }
   async getKategori(id: string) { return this.kategoris.get(id); }
   async createKategori(k: Kategori) { this.kategoris.set(k.id, k); }
-  async updateKategoriThreshold(id: string, threshold: number[]) {
+  async aturIngatanBasi(id: string, threshold: number[]) {
     const k = this.kategoris.get(id);
     if (!k) throw new Error('Kategori not found');
     // validation: non-empty, descending, >0, no dup - same as TASK-05

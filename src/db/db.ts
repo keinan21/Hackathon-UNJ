@@ -54,7 +54,7 @@ export interface Batch {
   /** auto now saat insert */
   received_at: string; // ISO datetime
   /** copy hpp SKU saat terima barang */
-  hpp_snapshot: number;
+  modal_snapshot: number;
   org_id: string; // sync-ready sharding
 }
 
@@ -102,7 +102,7 @@ export interface Promo {
   batch_id: number;
   sku_pasangan_id: number;
   harga_tebus: number;
-  hpp_snapshot: number;
+  modal_snapshot: number;
   created_at: string; // ISO datetime
   updated_at: string; // ISO datetime
   org_id: string; // sync-ready sharding
@@ -205,7 +205,7 @@ export interface InventoryRepository {
   createKategori(k: Omit<Kategori, "id" | "org_id"> & { org_id?: string }): Promise<Kategori>;
   getKategori(id: number): Promise<Kategori | undefined>;
   listKategoris(org_id?: string): Promise<Kategori[]>;
-  updateKategoriThreshold(id: number, threshold_h_minus: number[]): Promise<Kategori>;
+  aturIngatanBasi(id: number, threshold_h_minus: number[]): Promise<Kategori>;
 
   // SKU
   createSKU(s: Omit<SKU, "id" | "org_id"> & { org_id?: string }): Promise<SKU>;
@@ -306,7 +306,7 @@ export class DexieRepository implements InventoryRepository {
     return this.d.kategoris.where("org_id").equals(org).toArray();
   }
 
-  async updateKategoriThreshold(id: number, threshold_h_minus: number[]): Promise<Kategori> {
+  async aturIngatanBasi(id: number, threshold_h_minus: number[]): Promise<Kategori> {
     if (!Array.isArray(threshold_h_minus) || threshold_h_minus.length === 0)
       throw new ValidationError("Threshold tidak boleh kosong");
     if (threshold_h_minus.some((t) => !(t > 0)))

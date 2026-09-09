@@ -23,7 +23,7 @@ export class PromoService {
     const sku = await this.repo.getSku(batch.sku_id);
     if (!sku) throw new Error('SKU tidak ditemukan');
 
-    const hpp = batch.hpp_snapshot;
+    const hpp = batch.modal_snapshot;
     const hargaNormal = sku.harga_normal;
 
     const validation = validateHargaTebus(hpp, input.harga_tebus, hargaNormal);
@@ -91,7 +91,7 @@ export class PromoService {
     if (batch.qty <= 0) throw new Error('Stok habis, tidak bisa approve tebus murah');
     const sku = await this.repo.getSku(batch.sku_id);
     if (!sku) throw new Error('SKU tidak ditemukan');
-    const guard = validatePromoUsul('tebus', { hpp: batch.hpp_snapshot, harga_tebus: promo.harga_tebus, harga_normal: sku.harga_normal });
+    const guard = validatePromoUsul('tebus', { hpp: batch.modal_snapshot, harga_tebus: promo.harga_tebus, harga_normal: sku.harga_normal });
     if (!guard.valid) throw new Error(guard.error ?? 'Harga tebus tidak valid');
     const active: Promo = { ...promo, status: 'active', updated_at: new Date().toISOString() };
     await this.repo.updatePromo(active);

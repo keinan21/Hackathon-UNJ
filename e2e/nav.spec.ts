@@ -107,32 +107,24 @@ test.describe("Nav 3-tab + sub-tab wiring — real Dexie", () => {
     await expect(page.getByTestId("nav-promo")).toHaveCount(0);
   });
 
-  test("Statistik via Dashboard sub-tab Ringkasan/Statistik dan In-Out via SKU detail", async ({ page }) => {
+  test("Statistik via tombol hub + In-Out via SKU detail", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await seedNav(page);
     await page.goto("/");
     await page.waitForTimeout(700);
     await expect(page.getByTestId("dashboard-page")).toBeVisible();
-    const subtabs = page.getByTestId("dashboard-subtabs");
-    await expect(subtabs).toBeVisible();
-    await expect(subtabs).toHaveAttribute("aria-label", "Sub-tab Dashboard");
-    const tabRingkasan = page.getByTestId("tab-ringkasan");
-    const tabStatistik = page.getByTestId("tab-statistik");
-    await expect(tabRingkasan).toBeVisible();
-    await expect(tabStatistik).toBeVisible();
-    await expect(tabRingkasan).toContainText("Ringkasan");
-    await expect(tabStatistik).toContainText("Statistik");
-    for (const t of [tabRingkasan, tabStatistik]) {
-      await expect(t).toHaveCSS("min-height", "48px");
-      await expect(t).toHaveCSS("font-size", "16px");
-      await expect(t.locator("svg").first()).toBeVisible();
+    const hub = page.getByTestId("hub-nav");
+    await expect(hub).toBeVisible();
+    await expect(hub).toHaveAttribute("aria-label", "Navigasi cepat warung");
+    for (const id of ["hub-masuk", "hub-kasir", "hub-sku", "hub-statistik"]) {
+      const b = page.getByTestId(id);
+      await expect(b).toBeVisible();
+      await expect(b).toHaveCSS("font-size", "16px");
+      await expect(b.locator("svg").first()).toBeVisible();
     }
-    await expect(tabRingkasan).toHaveAttribute("aria-selected", "true");
-    await tabStatistik.click();
-    await expect(tabStatistik).toHaveAttribute("aria-selected", "true");
+    await page.getByTestId("hub-statistik").click();
     await expect(page.getByTestId("statistik-tab")).toBeVisible({ timeout: 10_000 });
-    await tabRingkasan.click();
-    await expect(tabRingkasan).toHaveAttribute("aria-selected", "true");
+    await page.goto("/");
     await expect(page.getByTestId("section-urgent")).toBeVisible();
     await page.getByTestId("nav-sku").click();
     await expect(page.getByTestId("katalog-page")).toBeVisible({ timeout: 10_000 });
@@ -193,7 +185,13 @@ test.describe("Nav 3-tab + sub-tab wiring — real Dexie", () => {
     await page.goto("/");
     await page.waitForTimeout(500);
     await expect(page.getByTestId("dashboard-page")).toBeVisible();
-    const approveBtn = page.getByRole("button", { name: /Setujui Tebus Murah|Setujui/ }).first();
+    tapCount = 0;
+    const lihatBtn = page.getByTestId("promo-lihat-promo-nav-1");
+    await expect(lihatBtn).toBeVisible({ timeout: 10_000 });
+    await lihatBtn.click();
+    tapCount++;
+    await expect(page.getByTestId("promo-page")).toBeVisible({ timeout: 10_000 });
+    const approveBtn = page.getByTestId("btn-setujui-tebus").first();
     await expect(approveBtn).toBeVisible({ timeout: 10_000 });
     await expect(approveBtn).toHaveCSS("min-height", "48px");
     await expect(approveBtn).toHaveCSS("font-size", "16px");
@@ -218,7 +216,7 @@ test.describe("Nav 3-tab + sub-tab wiring — real Dexie", () => {
     await page.goto("/tidak-ada");
     await page.waitForTimeout(600);
     await expect(page.getByTestId("dashboard-page")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId("dashboard-subtabs")).toBeVisible();
+    await expect(page.getByTestId("hub-nav")).toBeVisible();
     await expect(page.getByTestId("bottom-nav-dashboard")).toHaveAttribute("aria-current", "page");
     await page.goto("/foo/bar/baz");
     await page.waitForTimeout(600);
@@ -243,8 +241,9 @@ test.describe("Nav 3-tab + sub-tab wiring — real Dexie", () => {
     await expect(page.getByTestId("bottom-nav-dashboard")).toContainText("Dashboard");
     await expect(page.getByTestId("bottom-nav-sku")).toContainText("SKU");
     await expect(page.getByTestId("bottom-nav-settings")).toContainText("Pengaturan");
-    await expect(page.getByTestId("tab-ringkasan")).toHaveCSS("min-height", "48px");
-    await expect(page.getByTestId("tab-statistik")).toHaveCSS("min-height", "48px");
+    for (const id of ["hub-masuk", "hub-kasir", "hub-sku", "hub-statistik"]) {
+      await expect(page.getByTestId(id)).toHaveCSS("font-size", "16px");
+    }
     await page.goto("/sku/sku-susu");
     await page.waitForTimeout(600);
     await expect(page.getByTestId("tab-masuk")).toHaveCSS("min-height", "48px");

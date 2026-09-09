@@ -1,9 +1,8 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { UrgentList } from "./UrgentList";
 import { PromoAktifList } from "../promo/PromoAktifList";
 import { HistoriList } from "./HistoriList";
-import { StatistikTab } from "./StatistikTab";
-import { WarningCircle, Package, StatsReport, Home } from "iconoir-react";
+import { WarningCircle, Package, StatsReport, ShoppingBag, Plus } from "iconoir-react";
 import { daysToExpiry } from "../../engine/expiry";
 import { realRepo } from "../../db/dexieRepository";
 
@@ -48,28 +47,18 @@ function KritisBanner() {
   };
 
   return (
-    <div
-      data-testid="kritis-banner"
-      role="status"
-      aria-live="polite"
-      className="card bg-[#FFEBEE] border border-[#FFCDD2] rounded-2xl p-4 flex items-center justify-between gap-3 mb-6"
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="w-9 h-9 rounded-xl bg-[#C62828] text-white flex items-center justify-center shrink-0">
-          <WarningCircle width={18} height={18} />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[16px] font-bold text-[#C62828]">Ada {count} batch kritis</p>
-          <p className="text-sm text-[#595959]">Tap untuk lihat daftar lengkap per batch</p>
-        </div>
+    <div data-testid="kritis-banner" role="alert" className="alert alert-error alert-soft mb-6">
+      <WarningCircle width={20} height={20} aria-hidden="true" />
+      <div className="min-w-0">
+        <p className="font-bold">Ada {count} batch kritis</p>
+        <p className="text-sm opacity-80">Tap untuk lihat daftar lengkap per batch</p>
       </div>
       <button
         type="button"
         data-testid="kritis-banner-link"
         onClick={handleClick}
         aria-label={`Lihat ${count} batch kritis`}
-        className="btn btn-sm bg-[#C62828] text-white border-none rounded-xl min-h-[48px] px-5 text-[16px] font-semibold shrink-0 hover:bg-[#B71C1C]"
-        style={{ minHeight: "48px", fontSize: "16px" }}
+        className="btn btn-error btn-sm min-h-12 px-5 text-base font-semibold shrink-0"
       >
         Lihat Kritis
       </button>
@@ -77,10 +66,44 @@ function KritisBanner() {
   );
 }
 
+function go(path: string) {
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+function goSkuView() {
+  window.dispatchEvent(new CustomEvent("warung-navigate", { detail: { view: "sku" } }));
+}
+
+const HUB_BUTTONS = [
+  { id: "hub-masuk", label: "Barang Masuk", icon: <Plus width={26} height={26} aria-hidden="true" />, onClick: () => go("/masuk") },
+  { id: "hub-kasir", label: "Kasir", icon: <ShoppingBag width={26} height={26} aria-hidden="true" />, onClick: () => go("/keluar") },
+  { id: "hub-sku", label: "Lihat SKU", icon: <Package width={26} height={26} aria-hidden="true" />, onClick: goSkuView },
+  { id: "hub-statistik", label: "Statistik", icon: <StatsReport width={26} height={26} aria-hidden="true" />, onClick: () => go("/statistik") },
+];
+
+function NavHub() {
+  return (
+    <nav data-testid="hub-nav" aria-label="Navigasi cepat warung" className="grid grid-cols-2 gap-3 mb-6">
+      {HUB_BUTTONS.map((b) => (
+        <button
+          key={b.id}
+          type="button"
+          data-testid={b.id}
+          onClick={b.onClick}
+          aria-label={b.label}
+          className="btn btn-primary min-h-16 text-base font-bold flex-col gap-1 py-4 rounded-2xl"
+        >
+          {b.icon}
+          {b.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 export function DashboardPage() {
-  const promoRef = useRef<HTMLElement>(null);
   const [skuCount, setSkuCount] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"ringkasan" | "statistik">("ringkasan");
 
   useEffect(() => {
     let cancelled = false;
@@ -107,92 +130,49 @@ export function DashboardPage() {
   return (
     <div data-testid="dashboard-page" className="w-full">
       <KritisBanner />
-      {/* Sub-tab Ringkasan vs Statistik — 48px, iconoir, Bahasa Indonesia */}
-      <div
-        role="tablist"
-        aria-label="Sub-tab Dashboard"
-        className="flex gap-2 mb-6 p-1 bg-base-200 rounded-2xl"
-        data-testid="dashboard-subtabs"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "ringkasan"}
-          data-testid="tab-ringkasan"
-          onClick={() => setActiveTab("ringkasan")}
-          className={[
-            "flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors",
-            activeTab === "ringkasan" ? "bg-[#0F7A4A] text-white shadow-sm" : "bg-transparent text-[#595959] hover:bg-base-100",
-          ].join(" ")}
-          style={{ minHeight: "48px", fontSize: "16px" }}
-        >
-          <Home width={16} height={16} aria-hidden="true" /> Ringkasan
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "statistik"}
-          data-testid="tab-statistik"
-          onClick={() => setActiveTab("statistik")}
-          className={[
-            "flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors",
-            activeTab === "statistik" ? "bg-[#0F7A4A] text-white shadow-sm" : "bg-transparent text-[#595959] hover:bg-base-100",
-          ].join(" ")}
-          style={{ minHeight: "48px", fontSize: "16px" }}
-        >
-          <StatsReport width={16} height={16} aria-hidden="true" /> Statistik
-        </button>
-      </div>
+      <NavHub />
 
-      {activeTab === "ringkasan" ? (
-        <>
-          {isEmpty && (
-            <div
-              data-testid="dashboard-empty"
-              role="status"
-              aria-live="polite"
-              className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-8 text-center flex flex-col items-center mb-6"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-[#FFF8E1] border border-[#FFE082]/60 flex items-center justify-center text-[#F9A825] mb-4">
-                <Package width={28} height={28} />
+      <div className="space-y-6">
+        {isEmpty && (
+          <div data-testid="dashboard-empty" role="status" className="card card-border bg-base-100">
+            <div className="card-body items-center text-center">
+              <div className="bg-base-200 text-base-content/70 flex h-14 w-14 items-center justify-center rounded-field">
+                <Package width={26} height={26} />
               </div>
-              <h3 className="text-[16px] font-bold text-[#1A1A1A]">Belum ada SKU</h3>
-              <p className="text-sm text-[#595959] mt-1.5 leading-relaxed max-w-sm">Tambah SKU pertama untuk mulai kelola inventaris. Semua data tersimpan lokal di perangkat.</p>
-              <button
-                type="button"
-                data-testid="dashboard-empty-cta"
-                onClick={handleTambahSku}
-                className="btn btn-primary w-full min-h-[48px] mt-5 text-[16px] font-semibold rounded-xl shadow-sm"
-                style={{ minHeight: "48px", fontSize: "16px" }}
-                aria-label="Tambah SKU"
-              >
-                Tambah SKU
-              </button>
+              <h3 className="card-title text-base">Belum ada SKU</h3>
+              <p className="text-base text-base-content/70 leading-relaxed max-w-sm">
+                Tambah barang pertama biar stok toko tercatat rapi di HP ini.
+              </p>
+              <div className="card-actions">
+                <button
+                  type="button"
+                  data-testid="dashboard-empty-cta"
+                  onClick={handleTambahSku}
+                  className="btn btn-primary min-h-12 text-base font-semibold"
+                  aria-label="Tambah SKU"
+                >
+                  Tambah SKU
+                </button>
+              </div>
             </div>
-          )}
-          {/* Seksi 1: Urgent */}
-          <section data-testid="section-urgent" className="mb-6">
-            <UrgentList onViewSuggestion={() => promoRef.current?.scrollIntoView({ behavior: "smooth" })} />
+          </div>
+        )}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+          <section data-testid="section-urgent" className="lg:col-span-3 min-w-0">
+            <UrgentList actions={false} />
           </section>
-
-          <div style={{ height: 24 }} aria-hidden="true" />
-
-          {/* Seksi 2: Promo Aktif */}
-          <section ref={promoRef} data-testid="section-promo" className="mb-6">
-            <PromoAktifList />
+          <section data-testid="section-promo" className="lg:col-span-2 min-w-0 lg:sticky lg:top-20">
+            <PromoAktifList actions={false} />
           </section>
+        </div>
 
-          <div style={{ height: 24 }} aria-hidden="true" />
+        <div className="divider my-0" aria-hidden="true" />
 
-          {/* Seksi 3: Histori */}
-          <section data-testid="section-histori" className="mb-6">
-            <HistoriList />
-            <span className="sr-only" data-testid="histori-count">Menampilkan histori terbaru</span>
-          </section>
-        </>
-      ) : (
-        <StatistikTab />
-      )}
+        <section data-testid="section-histori">
+          <HistoriList />
+          <span className="sr-only" data-testid="histori-count">Menampilkan histori terbaru</span>
+        </section>
+      </div>
     </div>
   );
 }

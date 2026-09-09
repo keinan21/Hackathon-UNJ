@@ -55,7 +55,7 @@ async function seedBatch(page: import("@playwright/test").Page, batch: { id: str
   }, { b: batch });
 }
 
-test.describe("Outbound form FEFO + penerima/catatan", () => {
+test.describe("Keluar kasir FEFO + form prefill penerima/catatan", () => {
   test.beforeEach(async ({ page }) => {
     await loginSetup(page);
     await page.waitForTimeout(300);
@@ -71,26 +71,22 @@ test.describe("Outbound form FEFO + penerima/catatan", () => {
     await seedBatch(page, { id: "b-2", sku_id: "sku-1", qty: 10, expiry_date: "2026-09-10", hpp_snapshot: 8000 });
 
     await page.goto("/keluar");
-    await expect(page.getByTestId("outbound-page")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("kasir-page")).toBeVisible({ timeout: 10_000 });
 
-    await page.getByTestId("select-outbound-sku").selectOption("sku-1");
-    await expect(page.getByTestId("outbound-stok-info")).toContainText("Stok siap FEFO: 15 pcs", { timeout: 5000 });
-    await expect(page.getByTestId("outbound-fefo-preview")).toBeVisible();
+    await page.getByTestId("kasir-search").fill("Roti");
+    await expect(page.getByTestId("kasir-row-sku-1")).toBeVisible({ timeout: 5000 });
 
-    await page.getByTestId("input-qty").fill("7");
-    await page.getByTestId("input-penerima").fill("Pelanggan A");
-    await page.getByTestId("textarea-catatan").fill("Penjualan ecer");
+    await page.getByTestId("kasir-qty-sku-1").fill("7");
+    await page.getByTestId("kasir-penerima").fill("Pelanggan A");
+    await page.getByTestId("kasir-catatan").fill("Penjualan ecer");
 
-    await expect(page.getByTestId("btn-keluar-simpan")).toHaveCSS("min-height", "48px");
-    await expect(page.getByTestId("input-qty")).toHaveCSS("min-height", "48px");
+    await expect(page.getByTestId("kasir-simpan")).toHaveCSS("min-height", "48px");
+    await expect(page.getByTestId("kasir-qty-sku-1")).toHaveCSS("min-height", "48px");
 
-    await page.getByTestId("btn-keluar-simpan").click();
+    await page.getByTestId("kasir-simpan").click();
 
     await expect(page.getByTestId("form-success")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId("form-success")).toContainText("berhasil");
-
-    await page.waitForTimeout(600);
-    await expect(page).toHaveURL("/");
+    await expect(page.getByTestId("form-success")).toContainText("tersimpan");
 
     const batchInfo = await page.evaluate(async () => {
       const w = window as unknown as Record<string, unknown>;
@@ -116,30 +112,29 @@ test.describe("Outbound form FEFO + penerima/catatan", () => {
     expect(transFound?.catatan).toBe("Penjualan ecer");
   });
 
-  test("qty 0 → Qty harus lebih dari 0", async ({ page }) => {
+  test("keranjang kosong → tombol disabled + hint", async ({ page }) => {
     await seedBatch(page, { id: "b-1", sku_id: "sku-1", qty: 10, expiry_date: "2026-09-05", hpp_snapshot: 8000 });
     await page.goto("/keluar");
-    await expect(page.getByTestId("outbound-page")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("kasir-page")).toBeVisible({ timeout: 10_000 });
 
-    await page.getByTestId("select-outbound-sku").selectOption("sku-1");
-    await page.getByTestId("input-qty").fill("0");
-    await page.getByTestId("btn-keluar-simpan").click();
-
-    await expect(page.getByTestId("form-error")).toBeVisible({ timeout: 5000 });
-    await expect(page.getByTestId("form-error")).toContainText("Qty harus lebih dari 0");
+    await expect(page.getByTestId("kasir-row-sku-1")).toBeVisible({ timeout: 5000 });
+    await page.getByTestId("kasir-qty-sku-1").fill("0");
+    await expect(page.getByTestId("kasir-simpan")).toBeDisabled();
+    await expect(page.getByTestId("kasir-empty-hint")).toBeVisible();
   });
 
-  test("stok tidak cukup → Stok tidak cukup", async ({ page }) => {
+  test("stok tidak cukup → error per-baris, stok utuh", async ({ page }) => {
     await seedBatch(page, { id: "b-1", sku_id: "sku-1", qty: 5, expiry_date: "2026-09-03", hpp_snapshot: 8000 });
     await page.goto("/keluar");
-    await expect(page.getByTestId("outbound-page")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("kasir-page")).toBeVisible({ timeout: 10_000 });
 
-    await page.getByTestId("select-outbound-sku").selectOption("sku-1");
-    await page.getByTestId("input-qty").fill("10");
-    await page.getByTestId("btn-keluar-simpan").click();
+    await expect(page.getByTestId("kasir-row-sku-1")).toBeVisible({ timeout: 5000 });
+    await page.getByTestId("kasir-qty-sku-1").fill("10");
+    await page.getByTestId("kasir-simpan").click();
 
-    await expect(page.getByTestId("form-error")).toBeVisible({ timeout: 5000 });
-    await expect(page.getByTestId("form-error")).toContainText("Stok tidak cukup");
+    const err = page.getByTestId("kasir-error-sku-1");
+    await expect(err).toBeVisible({ timeout: 5000 });
+    await expect(err).toContainText("Stok tidak cukup");
   });
 
   test("read-only SKU dari query ?skuId=sku-1", async ({ page }) => {

@@ -1,29 +1,12 @@
-import { useMemo, useReducer, useState, useEffect } from "react";
-import { WarningCircle } from "iconoir-react";
+import { useMemo, useState, useEffect } from "react";
 import Badge from "../../components/Badge";
-import { daysToExpiry, urgencyScore } from "../../engine/expiry";
+import { daysToExpiry, peringkat } from "../../engine/expiry";
 import { realRepo } from "../../db/dexieRepository";
 import { seedDefaultKategoris } from "../../db/seed";
 
-type FilterState = string[];
-type FilterAction = { type: "TOGGLE"; payload: string };
-
-const ALL_CATEGORIES = ["Semua", "Dairy", "Snack", "Beras"] as const;
-
-function filterReducer(state: FilterState, action: FilterAction): FilterState {
-  const payload = action.payload;
-  if (payload === "Semua") return ["Semua"];
-  const withoutSemua = state.filter((s) => s !== "Semua");
-  let next: string[];
-  if (withoutSemua.includes(payload)) next = withoutSemua.filter((s) => s !== payload);
-  else next = [...withoutSemua, payload];
-  if (next.length === 0) return ["Semua"];
-  return next;
-}
-
 export type UrgentListProps = {
-  initialFilter?: FilterState;
   onViewSuggestion?: (batchId: string) => void;
+  actions?: boolean;
 };
 
 type RealUrgentBatch = {
@@ -35,17 +18,22 @@ type RealUrgentBatch = {
   qty: number;
   expiry_date: string | null;
   received_at: string;
-  hpp_snapshot: number;
+  modal_snapshot: number;
   org_id: string;
   daysToExpiry: number;
-  urgencyScore: number;
+  peringkat: number;
 };
 
-export function UrgentList({ initialFilter, onViewSuggestion }: UrgentListProps) {
-  const [selected, dispatch] = useReducer(filterReducer, initialFilter ?? ["Semua"]);
+export function UrgentList({ onViewSuggestion, actions = true }: UrgentListProps) {
+  const goKritis = () => {
+    window.history.pushState({}, "", "/kritis");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+  const [kategoriFilter, setKategoriFilter] = useState("Semua");
   const [sortBy, setSortBy] = useState<"expiry" | "urgency">("expiry");
   const [visibleCount, setVisibleCount] = useState(50);
   const [realBatches, setRealBatches] = useState<RealUrgentBatch[]>([]);
+  const [kategoriOptions, setKategoriOptions] = useState<{ id: string; nama: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const today = useMemo(() => new Date(), []);
@@ -80,7 +68,7 @@ export function UrgentList({ initialFilter, onViewSuggestion }: UrgentListProps)
           const maxThreshold = Math.max(...threshold);
           if (days > maxThreshold) continue;
           const avg = avgMap.get(b.sku_id) ?? 1;
-          const score = urgencyScore(b.qty, days, avg);
+          const score = peringkat(b.qty, days, avg);
           urgent.push({
             id: b.id,
             sku_id: b.sku_id,
@@ -90,18 +78,19 @@ export function UrgentList({ initialFilter, onViewSuggestion }: UrgentListProps)
             qty: b.qty,
             expiry_date: b.expiry_date,
             received_at: b.received_at,
-            hpp_snapshot: b.hpp_snapshot,
+            modal_snapshot: b.modal_snapshot,
             org_id: b.org_id,
             daysToExpiry: days,
-            urgencyScore: score,
+            peringkat: score,
           });
         }
         urgent.sort((a, b) => {
-          if (sortBy === "urgency") return a.urgencyScore - b.urgencyScore;
+          if (sortBy === "urgency") return a.peringkat - b.peringkat;
           if (a.daysToExpiry !== b.daysToExpiry) return a.daysToExpiry - b.daysToExpiry;
-          return a.urgencyScore - b.urgencyScore;
+          return a.peringkat - b.peringkat;
         });
         if (!cancelled) {
+          setKategoriOptions(kategoris.map((k) => ({ id: k.id, nama: k.nama })));
           setRealBatches(urgent);
           setLoading(false);
         }
@@ -137,113 +126,144 @@ export function UrgentList({ initialFilter, onViewSuggestion }: UrgentListProps)
   const urgentBatches = realBatches;
 
   const filtered = useMemo(() => {
-    if (selected.includes("Semua")) return urgentBatches;
-    return urgentBatches.filter((b) => selected.includes(b.kategori_name ?? ""));
-  }, [urgentBatches, selected]);
+    if (kategoriFilter === "Semua") return urgentBatches;
+    return urgentBatches.filter((b) => b.kategori_name === kategoriFilter);
+  }, [urgentBatches, kategoriFilter]);
 
   const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
   const hasMore = filtered.length > visibleCount;
   const totalCount = filtered.length;
 
-  const badgePerSku = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const b of filtered) m.set(b.sku_name ?? b.sku_id, (m.get(b.sku_name ?? b.sku_id) ?? 0) + b.qty);
-    return m;
-  }, [filtered]);
-
-  const handleChip = (cat: string) => {
-    dispatch({ type: "TOGGLE", payload: cat });
+  const handleKategoriChange = (nama: string) => {
+    setKategoriFilter(nama);
     setVisibleCount(50);
   };
+
+
 
   const showLoading = loading;
 
   return (
-    <section className="w-full max-w-[480px] mx-auto px-4" aria-labelledby="urgent-heading">
-      <h2 id="urgent-heading" className="text-[20px] font-bold text-[#1A1A1A] mb-3" style={{ fontSize: "20px" }}>
-        Stok Mepet
-      </h2>
-
-      <div className="flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter kategori">
-        {ALL_CATEGORIES.map((cat) => {
-          const isPressed = selected.includes(cat);
-          return (
-            <button
-              key={cat}
-              type="button"
-              aria-pressed={isPressed}
-              aria-label={`Filter ${cat}`}
-              onClick={() => handleChip(cat)}
-              className={`btn btn-sm min-h-[48px] text-base font-semibold rounded-full px-5 ${isPressed ? "btn-primary" : "btn-outline border-[#D9D9D9] text-[#1A1A1A]"}`}
-              style={{ fontSize: "16px", minHeight: "48px" }}
-            >
-              {cat}
-            </button>
-          );
-        })}
+    <section className="w-full" aria-labelledby="urgent-heading">
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <h2 id="urgent-heading" className="text-lg font-bold">
+          Stok Mepet
+        </h2>
+        <span role="status" aria-live="polite" className="text-sm text-base-content/70 shrink-0">
+          {showLoading ? "Memuat..." : totalCount === 0 ? "Aman semua" : `${totalCount} perlu perhatian`}
+        </span>
       </div>
 
-      <div className="flex items-center justify-between mb-3">
-        <div aria-live="polite" aria-atomic="true" className="text-sm text-[#595959]">
-          <span role="status" aria-live="polite">
-            {showLoading ? "Memuat..." : `${totalCount} stok mepet`}
-          </span>
-          {badgePerSku.size > 0 && (
-            <span className="ml-2 text-xs">• {Array.from(badgePerSku.entries()).map(([k, v]) => `${k}: ${v} pcs`).join(", ")}</span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setSortBy((s) => (s === "expiry" ? "urgency" : "expiry"))}
-          className="btn btn-ghost btn-sm min-h-[48px] text-base"
-          style={{ fontSize: "16px", minHeight: "48px" }}
-          aria-label={`Urut ${sortBy === "expiry" ? "expiry terdekat" : "urgencyScore"}`}
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <label className="sr-only" htmlFor="filter-kategori">
+          Filter kategori
+        </label>
+        <select
+          id="filter-kategori"
+          data-testid="filter-kategori"
+          aria-label="Filter kategori"
+          value={kategoriFilter}
+          onChange={(e) => handleKategoriChange(e.target.value)}
+          className="select select-bordered min-h-12 text-base font-medium w-full sm:max-w-60"
         >
-          Urut: {sortBy === "expiry" ? "Expiry terdekat" : "Urgency"}
-        </button>
+          <option value="Semua">Semua kategori</option>
+          {kategoriOptions.map((k) => (
+            <option key={k.id} value={k.nama}>
+              {k.nama}
+            </option>
+          ))}
+        </select>
+        <label className="sr-only" htmlFor="sort-order">
+          Urutkan stok mepet
+        </label>
+        <select
+          id="sort-order"
+          data-testid="sort-order"
+          aria-label="Urutkan stok mepet"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as "expiry" | "urgency")}
+          className="select select-bordered min-h-12 text-base font-medium w-full sm:max-w-60"
+        >
+          <option value="expiry">Urut: paling dekat</option>
+          <option value="urgency">Urut: paling mendesak</option>
+        </select>
       </div>
 
       {showLoading ? (
-        <div className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 text-center" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-          <p className="text-base text-[#595959]" style={{ fontSize: "16px" }}>
-            Memuat stok mepet...
-          </p>
+        <div className="flex flex-col gap-3" aria-hidden="true">
+          <div className="skeleton h-24 w-full" />
+          <div className="skeleton h-24 w-full" />
         </div>
       ) : filtered.length === 0 ? (
-        <div role="status" aria-live="polite" className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 text-center" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-          <p className="text-base text-[#1A1A1A] leading-relaxed" style={{ fontSize: "16px" }}>
-            Stok aman, tidak ada yang mepet kadaluarsa. Cek lagi besok jam 7 pagi.
-          </p>
+        <div role="status" className="card card-border bg-base-100">
+          <div className="card-body items-center text-center">
+            <p className="text-base font-semibold">Stok aman semua</p>
+            <p className="text-base text-base-content/70 leading-relaxed">
+              Tidak ada yang mepet kadaluarsa. Cek lagi besok jam 7 pagi.
+            </p>
+          </div>
         </div>
       ) : (
         <ul className="space-y-3" aria-label="Daftar stok mepet">
           {visible.map((b) => (
-            <li key={b.id} className="bg-white border border-[#D9D9D9] rounded-[12px] p-4" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <WarningCircle width={16} height={16} aria-hidden="true" className="text-[#1A1A1A] shrink-0" />
-                    <span className="font-semibold text-[#1A1A1A] truncate" style={{ fontSize: "16px" }}>
-                      {b.sku_name}
-                    </span>
+            <li key={b.id} className="card card-border bg-base-100">
+              <div className="card-body gap-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="card-title text-base leading-snug">{b.sku_name}</p>
+                    <p className="text-base text-base-content/70">
+                      Sisa {b.qty} pcs • kadaluarsa {b.expiry_date}
+                    </p>
+                    {b.kategori_name ? (
+                      <span className="badge badge-soft badge-sm mt-1.5">{b.kategori_name}</span>
+                    ) : null}
                   </div>
-                  <p className="text-sm text-[#595959]" style={{ fontSize: "16px" }}>
-                    {b.qty} pcs • exp {b.expiry_date}
-                  </p>
-                  <p className="text-xs text-[#595959] mt-1">Urgency: {b.urgencyScore.toFixed(1)} • {b.kategori_name}</p>
+                  <Badge daysToExpiry={b.daysToExpiry} qty={b.qty} expiryDate={b.expiry_date as string} showIcon />
                 </div>
-                <Badge daysToExpiry={b.daysToExpiry} qty={b.qty} expiryDate={b.expiry_date as string} showIcon />
+                <div className="card-actions flex-col items-stretch">
+                  {actions ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onViewSuggestion?.(b.id)}
+                        className="btn btn-primary btn-block min-h-12 text-base font-semibold"
+                        aria-label={`Lihat saran tebus untuk ${b.sku_name}`}
+                      >
+                        Lihat Saran Tebus
+                      </button>
+                      <button
+                        type="button"
+                        data-testid={`sku-detail-${b.sku_id}`}
+                        aria-label={`Lihat detail ${b.sku_name}`}
+                        onClick={() => {
+                          window.history.pushState({}, "", `/sku/${b.sku_id}`);
+                          window.dispatchEvent(new PopStateEvent("popstate"));
+                        }}
+                        className="btn btn-ghost btn-block min-h-12 text-base font-semibold"
+                      >
+                        Detail Barang
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      data-testid={`urgent-lihat-${b.id}`}
+                      aria-label={`Lihat daftar kritis ${b.sku_name}`}
+                      onClick={goKritis}
+                      className="btn btn-outline btn-block min-h-12 text-base font-semibold"
+                    >
+                      Lihat
+                    </button>
+                  )}
+                </div>
               </div>
-              <button type="button" onClick={() => onViewSuggestion?.(b.id)} className="btn btn-primary w-full min-h-[48px] mt-3 text-base font-semibold" style={{ fontSize: "16px", minHeight: "48px" }} aria-label={`Lihat saran tebus untuk ${b.sku_name}`}>
-                Lihat Saran Tebus
-              </button>
             </li>
           ))}
         </ul>
       )}
 
       {hasMore && (
-        <button type="button" onClick={() => setVisibleCount(filtered.length)} className="btn btn-primary w-full min-h-[48px] mt-4 text-base font-semibold" style={{ fontSize: "16px", minHeight: "48px" }}>
+        <button type="button" onClick={() => setVisibleCount(filtered.length)} className="btn btn-outline btn-block min-h-12 mt-4 text-base font-semibold">
           Lihat semua ({filtered.length - visibleCount} lagi)
         </button>
       )}

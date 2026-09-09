@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { realRepo, dexieV2 } from "../../db/dexieRepository";
+import { realRepo } from "../../db/dexieRepository";
+import { consumeKeluarTercepat } from "../../db/keluar";
 import type { SKU, Batch } from "../../db/types";
 import { PageHeader, AppButton } from "../../components/ui";
 import { Package, WarningCircle, CheckCircle, ShoppingBag } from "iconoir-react";
@@ -40,7 +41,7 @@ export function OutboundForm({ skuId: initialSkuId }: OutboundFormProps = {}) {
     (async () => {
       try {
         const list = await realRepo.listBatchesBySku(skuId, "toko-01");
-        // sort FEFO: expiry terdekat dulu, null di akhir
+        // sort Keluar tercepat: expiry terdekat dulu, null di akhir
         const sorted = [...list].sort((a, b) => {
           if (a.expiry_date === null && b.expiry_date === null) return 0;
           if (a.expiry_date === null) return 1;
@@ -81,75 +82,12 @@ export function OutboundForm({ skuId: initialSkuId }: OutboundFormProps = {}) {
 
     setSubmitting(true);
     try {
-      const sku = await dexieV2.skus.get(skuId);
-      if (!sku) {
-        setError("SKU tidak ditemukan");
-        return;
-      }
-
-      // FEFO consume + transaksi keluar atomic
-      await dexieV2.transaction("rw", dexieV2.skus, dexieV2.batches, dexieV2.transaksis, async () => {
-        // ambil batch qty>0 untuk sku ini
-        const all: Batch[] = await dexieV2.batches
-          .where("[org_id+sku_id]")
-          .equals(["toko-01", skuId])
-          .toArray();
-
-        const expiring = all.filter((b) => b.expiry_date !== null && b.qty > 0).sort((a, b) => {
-          if (a.expiry_date === null && b.expiry_date === null) return 0;
-          if (a.expiry_date === null) return 1;
-          if (b.expiry_date === null) return -1;
-          return (a.expiry_date as string).localeCompare(b.expiry_date as string);
-        });
-        const nonPerishable = all.filter((b) => b.expiry_date === null && b.qty > 0);
-
-        let target: Batch[];
-        let totalAvailable: number;
-        if (expiring.length > 0) {
-          target = expiring;
-          totalAvailable = expiring.reduce((s, b) => s + b.qty, 0);
-        } else {
-          target = nonPerishable;
-          totalAvailable = nonPerishable.reduce((s, b) => s + b.qty, 0);
-        }
-
-        if (totalAvailable < qtyNum) {
-          throw new Error("Stok tidak cukup");
-        }
-
-        let remaining = qtyNum;
-        for (const batch of target) {
-          if (remaining <= 0) break;
-          const take = Math.min(batch.qty, remaining);
-          const newQty = batch.qty - take;
-          await dexieV2.batches.put({ ...batch, qty: newQty });
-          remaining -= take;
-        }
-
-        const nowIso = new Date().toISOString();
-        await (dexieV2.transaksis as unknown as { put: (x: unknown) => Promise<unknown> }).put({
-          id: crypto.randomUUID(),
-          sku_id: skuId,
-          qty_sold: qtyNum,
-          sold_at: nowIso,
-          org_id: "toko-01",
-          jenis: "keluar",
-          harga_jual_snapshot: sku.harga_normal,
-          pengirim: null,
-          penerima: penerima.trim() || null,
-          catatan: catatan.trim() || null,
-        });
-        // stash for event
-        (globalThis as unknown as Record<string, string>).__outbound_sku_id = skuId;
-      });
-
-      const savedSkuId = (globalThis as unknown as Record<string, string>).__outbound_sku_id ?? skuId;
-      delete (globalThis as unknown as Record<string, unknown>).__outbound_sku_id;
+      await consumeKeluarTercepat([{ skuId, qty: qtyNum, penerima, catatan }]);
 
       setSuccess("Barang keluar berhasil dicatat");
 
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("outbound-created", { detail: { id: savedSkuId } }));
+        window.dispatchEvent(new CustomEvent("outbound-created", { detail: { id: skuId } }));
         window.history.pushState({}, "", "/");
         window.dispatchEvent(new PopStateEvent("popstate"));
       }, 400);
@@ -171,7 +109,7 @@ export function OutboundForm({ skuId: initialSkuId }: OutboundFormProps = {}) {
     <div data-testid="outbound-page" className="w-full max-w-[640px] mx-auto space-y-5">
       <PageHeader
         title="Barang Keluar"
-        subtitle="Kurangi stok — pilih SKU, isi jumlah, penerima dan catatan. FEFO: batch kadaluarsa terdekat keluar dulu otomatis."
+        subtitle="Kurangi stok — pilih SKU, isi jumlah, penerima dan catatan. Keluar tercepat: batch kadaluarsa terdekat keluar dulu otomatis."
         icon={<ShoppingBag width={18} height={18} />}
       />
 
@@ -227,23 +165,23 @@ export function OutboundForm({ skuId: initialSkuId }: OutboundFormProps = {}) {
             )}
             {skuId && (
               <p data-testid="outbound-stok-info" className="text-xs text-[#595959] mt-1.5">
-                Stok total: {stokTotal} pcs • Stok siap FEFO: {stokAvailablePreview} pcs
+                Stok total: {stokTotal} pcs • Stok siap Keluar tercepat: {stokAvailablePreview} pcs
                 {stokExpiring > 0 ? ` (expiry) • ${stokExpiring} expiring` : " (non-perishable)"}
               </p>
             )}
           </div>
 
-          {/* Preview batch FEFO order kecil */}
+          {/* Preview batch Keluar tercepat order kecil */}
           {batches.length > 0 && skuId && (
             <div data-testid="outbound-fefo-preview" className="rounded-xl bg-[#F5F5F0] border border-base-300/40 p-3">
-              <p className="text-xs font-semibold text-neutral uppercase tracking-wide">Urutan FEFO (keluar terdekat dulu)</p>
+              <p className="text-xs font-semibold text-neutral uppercase tracking-wide">Urutan Keluar tercepat (keluar terdekat dulu)</p>
               <ul className="mt-2 flex flex-col gap-1.5">
                 {batches.slice(0, 3).map((b) => (
                   <li key={b.id} data-testid={`fefo-row-${b.id}`} className="text-xs text-[#595959] flex justify-between gap-2">
                     <span>
                       exp {b.expiry_date ?? "Tanpa kadaluarsa"} • {b.qty} pcs
                     </span>
-                    <span className="font-medium">Rp{b.hpp_snapshot.toLocaleString("id-ID")}</span>
+                    <span className="font-medium">Rp{b.modal_snapshot.toLocaleString("id-ID")}</span>
                   </li>
                 ))}
                 {batches.length > 3 && <li className="text-xs text-[#595959]">+{batches.length - 3} batch lagi</li>}

@@ -12,7 +12,7 @@ export async function approvePromo(repo: InventoryRepository, promoId: string, n
   if (batch.qty <= 0) throw new Error('Stok habis, tidak bisa approve tebus murah');
   const sku = await repo.getSku(batch.sku_id);
   if (!sku) throw new Error('SKU tidak ditemukan');
-  const hpp = batch.hpp_snapshot;
+  const hpp = batch.modal_snapshot;
   const hargaTebus = promo.harga_tebus;
   const guard = validatePromoUsul('tebus', { hpp, harga_tebus: hargaTebus, harga_normal: sku.harga_normal });
   if (!guard.valid) throw new Error(guard.error ?? 'Harga tebus tidak valid');

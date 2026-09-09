@@ -1,7 +1,7 @@
 import type { AdvisorPort } from './AdvisorPort';
 import type { AdvisorSuggestion, Batch, SKU } from '../db/types';
 import type { InventoryRepository } from '../db/repository';
-import { daysToExpiry, urgencyScore } from '../engine/expiry';
+import { daysToExpiry, peringkat } from '../engine/expiry';
 import { findTopPairing, buildCooccurrenceMap } from './pairing';
 import { validateHargaTebus, validatePromoUsul, type PromoJenis } from '../lib/validation';
 
@@ -72,7 +72,7 @@ export class LangChainGeminiAdvisor implements AdvisorPort {
     const sku = await this.repo.getSku(batch.sku_id);
     if (!sku) return null;
 
-    const hpp = batch.hpp_snapshot;
+    const hpp = batch.modal_snapshot;
     const hargaNormal = sku.harga_normal;
 
     // guardrail: HPP must be >0
@@ -198,7 +198,7 @@ export class LangChainGeminiAdvisor implements AdvisorPort {
     if (batch.expiry_date === null) return null;
     const sku = await this.repo.getSku(batch.sku_id);
     if (!sku) return null;
-    const hpp = batch.hpp_snapshot;
+    const hpp = batch.modal_snapshot;
     const hargaNormal = extra?.harga_normal_override ?? sku.harga_normal;
     if (!Number.isFinite(hpp) || hpp <= 0) throw new Error('HPP harus lebih dari 0');
     const days = daysToExpiry(batch.expiry_date, this.now());
@@ -300,7 +300,7 @@ export class LangChainGeminiAdvisor implements AdvisorPort {
       const days = daysToExpiry(b.expiry_date, this.now());
       if (days === null) continue;
       const avg = avgMap.get(b.sku_id) ?? 1;
-      const score = urgencyScore(b.qty, days, avg);
+      const score = peringkat(b.qty, days, avg);
       scored.push({ batch: b, days, score });
     }
     scored.sort((a, b) => a.score - b.score);

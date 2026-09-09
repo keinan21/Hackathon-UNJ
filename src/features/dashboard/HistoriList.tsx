@@ -28,6 +28,14 @@ export function HistoriList({ onSelect, limit = 5, historiOverride }: HistoriLis
     return [];
   });
   const [loading, setLoading] = useState(!historiOverride);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  useEffect(() => {
+    if (historiOverride) return;
+    const onCreated = () => setReloadToken((t) => t + 1);
+    window.addEventListener("promo-created", onCreated as EventListener);
+    return () => window.removeEventListener("promo-created", onCreated as EventListener);
+  }, [historiOverride]);
 
   useEffect(() => {
     if (historiOverride) return;
@@ -88,18 +96,17 @@ export function HistoriList({ onSelect, limit = 5, historiOverride }: HistoriLis
     return () => {
       cancelled = true;
     };
-  }, [limit, historiOverride]);
+  }, [limit, historiOverride, reloadToken]);
 
   if (loading) {
     return (
-      <section className="w-full max-w-[480px] mx-auto px-4" aria-labelledby="histori-heading" data-testid="section-histori">
-        <h2 id="histori-heading" className="text-[20px] font-bold text-[#1A1A1A] mb-3" style={{ fontSize: "20px" }}>
+      <section className="w-full" aria-labelledby="histori-heading" data-testid="section-histori">
+        <h2 id="histori-heading" className="text-lg font-bold mb-3">
           Histori Saran
         </h2>
-        <div className="bg-white border border-[#D9D9D9] rounded-[12px] p-6 text-center" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-          <p className="text-base text-[#595959]" style={{ fontSize: "16px" }}>
-            Memuat histori...
-          </p>
+        <div className="flex flex-col gap-3" aria-hidden="true">
+          <div className="skeleton h-24 w-full" />
+          <div className="skeleton h-24 w-full" />
         </div>
       </section>
     );
@@ -107,38 +114,40 @@ export function HistoriList({ onSelect, limit = 5, historiOverride }: HistoriLis
 
   if (histori.length === 0) {
     return (
-      <section className="w-full max-w-[480px] mx-auto px-4" aria-labelledby="histori-heading" data-testid="section-histori">
-        <h2 id="histori-heading" className="text-[20px] font-bold text-[#1A1A1A] mb-3" style={{ fontSize: "20px" }}>
+      <section className="w-full" aria-labelledby="histori-heading" data-testid="section-histori">
+        <h2 id="histori-heading" className="text-lg font-bold mb-3">
           Histori Saran
         </h2>
         <div
           role="status"
-          aria-live="polite"
-          className="bg-white border border-[#D9D9D9] rounded-[12px] p-6 text-center flex flex-col items-center gap-3"
-          style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+          className="card card-border bg-base-100"
           data-testid="histori-empty"
         >
-          <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" className="shrink-0">
-            <circle cx="24" cy="24" r="16" fill="none" stroke="#D9D9D9" strokeWidth="2" />
-            <path d="M24 14 L24 24 L32 28" fill="none" stroke="#595959" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <p className="text-base text-[#595959]" style={{ fontSize: "16px" }}>
-            Belum ada histori saran. Buat promo dulu.
-          </p>
+          <div className="card-body items-center text-center">
+            <div className="bg-base-200 text-base-content/70 flex h-14 w-14 items-center justify-center rounded-field">
+              <Clock width={26} height={26} aria-hidden="true" />
+            </div>
+            <p className="text-base font-semibold">Belum ada saran tersimpan</p>
+            <p className="text-base text-base-content/70 leading-relaxed">
+              Saran baru muncul tiap jam 7 pagi, atau saat ada stok yang mepet.
+            </p>
+          </div>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="w-full max-w-[480px] mx-auto px-4" aria-labelledby="histori-heading" data-testid="section-histori">
-      <h2 id="histori-heading" className="text-[20px] font-bold text-[#1A1A1A] mb-3" style={{ fontSize: "20px" }}>
-        Histori Saran
-      </h2>
-      <p className="text-sm text-[#595959] mb-2" style={{ fontSize: "12px" }}>
-        Menampilkan {histori.length} terbaru dari {histori.length} saran
-      </p>
-      <ul className="space-y-3" aria-label="Daftar histori saran">
+    <section className="w-full" aria-labelledby="histori-heading" data-testid="section-histori">
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <h2 id="histori-heading" className="text-lg font-bold">
+          Histori Saran
+        </h2>
+        <span className="text-sm text-base-content/70 shrink-0">
+          {histori.length} terakhir
+        </span>
+      </div>
+      <ul className="grid grid-cols-1 md:grid-cols-2 gap-3" aria-label="Daftar histori saran">
         {histori.map((h) => (
           <li
             key={h.id}
@@ -152,8 +161,7 @@ export function HistoriList({ onSelect, limit = 5, historiOverride }: HistoriLis
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }
             }}
-            className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 cursor-pointer hover:border-[#0F7A4A] transition-colors"
-            style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+            className="card card-border bg-base-100 cursor-pointer hover:border-primary transition-colors"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -164,30 +172,25 @@ export function HistoriList({ onSelect, limit = 5, historiOverride }: HistoriLis
             }}
             aria-label={`${h.aksi} pasangan ${h.pasangan}`}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-[#1A1A1A] leading-snug" style={{ fontSize: "16px" }}>
-                  {h.aksi}
-                </p>
-                <p className="text-sm text-[#595959] mt-1 line-clamp-2" style={{ fontSize: "14px" }}>
-                  {h.alasan}
-                </p>
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  <span
-                    className="inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-1 rounded-full"
-                    style={{ backgroundColor: "#E8F5E9", color: "#0F7A4A", fontSize: "12px", border: "1px solid #0F7A4A" }}
-                  >
-                    <Shop width={12} height={12} aria-hidden="true" /> {h.pasangan}
-                  </span>
-                  <span className="text-[12px] text-[#595959] inline-flex items-center gap-1" style={{ fontSize: "12px" }}>
-                    <Clock width={14} height={14} aria-hidden="true" />{" "}
-                    {new Date(h.created_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
-                  </span>
-                </div>
-                <p className="text-[12px] font-semibold mt-1" style={{ fontSize: "12px", color: "#0F7A4A" }}>
-                  Rp{h.harga_tebus.toLocaleString("id-ID")} • floor Rp{h.harga_floor.toLocaleString("id-ID")}
-                </p>
+            <div className="card-body gap-2 p-4">
+              <p className="card-title text-base leading-snug">
+                {h.aksi}
+              </p>
+              <p className="text-sm text-base-content/70 line-clamp-2 leading-relaxed">
+                {h.alasan}
+              </p>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span className="badge badge-soft badge-success badge-sm gap-1">
+                  <Shop width={12} height={12} aria-hidden="true" /> {h.pasangan}
+                </span>
+                <span className="text-xs text-base-content/70 inline-flex items-center gap-1">
+                  <Clock width={14} height={14} aria-hidden="true" />{" "}
+                  {new Date(h.created_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+                </span>
               </div>
+              <p className="text-sm font-semibold text-success">
+                Rp{h.harga_tebus.toLocaleString("id-ID")}
+              </p>
             </div>
           </li>
         ))}

@@ -19,7 +19,7 @@ describe('Tebus Murah template manual + AI assist flow (proposed)', () => {
     await repo.createSku(sku);
     const skuRoti: SKU = { id: 'sku-roti', nama: 'Roti Tawar', kategori_id: 'kat-dairy', hpp: 8000, harga_normal: 12000, org_id: org };
     await repo.createSku(skuRoti);
-    const batch: Batch = { id: 'batch-1', sku_id: 'sku-susu', qty: 10, expiry_date: '2026-09-05', received_at: '2026-08-30T07:00:00.000Z', hpp_snapshot: 10000, org_id: org };
+    const batch: Batch = { id: 'batch-1', sku_id: 'sku-susu', qty: 10, expiry_date: '2026-09-05', received_at: '2026-08-30T07:00:00.000Z', modal_snapshot: 10000, org_id: org };
     await repo.createBatch(batch);
     service = new PromoService(repo);
   });

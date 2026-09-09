@@ -141,7 +141,7 @@ export async function updateSKU(
 export async function createKategori(
   data: Omit<Kategori, "id" | "org_id"> & { org_id?: string }
 ): Promise<Kategori> {
-  // Validasi nama sama dengan db.ts; threshold default [7,3,1] editable via updateKategoriThreshold
+  // Validasi nama sama dengan db.ts; threshold default [7,3,1] editable via aturIngatanBasi
   return defaultRepo.createKategori(data);
 }
 
@@ -149,11 +149,11 @@ export async function listKategoris(org_id?: string): Promise<Kategori[]> {
   return defaultRepo.listKategoris(org_id ?? DEFAULT_ORG_ID);
 }
 
-export async function updateKategoriThreshold(
+export async function aturIngatanBasi(
   id: number,
   threshold_h_minus: number[]
 ): Promise<Kategori> {
-  return defaultRepo.updateKategoriThreshold(id, threshold_h_minus);
+  return defaultRepo.aturIngatanBasi(id, threshold_h_minus);
 }
 
 // Re-export untuk konsumen & test

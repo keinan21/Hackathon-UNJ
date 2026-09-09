@@ -1,5 +1,5 @@
 /**
- * TASK-29 — ChartArus: bar ganda masuk/keluar 14 hari + garis BEP amber
+ * TASK-29 — ChartArus: bar ganda masuk/keluar 14 hari + garis Balik Modal amber
  *
  * Lazy-safe: registrasi Chart.js dilakukan di dalam komponen/effect-like top-level
  * guard (bukan annotation plugin). Props murni dari DB (bukan LLM).
@@ -7,7 +7,7 @@
  * Warna:
  *  - masuk  #16a34a (hijau)
  *  - keluar #dc2626 (merah)
- *  - BEP    #F59E0B (amber, BEDA dari hijau)
+ *  - Balik Modal    #F59E0B (amber, BEDA dari hijau)
  */
 
 import { useMemo } from "react";
@@ -64,7 +64,7 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
 
   const labels = days.map(formatDayLabelDDMM);
 
-  // Kumulatif margin + BEP index
+  // Kumulatif margin + Balik Modal index
   const kumulatif: number[] = [];
   let cum = 0;
   for (let i = 0; i < marginPerDay.length; i++) {
@@ -79,13 +79,13 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
     }
   }
 
-  // Dataset garis BEP: nilai kumulatif (agar garis terlihat), titik besar hanya di bepIndex
+  // Dataset garis Balik Modal: nilai kumulatif (agar garis terlihat), titik besar hanya di bepIndex
   // Untuk visual yang jelas, garis amber menelusuri kumulatif margin (skala kedua jika perlu)
   // Sederhana: pakai sumbu-y yang sama qty — tapi kumulatif margin angka besar, jadi kita
-  // normalisasi? Spec: garis/marker BEP amber (nilai kumulatif). Praktik terbaik: garis di sumbu kedua
+  // normalisasi? Spec: garis/marker Balik Modal amber (nilai kumulatif). Praktik terbaik: garis di sumbu kedua
   // atau overlay. Simplest: garis kumulatif pada yAxisId bep, hidden scale.
-  // Agar bar tetap terbaca, BEP dataset pakai yAxisID 'yBep' terpisah.
-  const bepLabel = bepIndex !== null ? `BEP tercapai H+${bepIndex + 1}` : "Belum BEP";
+  // Agar bar tetap terbaca, Balik Modal dataset pakai yAxisID 'yBep' terpisah.
+  const bepLabel = bepIndex !== null ? `Balik Modal tercapai H+${bepIndex + 1}` : "Belum Balik Modal";
 
   // radii: hanya bepIndex titik besar, lainnya 0 (garis tetap span)
   const pointRadius = marginPerDay.map((_, i) => (i === bepIndex ? 7 : 0));
@@ -115,7 +115,7 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
       },
       {
         type: "line" as const,
-        label: "Kumulatif margin (BEP)",
+        label: "Kumulatif margin (Balik Modal)",
         data: kumulatif,
         borderColor: "#F59E0B",
         backgroundColor: "#F59E0B",
@@ -168,8 +168,8 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
           footer: (items: TooltipItem<"bar" | "line">[]) => {
             const idx = items[0]?.dataIndex;
             if (idx === undefined) return "";
-            if (bepIndex !== null && idx === bepIndex) return "\u25B2 BEP tercapai di hari ini";
-            if (bepIndex !== null && idx > bepIndex) return "Sudah BEP";
+            if (bepIndex !== null && idx === bepIndex) return "\u25B2 Balik Modal tercapai di hari ini";
+            if (bepIndex !== null && idx > bepIndex) return "Sudah Balik Modal";
             return "";
           },
         },
@@ -215,7 +215,7 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
         <Chart type="bar" data={data} options={options} data-testid="chart-arus-canvas" />
       </div>
 
-      {/* Legenda tambahan visual + BEP label amber jelas */}
+      {/* Legenda tambahan visual + Balik Modal label amber jelas */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 10, fontSize: 12, color: "#595959" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 12, height: 12, background: "#16a34a", display: "inline-block", borderRadius: 2 }} /> Masuk
@@ -235,7 +235,7 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
               boxShadow: "0 0 0 1px #F59E0B",
             }}
           />{" "}
-          BEP (amber)
+          Balik Modal (amber)
         </span>
       </div>
 
@@ -244,10 +244,10 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
           data-testid="chart-bep-label"
           style={{ fontSize: 14, color: "#F59E0B", fontWeight: 700, marginTop: 8 }}
         >
-          BEP tercapai H+{bepIndex + 1}
+          Balik Modal tercapai H+{bepIndex + 1}
           <span
             data-testid="bep-marker"
-            aria-label="BEP marker"
+            aria-label="Balik Modal marker"
             style={{
               display: "inline-block",
               width: 12,
@@ -263,13 +263,13 @@ export function ChartArus({ masukPerDay, keluarPerDay, marginPerDay, days }: Cha
         </p>
       ) : (
         <p data-testid="chart-bep-label" style={{ fontSize: 14, color: "#595959", marginTop: 8 }}>
-          Belum BEP
+          Belum Balik Modal
         </p>
       )}
 
       {/* Hidden debug text for e2e tooltip assertion fallback */}
       <span data-testid="chart-arus-legend-text" style={{ position: "absolute", left: -9999, top: "auto" }}>
-        Masuk Keluar Kumulatif margin (BEP) BEP tercapai H
+        Masuk Keluar Kumulatif margin (Balik Modal) Balik Modal tercapai H
       </span>
     </div>
   );

@@ -22,7 +22,7 @@ export interface Batch {
   qty: number;
   expiry_date: string | null; // ISO date string, null = non-perishable skip engine
   received_at: string; // ISO
-  hpp_snapshot: number;
+  modal_snapshot: number;
   org_id: string;
 }
 

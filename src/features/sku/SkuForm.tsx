@@ -39,6 +39,7 @@ export function SkuForm() {
   const [warningHarga, setWarningHarga] = useState<string>("");
   const [toast, setToast] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [rugiInfo, setRugiInfo] = useState<{ hpp: number; harga: number; rugi: number } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -107,7 +108,15 @@ export function SkuForm() {
       setError("Harga jual tidak valid");
       return;
     }
+    if (hargaNum < hppNum) {
+      setRugiInfo({ hpp: hppNum, harga: hargaNum, rugi: hppNum - hargaNum });
+      return;
+    }
 
+    await doSave(hppNum, hargaNum);
+  };
+
+  const doSave = async (hppNum: number, hargaNum: number) => {
     const barcodeTrim = barcode.trim();
     if (barcodeTrim) {
       try {
@@ -329,6 +338,46 @@ export function SkuForm() {
             <CheckCircle width={16} height={16} className="shrink-0" />
             {toast}
           </p>
+        )}
+
+        {rugiInfo && (
+          <div
+            data-testid="confirm-rugi-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Konfirmasi harga di bawah modal"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4"
+            onClick={() => setRugiInfo(null)}
+          >
+            <div
+              className="card bg-base-100 rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base font-bold">Yakin jual rugi?</h3>
+              <p data-testid="confirm-rugi-text" className="text-base leading-relaxed">
+                Harga di bawah modal Rp{rugiInfo.hpp.toLocaleString("id-ID")} — rugi Rp
+                {rugiInfo.rugi.toLocaleString("id-ID")} per pcs. Yakin simpan?
+              </p>
+              <div className="flex flex-col gap-2">
+                <AppButton
+                  type="button"
+                  data-testid="btn-rugi-yakin"
+                  onClick={async () => {
+                    const hppNum = Number(hpp);
+                    const hargaNum = Number(hargaJual);
+                    setRugiInfo(null);
+                    await doSave(hppNum, hargaNum);
+                  }}
+                  fullWidth
+                >
+                  Yakin Simpan
+                </AppButton>
+                <AppButton type="button" variant="outline" data-testid="btn-rugi-batal" onClick={() => setRugiInfo(null)} fullWidth>
+                  Batal
+                </AppButton>
+              </div>
+            </div>
+          </div>
         )}
 
         <AppButton type="submit" data-testid="btn-simpan-sku" disabled={submitting} loading={submitting} fullWidth className="rounded-xl mt-2">

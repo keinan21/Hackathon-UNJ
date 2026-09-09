@@ -96,19 +96,19 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
       sku_id: sku.id!,
       qty: 10,
       expiry_date: "2026-09-05",
-      hpp_snapshot: 12000,
+      modal_snapshot: 12000,
     });
     await repo.createBatch({
       sku_id: sku.id!,
       qty: 5,
       expiry_date: "2026-09-12",
-      hpp_snapshot: 12000,
+      modal_snapshot: 12000,
     });
     await repo.createBatch({
       sku_id: sku.id!,
       qty: 20,
       expiry_date: null,
-      hpp_snapshot: 12000,
+      modal_snapshot: 12000,
     });
 
     const due = await getDueNotifications(repo, mockToday);
@@ -120,17 +120,17 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
     expect(due[0].kategori.nama).toBe("Makanan Basah");
     expect(due[0].daysToExpiry).toBe(3);
     // urgency = qty*days / max(avg,1) — avg fallback 1 (5 distinct <14 → 1) → 10*3/1=30. Jika avg dihitung 2 tanpa fallback tetap finite
-    expect(due[0].urgencyScore).toBeGreaterThan(0);
-    expect(Number.isFinite(due[0].urgencyScore)).toBe(true);
+    expect(due[0].peringkat).toBeGreaterThan(0);
+    expect(Number.isFinite(due[0].peringkat)).toBe(true);
     // Jika fallback 1, 30; jika pure avg 2, 15 — keduanya valid, cek salah satu
-    expect([15, 30]).toContain(due[0].urgencyScore);
+    expect([15, 30]).toContain(due[0].peringkat);
   });
 
   test("batch H-10 not trigger, expiry null not trigger (isolasi per kategori)", async () => {
     await seedDefaultKategoris(repo);
     const dairy = (await repo.listKategoris()).find((k) => k.nama === "Makanan Basah")!;
     const snack = (await repo.listKategoris()).find((k) => k.nama === "Makanan Kering")!;
-    await repo.updateKategoriThreshold(snack.id!, [7, 3, 1]);
+    await repo.aturIngatanBasi(snack.id!, [7, 3, 1]);
 
     const skuDairy = await repo.createSKU({
       nama: "Yoghurt Cup 100ml",
@@ -148,11 +148,11 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
     const mockToday = jakartaDate("2026-09-02");
 
     // Dairy H-10 → not trigger (10 not in [7,3,1])
-    await repo.createBatch({ sku_id: skuDairy.id!, qty: 8, expiry_date: "2026-09-12", hpp_snapshot: 8000 });
+    await repo.createBatch({ sku_id: skuDairy.id!, qty: 8, expiry_date: "2026-09-12", modal_snapshot: 8000 });
     // Snack H-3 → trigger (3 in [7,3,1])
-    await repo.createBatch({ sku_id: skuSnack.id!, qty: 6, expiry_date: "2026-09-05", hpp_snapshot: 5000 });
+    await repo.createBatch({ sku_id: skuSnack.id!, qty: 6, expiry_date: "2026-09-05", modal_snapshot: 5000 });
     // Snack expiry null → not trigger
-    await repo.createBatch({ sku_id: skuSnack.id!, qty: 10, expiry_date: null, hpp_snapshot: 5000 });
+    await repo.createBatch({ sku_id: skuSnack.id!, qty: 10, expiry_date: null, modal_snapshot: 5000 });
 
     const due = await getDueNotifications(repo, mockToday);
     expect(due).toHaveLength(1);
@@ -175,8 +175,8 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
     });
 
     const mockToday = jakartaDate("2026-09-02");
-    await repo.createBatch({ sku_id: sku.id!, qty: 20, expiry_date: null, hpp_snapshot: 60000 });
-    await repo.createBatch({ sku_id: sku.id!, qty: 15, expiry_date: null, hpp_snapshot: 60000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 20, expiry_date: null, modal_snapshot: 60000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 15, expiry_date: null, modal_snapshot: 60000 });
 
     const due = await getDueNotifications(repo, mockToday);
     expect(due).toHaveLength(0);
@@ -195,7 +195,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
       hpp: 12000,
       harga_normal: 15000,
     });
-    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-05", hpp_snapshot: 12000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-05", modal_snapshot: 12000 });
 
     const mockToday = jakartaDate("2026-09-02");
 
@@ -238,7 +238,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
       hpp: 12000,
       harga_normal: 15000,
     });
-    await repo.createBatch({ sku_id: sku.id!, qty: 7, expiry_date: "2026-09-03", hpp_snapshot: 12000 }); // H-1 triggers
+    await repo.createBatch({ sku_id: sku.id!, qty: 7, expiry_date: "2026-09-03", modal_snapshot: 12000 }); // H-1 triggers
 
     const mockToday = jakartaDate("2026-09-02");
     const due = await getDueNotifications(repo, mockToday);
@@ -270,7 +270,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
       hpp: 10000,
       harga_normal: 15000,
     });
-    await repo.createBatch({ sku_id: sku.id!, qty: 4, expiry_date: "2026-09-09", hpp_snapshot: 10000 }); // H-7 triggers
+    await repo.createBatch({ sku_id: sku.id!, qty: 4, expiry_date: "2026-09-09", modal_snapshot: 10000 }); // H-7 triggers
 
     const mockToday = jakartaDate("2026-09-02");
     const due = await getDueNotifications(repo, mockToday);
@@ -296,7 +296,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
       hpp: 10000,
       harga_normal: 15000,
     });
-    await repo.createBatch({ sku_id: sku.id!, qty: 3, expiry_date: "2026-09-05", hpp_snapshot: 10000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 3, expiry_date: "2026-09-05", modal_snapshot: 10000 });
 
     const mockToday = jakartaDate("2026-09-02");
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
@@ -339,11 +339,11 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
 
     const mockToday = jakartaDate("2026-09-02");
     // Dairy H-14 (2026-09-16) → trigger karena Dairy threshold [14,7,3] includes 14
-    await repo.createBatch({ sku_id: skuDairy.id!, qty: 5, expiry_date: "2026-09-16", hpp_snapshot: 10000 });
+    await repo.createBatch({ sku_id: skuDairy.id!, qty: 5, expiry_date: "2026-09-16", modal_snapshot: 10000 });
     // Snack H-14 → NOT trigger karena Snack threshold [7,3,1] tidak includes 14 (14>7)
-    await repo.createBatch({ sku_id: skuSnack.id!, qty: 5, expiry_date: "2026-09-16", hpp_snapshot: 5000 });
+    await repo.createBatch({ sku_id: skuSnack.id!, qty: 5, expiry_date: "2026-09-16", modal_snapshot: 5000 });
     // Snack H-7 → trigger
-    await repo.createBatch({ sku_id: skuSnack.id!, qty: 5, expiry_date: "2026-09-09", hpp_snapshot: 5000 });
+    await repo.createBatch({ sku_id: skuSnack.id!, qty: 5, expiry_date: "2026-09-09", modal_snapshot: 5000 });
 
     const due = await getDueNotifications(repo, mockToday);
     // Dairy H-14 + Snack H-7 = 2, Snack H-14 terfilter
@@ -352,7 +352,7 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
     expect(due.map((d) => d.sku.nama).sort()).toEqual(["Snack Custom", "Susu Dairy Custom"].sort());
   });
 
-  test("urgencyScore dihitung qty*days/max(avg,1) — mock avg fallback 1", async () => {
+  test("peringkat dihitung qty*days/max(avg,1) — mock avg fallback 1", async () => {
     await seedDefaultKategoris(repo);
     const dairy = (await repo.listKategoris()).find((k) => k.nama === "Makanan Basah")!;
     const sku = await repo.createSKU({
@@ -363,15 +363,15 @@ describe("notifScheduler — TASK-10 [FRD-03] daily 07:00 + threshold per katego
     });
 
     // Tidak buat transaksi → avg fallback 1 → urgency 10*3/1=30
-    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-05", hpp_snapshot: 12000 });
+    await repo.createBatch({ sku_id: sku.id!, qty: 10, expiry_date: "2026-09-05", modal_snapshot: 12000 });
     const mockToday = jakartaDate("2026-09-02");
     const due = await getDueNotifications(repo, mockToday);
-    expect(due[0].urgencyScore).toBe(30); // 10*3 /1
+    expect(due[0].peringkat).toBe(30); // 10*3 /1
 
     // Tambah transaksi 14 hari full → avg akan hitung pure? Tapi scheduler pakai fallback 1 jika distinct<14, jadi tetap 1
     // Untuk test ini kita cek max(avg,1) guard: jika avg 0 tetap 1
     // Sudah di-cover via expiry.test, tapi pastikan scheduler tidak Infinity
-    expect(Number.isFinite(due[0].urgencyScore)).toBe(true);
-    expect(due[0].urgencyScore).not.toBe(Infinity);
+    expect(Number.isFinite(due[0].peringkat)).toBe(true);
+    expect(due[0].peringkat).not.toBe(Infinity);
   });
 });

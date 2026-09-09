@@ -3,7 +3,7 @@
  *
  * Generic threshold [7,3,1] adalah default truth (FRD-02, CONTEXT.md:10-11).
  * Seed 3 kategori Dairy/Snack/Beras dengan nilai tersebut.
- * Editable via InventoryRepository.updateKategoriThreshold — validasi
+ * Editable via InventoryRepository.aturIngatanBasi — validasi
  * non-empty, descending, >0, no dup — MUST NOT hardcode non-editable.
  *
  * Idempotent: cek listKategoris dulu, jika nama sudah ada skip.

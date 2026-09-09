@@ -6,9 +6,9 @@
  * - arsip {sku_id, hpp_lama, hpp_baru, created_at} ke hpp_history
  * - timpa sku.hpp = harga_beli
  * - return {warning?: "Harga normal di bawah HPP baru"} jika harga_normal < harga_beli
- * - guardrail promo (validateHargaTebus) TETAP pakai hpp_snapshot per batch — jangan ubah validation.ts
+ * - guardrail promo (validateHargaTebus) TETAP pakai modal_snapshot per batch — jangan ubah validation.ts
  * - helper dipanggil dari createBatch saat harga_beli diisi;
- *   jika batch tanpa harga_beli → hpp_snapshot = sku.hpp lama, tidak timpa
+ *   jika batch tanpa harga_beli → modal_snapshot = sku.hpp lama, tidak timpa
  *
  * Local-first: akses via Dexie InventoryDB, org_id default toko-01 sync-ready sharding.
  */

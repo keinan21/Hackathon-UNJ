@@ -582,6 +582,7 @@ Tabel ini jadi bukti bahwa tugas utama selesai dalam maksimal tiga tap. QA wajib
 | Tugas | Tap 1 | Tap 2 | Tap 3 | Total | Lolos 3-tap |
 |-------|-------|-------|-------|-------|-------------|
 | Lihat stok mepet | Buka PWA (0) | Scroll lihat Stok Mepet sudah di atas | - | 0 tap navigasi | Ya |
+| Hub navigasi cepat | Buka PWA (0) | Tap tombol hub Masuk/Kasir/SKU/Statistik | Isi form / lihat list tujuan | 1 | Ya |
 | Buat dan setujui tebus murah dari Dashboard | Tap kartu Batch urgent | Tap Buat Tebus Murah | Tap Setujui Tebus Murah 48px | 3 | Ya |
 | Setujui promo yang sudah proposed | Tap kartu Diulas | Tap Setujui 48px | - | 2 | Ya |
 | Tambah Batch baru | Tap Tambah Batch | Isi qty dan tanggal | Tap Simpan Batch | 3 plus isi | Ya wajar untuk form |

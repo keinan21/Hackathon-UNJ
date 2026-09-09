@@ -3,7 +3,7 @@ import { realRepo, dexieV2 } from "../../db/dexieRepository";
 import type { SKU, Kategori, Batch, Tag } from "../../db/types";
 import { daysToExpiry } from "../../engine/expiry";
 import { PageHeader, EmptyState, AppButton, BadgeKritis } from "../../components/ui";
-import { Package, Search, Plus, WarningCircle } from "iconoir-react";
+import { Package, Search, Plus, WarningCircle, ArrowRight } from "iconoir-react";
 
 type BatchMap = Record<string, Batch[]>;
 type SkuTagsMap = Record<string, Tag[]>;
@@ -43,7 +43,6 @@ export function KatalogPage() {
   const debouncedSearch = useDebouncedValue(searchRaw, 300);
   const [selectedKategori, setSelectedKategori] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [expandedSku, setExpandedSku] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,6 +88,16 @@ export function KatalogPage() {
 
   const handleTambahSku = () => {
     window.history.pushState({}, "", "/sku/baru");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
+  const goBarangMasuk = () => {
+    window.history.pushState({}, "", "/masuk");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
+  const goSkuDetail = (skuId: string) => {
+    window.history.pushState({}, "", `/sku/${skuId}`);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
@@ -143,7 +152,7 @@ export function KatalogPage() {
 
   if (loading) {
     return (
-      <div data-testid="katalog-page" className="w-full max-w-[720px] mx-auto">
+      <div data-testid="katalog-page" className="w-full max-w-5xl">
         <p className="text-base text-[#595959] text-[16px]" role="status">
           Memuat katalog...
         </p>
@@ -161,13 +170,23 @@ export function KatalogPage() {
         subtitle="Cari, filter, dan kelola barang — semua stok di satu tempat."
         icon={<Package width={18} height={18} />}
         action={
-          <AppButton
-            onClick={handleTambahSku}
-            data-testid="btn-tambah-sku"
-            className="gap-1.5 rounded-xl"
-          >
-            <Plus width={16} height={16} /> Tambah SKU
-          </AppButton>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <AppButton
+              variant="outline"
+              onClick={goBarangMasuk}
+              data-testid="btn-barang-masuk"
+              className="rounded-xl"
+            >
+              Barang Masuk
+            </AppButton>
+            <AppButton
+              onClick={handleTambahSku}
+              data-testid="btn-tambah-sku"
+              className="gap-1.5 rounded-xl"
+            >
+              <Plus width={16} height={16} /> Tambah SKU
+            </AppButton>
+          </div>
         }
       />
 
@@ -187,67 +206,64 @@ export function KatalogPage() {
         />
       </div>
 
-      {/* Chips kategori + tag */}
-      <div data-testid="katalog-chips" className="flex flex-wrap gap-2" role="group" aria-label="Filter kategori dan tag">
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedKategori(null);
+      {/* Filter — dropdown kategori + tag, ringkas di HP maupun desktop */}
+      <div data-testid="katalog-filter" className="flex flex-col sm:flex-row gap-2" role="group" aria-label="Filter kategori dan tag">
+        <label className="sr-only" htmlFor="filter-kategori">
+          Filter kategori
+        </label>
+        <select
+          id="filter-kategori"
+          data-testid="filter-kategori"
+          aria-label="Filter kategori"
+          value={selectedKategori ?? ""}
+          onChange={(e) => {
+            setSelectedKategori(e.target.value === "" ? null : e.target.value);
             setSelectedTag(null);
           }}
-          data-testid="chip-semua"
-          aria-pressed={selectedKategori === null && selectedTag === null ? "true" : "false"}
-          className={[
-            "badge min-h-[48px] px-4 rounded-full border text-[16px] font-medium transition-colors",
-            selectedKategori === null && selectedTag === null
-              ? "bg-[#0F7A4A] text-white border-[#0F7A4A]"
-              : "bg-base-100 text-neutral border-base-300 hover:bg-base-200",
-          ].join(" ")}
+          className="select select-bordered min-h-12 text-base font-medium w-full sm:max-w-60"
         >
-          Semua
-        </button>
-        {dedupedKategoris.map((k) => (
+          <option value="">Semua kategori</option>
+          {dedupedKategoris.map((k) => (
+            <option key={k.id} value={k.id}>
+              {k.nama}
+            </option>
+          ))}
+        </select>
+        <label className="sr-only" htmlFor="filter-tag">
+          Filter tag
+        </label>
+        <select
+          id="filter-tag"
+          data-testid="filter-tag"
+          aria-label="Filter tag"
+          value={selectedTag ?? ""}
+          onChange={(e) => {
+            setSelectedTag(e.target.value === "" ? null : e.target.value);
+            setSelectedKategori(null);
+          }}
+          className="select select-bordered min-h-12 text-base font-medium w-full sm:max-w-60"
+        >
+          <option value="">Semua tag</option>
+          {tags.map((t) => (
+            <option key={t.id} value={t.id}>
+              #{t.nama}
+            </option>
+          ))}
+        </select>
+        {selectedKategori !== null || selectedTag !== null ? (
           <button
-            key={k.id}
             type="button"
+            data-testid="filter-reset"
+            aria-label="Tampilkan semua"
             onClick={() => {
-              setSelectedKategori((prev) => (prev === k.id ? null : k.id));
+              setSelectedKategori(null);
               setSelectedTag(null);
             }}
-            data-testid={`chip-kategori-${k.id}`}
-            aria-pressed={selectedKategori === k.id ? "true" : "false"}
-            aria-label={`Filter ${k.nama}`}
-            className={[
-              "badge min-h-[48px] px-4 rounded-full border text-[16px] font-medium transition-colors",
-              selectedKategori === k.id
-                ? "bg-[#0F7A4A] text-white border-[#0F7A4A]"
-                : "bg-base-100 text-neutral border-base-300 hover:bg-base-200",
-            ].join(" ")}
+            className="btn btn-ghost min-h-12 text-base font-semibold sm:w-auto"
           >
-            {k.nama}
+            Reset
           </button>
-        ))}
-        {tags.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => {
-              setSelectedTag((prev) => (prev === t.id ? null : t.id));
-              setSelectedKategori(null);
-            }}
-            data-testid={`chip-tag-${t.id}`}
-            aria-pressed={selectedTag === t.id ? "true" : "false"}
-            aria-label={`Filter tag ${t.nama}`}
-            className={[
-              "badge min-h-[48px] px-4 rounded-full border text-[16px] font-medium transition-colors",
-              selectedTag === t.id
-                ? "bg-[#0F7A4A] text-white border-[#0F7A4A]"
-                : "bg-[#FFF8E1] text-[#8D6E63] border-[#FFE082]/60 hover:bg-[#FFF3C4]",
-            ].join(" ")}
-          >
-            #{t.nama}
-          </button>
-        ))}
+        ) : null}
       </div>
 
       {/* List */}
@@ -278,44 +294,42 @@ export function KatalogPage() {
           <p className="text-sm text-[#595959] mt-1">Coba kata kunci lain atau tambah SKU baru.</p>
         </div>
       ) : (
-        <ul className="space-y-3" aria-label="Daftar SKU" data-testid="katalog-list">
+        <ul className="grid grid-cols-1 md:grid-cols-2 gap-3" aria-label="Daftar SKU" data-testid="katalog-list">
           {filtered.map((sku) => {
             const isKritis = isKritisForSku(sku);
-            const kritisDays = kritisDaysForSku(sku);
             const batches = batchesBySku[sku.id] ?? [];
             const tagsForSku = skuTagsMap[sku.id] ?? [];
-            const isExpanded = expandedSku === sku.id;
             const kategori = dedupedKategoris.find((k) => k.id === sku.kategori_id);
             return (
               <li
                 key={sku.id}
                 data-testid={`sku-card-${sku.id}`}
-                className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-4 hover:shadow-md transition-shadow"
+                className="card card-border bg-base-100 hover:border-primary transition-colors"
               >
                 <button
                   type="button"
-                  onClick={() => setExpandedSku((prev) => (prev === sku.id ? null : sku.id))}
-                  data-testid={`sku-expand-${sku.id}`}
-                  aria-expanded={isExpanded}
-                  className="w-full text-left"
+                  onClick={() => goSkuDetail(sku.id)}
+                  data-testid={`sku-open-${sku.id}`}
+                  aria-label={`Lihat detail ${sku.nama}`}
+                  className="w-full text-left p-4 min-h-12"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-xl bg-[#0F7A4A]/10 text-[#0F7A4A] flex items-center justify-center shrink-0">
+                        <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-field">
                           <Package width={16} height={16} />
                         </div>
-                        <p className="font-semibold text-neutral text-[16px] truncate">{sku.nama}</p>
+                        <p className="text-base font-semibold truncate">{sku.nama}</p>
                       </div>
-                      <p className="text-sm text-[#595959] mt-2 ml-1">
+                      <p className="text-sm text-base-content/70 mt-2 ml-1">
                         {sku.kode ?? "-"} {sku.barcode ? `• ${sku.barcode}` : ""} • {kategori?.nama ?? "-"}
                       </p>
                       {tagsForSku.length > 0 && (
-                        <p className="text-xs text-[#595959] mt-1 ml-1" data-testid={`sku-tags-${sku.id}`}>
+                        <p className="text-xs text-base-content/70 mt-1 ml-1" data-testid={`sku-tags-${sku.id}`}>
                           {tagsForSku.map((t) => `#${t.nama}`).join(" ")}
                         </p>
                       )}
-                      <p className="text-sm text-neutral mt-1.5 ml-1">
+                      <p className="text-sm mt-1.5 ml-1">
                         HPP Rp{sku.hpp.toLocaleString("id-ID")} • Harga Rp{sku.harga_normal.toLocaleString("id-ID")}
                       </p>
                     </div>
@@ -324,54 +338,27 @@ export function KatalogPage() {
                         <span
                           data-testid={`badge-kritis-${sku.id}`}
                           aria-label="Kritis - stok mepet kadaluarsa"
-                          className="badge gap-1 border-none font-bold rounded-full text-white"
-                          style={{ backgroundColor: "#C62828", fontSize: 12, padding: "2px 10px", height: 24 }}
+                          className="badge badge-sm badge-error gap-1 font-bold"
                         >
-                          <WarningCircle width={12} height={12} aria-hidden style={{ flexShrink: 0 }} />
-                          Kritis
+                          <WarningCircle width={12} height={12} aria-hidden /> Kritis
                         </span>
                       ) : null}
-                      <span className="text-xs text-[#595959] bg-base-200 rounded-full px-2.5 py-1 border border-base-300/50">
+                      {sku.harga_normal < sku.hpp ? (
+                        <span
+                          data-testid={`badge-rugi-${sku.id}`}
+                          aria-label="Harga jual di bawah modal"
+                          className="badge badge-sm badge-warning gap-1 font-bold"
+                        >
+                          Di bawah modal
+                        </span>
+                      ) : null}
+                      <span className="badge badge-soft badge-sm">
                         {batches.length} batch
                       </span>
+                      <ArrowRight width={18} height={18} aria-hidden="true" className="text-base-content/40" />
                     </div>
                   </div>
                 </button>
-
-                {isExpanded && (
-                  <div className="mt-3 border-t border-base-200 pt-3" data-testid={`batch-rows-${sku.id}`}>
-                    {batches.length === 0 ? (
-                      <p className="text-sm text-[#595959]">Belum ada batch untuk SKU ini.</p>
-                    ) : (
-                      <ul className="space-y-2" aria-label="Daftar batch">
-                        {batches.map((b) => {
-                          const days = b.expiry_date !== null ? daysToExpiry(b.expiry_date) : null;
-                          const maxThreshold = getMaxThreshold(kategori);
-                          const batchKritis = b.expiry_date !== null && days !== null && days <= maxThreshold;
-                          return (
-                            <li
-                              key={b.id}
-                              data-testid={`batch-row-${b.id}`}
-                              className={[
-                                "flex justify-between items-center text-sm rounded-xl px-3 py-2.5 border gap-2",
-                                batchKritis ? "bg-[#FFEBEE] border-[#FFCDD2]" : "bg-base-200/60 border-base-300/50",
-                              ].join(" ")}
-                            >
-                              <span className="text-sm">
-                                {b.qty} pcs • exp {b.expiry_date ?? "Tanpa kadaluarsa"} {days !== null ? `(H-${days})` : ""} • Rp{b.hpp_snapshot.toLocaleString("id-ID")}
-                              </span>
-                              {batchKritis && (
-                                <span className="badge badge-sm font-bold rounded-full text-white border-none" style={{ backgroundColor: "#C62828" }}>
-                                  Kritis
-                                </span>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                )}
               </li>
             );
           })}

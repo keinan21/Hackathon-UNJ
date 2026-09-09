@@ -47,15 +47,15 @@ describe("Kategori", () => {
     expect(list).toHaveLength(1);
   });
 
-  test("updateKategoriThreshold validasi: duplikat, kosong, tidak menurun", async () => {
+  test("aturIngatanBasi validasi: duplikat, kosong, tidak menurun", async () => {
     const k = await repo.createKategori({ nama: "Snack", threshold_h_minus: [7, 3, 1] });
 
-    await expect(repo.updateKategoriThreshold(k.id!, [14, 7, 3])).resolves.toMatchObject({
+    await expect(repo.aturIngatanBasi(k.id!, [14, 7, 3])).resolves.toMatchObject({
       threshold_h_minus: [14, 7, 3],
     });
-    await expect(repo.updateKategoriThreshold(k.id!, [3, 3, 1])).rejects.toThrow(ValidationError);
-    await expect(repo.updateKategoriThreshold(k.id!, [])).rejects.toThrow(ValidationError);
-    await expect(repo.updateKategoriThreshold(k.id!, [1, 7, 3])).rejects.toThrow(ValidationError);
+    await expect(repo.aturIngatanBasi(k.id!, [3, 3, 1])).rejects.toThrow(ValidationError);
+    await expect(repo.aturIngatanBasi(k.id!, [])).rejects.toThrow(ValidationError);
+    await expect(repo.aturIngatanBasi(k.id!, [1, 7, 3])).rejects.toThrow(ValidationError);
   });
 });
 
@@ -99,9 +99,9 @@ describe("Batch", () => {
       harga_normal: 15000,
     });
 
-    await repo.createBatch({ sku_id: s.id!, qty: 10, expiry_date: "2026-09-10", hpp_snapshot: 12000 });
-    await repo.createBatch({ sku_id: s.id!, qty: 5, expiry_date: "2026-09-03", hpp_snapshot: 12000 });
-    await repo.createBatch({ sku_id: s.id!, qty: 8, expiry_date: "2026-09-07", hpp_snapshot: 12000 });
+    await repo.createBatch({ sku_id: s.id!, qty: 10, expiry_date: "2026-09-10", modal_snapshot: 12000 });
+    await repo.createBatch({ sku_id: s.id!, qty: 5, expiry_date: "2026-09-03", modal_snapshot: 12000 });
+    await repo.createBatch({ sku_id: s.id!, qty: 8, expiry_date: "2026-09-07", modal_snapshot: 12000 });
 
     const batches = await repo.listBatchesBySKU(s.id!);
     expect(batches).toHaveLength(3);
@@ -120,8 +120,8 @@ describe("Batch", () => {
       harga_normal: 72000,
     });
 
-    await repo.createBatch({ sku_id: s.id!, qty: 20, expiry_date: null, hpp_snapshot: 60000 });
-    await repo.createBatch({ sku_id: s.id!, qty: 5, expiry_date: "2026-09-05", hpp_snapshot: 60000 });
+    await repo.createBatch({ sku_id: s.id!, qty: 20, expiry_date: null, modal_snapshot: 60000 });
+    await repo.createBatch({ sku_id: s.id!, qty: 5, expiry_date: "2026-09-05", modal_snapshot: 60000 });
 
     const bySku = await repo.listBatchesBySKU(s.id!);
     expect(bySku).toHaveLength(2);
@@ -133,10 +133,10 @@ describe("Batch", () => {
 
   test("failure: insert Batch tanpa sku_id / qty 0 → reject", async () => {
     await expect(
-      repo.createBatch({ sku_id: 0, qty: 10, expiry_date: "2026-09-05", hpp_snapshot: 1000 })
+      repo.createBatch({ sku_id: 0, qty: 10, expiry_date: "2026-09-05", modal_snapshot: 1000 })
     ).rejects.toThrow("sku_id wajib");
     await expect(
-      repo.createBatch({ sku_id: 1, qty: 0, expiry_date: "2026-09-05", hpp_snapshot: 1000 })
+      repo.createBatch({ sku_id: 1, qty: 0, expiry_date: "2026-09-05", modal_snapshot: 1000 })
     ).rejects.toThrow("Qty harus lebih dari 0");
   });
 });
@@ -158,7 +158,7 @@ describe("Transaksi / Promo / AdvisorCache", () => {
       batch_id: 1,
       sku_pasangan_id: 2,
       harga_tebus: 9000,
-      hpp_snapshot: 10000,
+      modal_snapshot: 10000,
     });
     expect(p.created_at).toBeTruthy();
 
@@ -187,7 +187,7 @@ describe("Repository interface contract", () => {
       "createKategori",
       "getKategori",
       "listKategoris",
-      "updateKategoriThreshold",
+      "aturIngatanBasi",
       "createSKU",
       "getSKU",
       "listSKUsByKategori",

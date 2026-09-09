@@ -3,9 +3,9 @@
  *
  * - Daily check 07:00 Asia/Jakarta via setInterval + on app open (checkAndNotify)
  * - Query batches where days_to_expiry in threshold_h_minus (per Kategori via SKU)
- * - daysToExpiry pakai Asia/Jakarta startOfDay + ceil (src/engine/expiry.ts)
+ * - daysToExpiry pakai Asia/Jakarta awalHari + ceil (src/engine/expiry.ts)
  * - skip expiry null (non-perishable)
- * - urgencyScore via qty*days / max(avg,1) — avg dari transaksi 14d atau fallback 1
+ * - peringkat via qty*days / max(avg,1) — avg dari transaksi 14d atau fallback 1
  * - request Notification permission, show push + badge count
  * - WA hook stub: console.log saja, MUST NOT implement WA send
  *
@@ -14,7 +14,7 @@
  */
 
 import type { InventoryRepository, Batch, SKU, Kategori } from "../db/db";
-import { daysToExpiry, urgencyScore } from "./expiry";
+import { daysToExpiry, peringkat } from "./expiry";
 import { calcAvgDailyUsage } from "./avgUsage";
 import { calcOmzet14 } from "./omzet";
 import { buildRecapText, enqueueTelegram, buildDedupKey } from "../lib/telegram";
@@ -28,7 +28,7 @@ export type DueNotification = {
   sku: SKU;
   kategori: Kategori;
   daysToExpiry: number;
-  urgencyScore: number;
+  peringkat: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -42,10 +42,10 @@ export type DueNotification = {
  * - Ambil batches via repo.listBatchesExpiring() (expiry != null, sorted)
  * - Untuk tiap batch: resolve SKU → Kategori, hitung daysToExpiry(today Asia/Jakarta),
  *   skip expiry null, skip jika days tidak ada di threshold_h_minus kategori tersebut
- * - Hitung urgencyScore = qty * days / max(avg,1), avg dari transaksi 14 hari terakhir atau 1
+ * - Hitung peringkat = qty * days / max(avg,1), avg dari transaksi 14 hari terakhir atau 1
  *
  * @param repo - InventoryRepository (DexieRepository)
- * @param today - tanggal acuan (default now), di-normalize ke startOfDay Asia/Jakarta di daysToExpiry
+ * @param today - tanggal acuan (default now), di-normalize ke awalHari Asia/Jakarta di daysToExpiry
  */
 export async function getDueNotifications(
   repo: InventoryRepository,
@@ -139,14 +139,14 @@ export async function getDueNotifications(
       avg = 1;
     }
 
-    const score = urgencyScore(batch.qty, days, avg);
+    const score = peringkat(batch.qty, days, avg);
 
     result.push({
       batch,
       sku,
       kategori,
       daysToExpiry: days,
-      urgencyScore: score,
+      peringkat: score,
     });
   }
 

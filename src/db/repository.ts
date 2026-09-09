@@ -11,7 +11,7 @@ export interface InventoryRepository {
   listKategoris(orgId: string): Promise<Kategori[]>;
   getKategori(id: string): Promise<Kategori | undefined>;
   createKategori(k: Kategori): Promise<void>;
-  updateKategoriThreshold(id: string, threshold: number[]): Promise<void>;
+  aturIngatanBasi(id: string, threshold: number[]): Promise<void>;
   // Batch
   listBatchesBySku(skuId: string, orgId: string): Promise<Batch[]>;
   listBatchesExpiring(orgId: string): Promise<Batch[]>; // expiry_date != null

@@ -1,10 +1,10 @@
 /**
- * TASK-09 [FRD-03] acceptance tests — Expiry engine: days_to_expiry + urgencyScore
+ * TASK-09 [FRD-03] acceptance tests — Expiry engine: days_to_expiry + peringkat
  *
  * Acceptance dari TASK.md:213-222
  * - daysToExpiry 2026-09-05 from 2026-09-02 =3
  * - expiry null → null
- * - urgencyScore 10*3/2=15
+ * - peringkat 10*3/2=15
  * - negative days -2 → -10
  * - avg 0 → divisor 1 not Infinity
  * - 5 batches sorted by urgency
@@ -17,9 +17,9 @@
  */
 
 import { describe, expect, test } from "vitest";
-import { daysToExpiry, urgencyScore, sortByUrgency, toJakartaStartOfDay } from "./expiry";
+import { daysToExpiry, peringkat, sortByUrgency, toJakartaStartOfDay } from "./expiry";
 
-describe("expiry — TASK-09 [FRD-03] daysToExpiry + urgencyScore deterministik", () => {
+describe("expiry — TASK-09 [FRD-03] daysToExpiry + peringkat deterministik", () => {
   // Helper bikin today di Jakarta midnight
   function jakartaDate(isoDate: string, time = "00:00:00"): Date {
     // isoDate "YYYY-MM-DD" → buat Date di timezone Jakarta
@@ -57,21 +57,21 @@ describe("expiry — TASK-09 [FRD-03] daysToExpiry + urgencyScore deterministik"
     expect(daysToExpiry(null)).toBeNull();
   });
 
-  test("urgencyScore 10*3/2=15 (FRD-03)", () => {
-    expect(urgencyScore(10, 3, 2)).toBe(15);
+  test("peringkat 10*3/2=15 (FRD-03)", () => {
+    expect(peringkat(10, 3, 2)).toBe(15);
     // juga via qty 5 days 4 avg 0 → 20
-    expect(urgencyScore(5, 4, 0)).toBe(20);
+    expect(peringkat(5, 4, 0)).toBe(20);
     // qty 10 days 3 avg 2 → 15 via formula
     const score = 10 * 3 / Math.max(2, 1);
-    expect(urgencyScore(10, 3, 2)).toBe(score);
+    expect(peringkat(10, 3, 2)).toBe(score);
   });
 
   test("negative days -2 → -10 (lebih urgent dari positif)", () => {
     // Batch A: qty 10 days -2 avg 2 → -10
     // Batch B: qty 10 days 5 avg 2 → 25
-    expect(urgencyScore(10, -2, 2)).toBe(-10);
-    expect(urgencyScore(10, 5, 2)).toBe(25);
-    expect(urgencyScore(10, -2, 2)).toBeLessThan(urgencyScore(10, 5, 2));
+    expect(peringkat(10, -2, 2)).toBe(-10);
+    expect(peringkat(10, 5, 2)).toBe(25);
+    expect(peringkat(10, -2, 2)).toBeLessThan(peringkat(10, 5, 2));
 
     // daysToExpiry negative case: expiry kemarin
     const today = jakartaDate("2026-09-02");
@@ -83,12 +83,12 @@ describe("expiry — TASK-09 [FRD-03] daysToExpiry + urgencyScore deterministik"
 
   test("avg 0 → divisor 1 not Infinity (guard FRD-03)", () => {
     // avg 0 harus pakai 1, jadi 5*4/1=20 bukan Infinity
-    expect(urgencyScore(5, 4, 0)).toBe(20);
-    expect(Number.isFinite(urgencyScore(5, 4, 0))).toBe(true);
-    expect(urgencyScore(5, 4, 0)).not.toBe(Infinity);
+    expect(peringkat(5, 4, 0)).toBe(20);
+    expect(Number.isFinite(peringkat(5, 4, 0))).toBe(true);
+    expect(peringkat(5, 4, 0)).not.toBe(Infinity);
 
     // avg negatif juga pakai 1
-    expect(urgencyScore(5, 4, -3)).toBe(20);
+    expect(peringkat(5, 4, -3)).toBe(20);
 
     // via sort, avg 0 tetap terhitung
     const items = [
@@ -185,11 +185,11 @@ describe("expiry — TASK-09 [FRD-03] daysToExpiry + urgencyScore deterministik"
     expect(daysToExpiry("2026-08-30", today)).toBe(-3);
   });
 
-  test("urgencyScore deterministik & pure (no LLM, no side effect)", () => {
+  test("peringkat deterministik & pure (no LLM, no side effect)", () => {
     // Panggil 2x hasil sama
-    expect(urgencyScore(10, 3, 2)).toBe(urgencyScore(10, 3, 2));
+    expect(peringkat(10, 3, 2)).toBe(peringkat(10, 3, 2));
     // Formula exact
-    expect(urgencyScore(7, 5, 3)).toBeCloseTo((7 * 5) / 3, 10);
-    expect(urgencyScore(7, 5, 0)).toBe(35); // 7*5/1
+    expect(peringkat(7, 5, 3)).toBeCloseTo((7 * 5) / 3, 10);
+    expect(peringkat(7, 5, 0)).toBe(35); // 7*5/1
   });
 });

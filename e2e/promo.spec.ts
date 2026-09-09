@@ -75,7 +75,7 @@ test.describe("Promo approve real + histori real", () => {
 
   test("happy: proposed → Setujui → Dialog Yakin → active + toast + dashboard", async ({ page }) => {
     await seedPromoScenario(page, { promoId: "promo-happy", harga: 9000, qty: 10, batchId: "batch-happy", skuId: "sku-susu-happy" });
-    await page.goto("/?view=promo");
+    await page.goto("/promo");
     await page.waitForTimeout(800);
     await expect(page.getByRole("heading", { name: "Promo Tebus Murah" })).toBeVisible({ timeout: 10_000 });
     const card = page.getByTestId("promo-card-proposed").first();
@@ -106,7 +106,7 @@ test.describe("Promo approve real + histori real", () => {
     const dismiss = page.getByTestId("toast-dismiss-x");
     await dismiss.click();
     await expect(toast).toHaveCount(0);
-    await page.goto("/?view=dashboard");
+    await page.goto("/");
     await page.waitForTimeout(400);
     await expect(page.getByTestId("dashboard-page")).toBeVisible();
     await expect(page.getByTestId("promo-card-active").first()).toBeVisible({ timeout: 5000 });
@@ -114,7 +114,7 @@ test.describe("Promo approve real + histori real", () => {
 
   test("guardrail fail di bawah floor disabled dan alert Rp", async ({ page }) => {
     await seedPromoScenario(page, { promoId: "promo-guard", harga: 8400, qty: 10, batchId: "batch-guard", skuId: "sku-susu-guard" });
-    await page.goto("/?view=promo");
+    await page.goto("/promo");
     await page.waitForTimeout(800);
     await expect(page.getByTestId("promo-card-proposed").first()).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(/Di bawah floor Rp8\.500/).first()).toBeVisible();
@@ -136,7 +136,7 @@ test.describe("Promo approve real + histori real", () => {
 
   test("tolak menghapus proposed + toast", async ({ page }) => {
     await seedPromoScenario(page, { promoId: "promo-tolak", harga: 9000, qty: 10, batchId: "batch-tolak", skuId: "sku-susu-tolak" });
-    await page.goto("/?view=promo");
+    await page.goto("/promo");
     await page.waitForTimeout(800);
     await expect(page.getByTestId("promo-card-proposed").first()).toBeVisible({ timeout: 10_000 });
     const tolakBtn = page.getByTestId("btn-tolak-promo").first();
@@ -158,7 +158,7 @@ test.describe("Promo approve real + histori real", () => {
 
   test("approve tanpa stok → error Stok habis, tidak ubah status", async ({ page }) => {
     await seedPromoScenario(page, { promoId: "promo-nostock", harga: 9000, qty: 0, batchId: "batch-nostock", skuId: "sku-susu-nostock" });
-    await page.goto("/?view=promo");
+    await page.goto("/promo");
     await page.waitForTimeout(800);
     await expect(page.getByTestId("promo-card-proposed").first()).toBeVisible({ timeout: 10_000 });
     await page.getByTestId("btn-setujui-tebus").first().click();
@@ -184,10 +184,10 @@ test.describe("Promo approve real + histori real", () => {
   });
 
   test("empty state Indonesia ketika belum ada promo + histori 5 terbaru real", async ({ page }) => {
-    await page.goto("/?view=promo");
+    await page.goto("/promo");
     await page.waitForTimeout(800);
     await expect(page.getByText("Belum ada promo aktif. Buat tebus murah dari stok mepet biar tidak jadi sampah.")).toBeVisible({ timeout: 10_000 });
-    await page.goto("/?view=dashboard");
+    await page.goto("/");
     await page.waitForTimeout(600);
     await expect(page.getByTestId("section-histori").first()).toBeVisible();
     await expect(page.getByTestId("histori-empty")).toBeVisible();
@@ -216,7 +216,7 @@ test.describe("Promo approve real + histori real", () => {
     });
     await page.reload();
     await page.waitForTimeout(800);
-    await page.goto("/?view=dashboard");
+    await page.goto("/");
     await page.waitForTimeout(600);
     await expect(page.getByTestId("section-histori").first()).toBeVisible();
     const items = page.locator('[data-testid="histori-hist-"], [data-testid^="promo-hist-"]');

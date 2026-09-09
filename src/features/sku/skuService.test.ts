@@ -236,10 +236,10 @@ describe("skuService — SKU Kategori CRUD (TASK-06 FRD-02)", () => {
     const list = await skuService.listKategoris();
     expect(list.map((x) => x.nama)).toContain("Snack");
 
-    const updated = await skuService.updateKategoriThreshold(k.id!, [14, 7, 3]);
+    const updated = await skuService.aturIngatanBasi(k.id!, [14, 7, 3]);
     expect(updated.threshold_h_minus).toEqual([14, 7, 3]);
 
-    await expect(skuService.updateKategoriThreshold(k.id!, [3, 3, 1])).rejects.toThrow("tidak boleh sama");
-    await expect(skuService.updateKategoriThreshold(k.id!, [])).rejects.toThrow("tidak boleh kosong");
+    await expect(skuService.aturIngatanBasi(k.id!, [3, 3, 1])).rejects.toThrow("tidak boleh sama");
+    await expect(skuService.aturIngatanBasi(k.id!, [])).rejects.toThrow("tidak boleh kosong");
   });
 });

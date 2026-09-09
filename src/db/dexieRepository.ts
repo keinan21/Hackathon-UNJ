@@ -55,6 +55,8 @@ export class DexieInventoryRepository implements InventoryRepository {
     return this.db.skus.get(id);
   }
   async createSku(sku: SKU) {
+    if (!sku.nama || !sku.nama.trim()) throw new Error("Nama SKU tidak boleh kosong");
+    if (!Number.isFinite(sku.hpp) || !(sku.hpp > 0)) throw new Error("HPP harus lebih dari 0");
     await this.db.skus.put(sku);
   }
   async updateSku(sku: SKU) {
@@ -70,7 +72,7 @@ export class DexieInventoryRepository implements InventoryRepository {
   async createKategori(k: Kategori) {
     await this.db.kategoris.put({ ...k, id: k.id ?? crypto.randomUUID(), org_id: k.org_id ?? "toko-01" });
   }
-  async updateKategoriThreshold(id: string, threshold: number[]) {
+  async aturIngatanBasi(id: string, threshold: number[]) {
     const k = await this.db.kategoris.get(id);
     if (!k) throw new Error("Kategori not found");
     if (!threshold.length) throw new Error("Threshold tidak boleh kosong");

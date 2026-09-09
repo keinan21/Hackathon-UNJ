@@ -1,6 +1,52 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "daisyui";
+
+/* Branded light theme — warung palette
+ * Tokens from docs/design.md:
+ * primary #0F7A4A, primary-pressed #0B5C38 → secondary, danger #C62828 → error,
+ * warning #EF6C00, caution #F9A825 → info (H-7), surface #FFFFFF → base-100,
+ * surface-muted #F5F5F0 → base-200, text #1A1A1A → base-content/neutral,
+ * border #D9D9D9 → base-300.
+ * Radius mapping: design.md radius-md 12px (kartu) → --radius-box 0.75rem (12px),
+ * radius-sm 8px (badge/input) → --radius-field 0.5rem (8px). Prompt suggested 0.5rem for box
+ * but 0.75rem = 12px is exact per design.md, so use 0.75rem for box and 0.5rem for field.
+ * --radius-selector 1rem per instruksi (pill badge tetap rounded-full via utility).
+ */
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  color-scheme: light;
+
+  --color-base-100: #ffffff;
+  --color-base-200: #f5f5f0;
+  --color-base-300: #d9d9d9;
+  --color-base-content: #1a1a1a;
+  --color-primary: #0f7a4a;
+  --color-primary-content: #ffffff;
+  --color-secondary: #0b5c38;
+  --color-secondary-content: #ffffff;
+  --color-accent: #0f7a4a;
+  --color-accent-content: #ffffff;
+  --color-neutral: #1a1a1a;
+  --color-neutral-content: #ffffff;
+  --color-info: #f9a825;
+  --color-info-content: #1a1a1a;
+  --color-success: #0f7a4a;
+  --color-success-content: #ffffff;
+  --color-warning: #ef6c00;
+  --color-warning-content: #1a1a1a;
+  --color-error: #c62828;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
 
 @layer base {
   html {
@@ -8,27 +54,21 @@
     -moz-osx-font-smoothing: grayscale;
   }
   body {
-    @apply bg-[#F5F5F0] text-[#1A1A1A];
+    @apply bg-base-200 text-base-content;
     font-family: Inter, system-ui, -apple-system, sans-serif;
     line-height: 1.5;
   }
 }
 
-@layer utilities {
-  .btn-primary {
-    @apply bg-[#0F7A4A] text-white border-none hover:bg-[#0B5C38];
-  }
-}
-
 button:focus-visible {
-  outline: 2px solid #0f7a4a;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 /* Warm warung polish — soft card, rounded, legible */
 @layer components {
   .card-warm {
-    @apply bg-base-100 rounded-2xl shadow-sm border border-base-300/50;
+    @apply bg-base-100 rounded-box shadow-sm border border-base-300/50;
   }
 }
 

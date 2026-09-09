@@ -17,7 +17,7 @@ export class RealJustwokerLLM implements LLMPort {
 
   async generate(input: {
     sku: { nama: string; kategori_id: string; harga_normal: number };
-    batch: { qty: number; expiry_date: string | null; hpp_snapshot: number };
+    batch: { qty: number; expiry_date: string | null; modal_snapshot: number };
     daysToExpiry: number;
     pasanganSku: { nama: string } | null;
     hpp: number;

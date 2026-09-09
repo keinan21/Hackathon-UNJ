@@ -85,9 +85,9 @@ describe("TASK-18+24 Backup/Restore v2", () => {
     const k = await repo.createKategori({ nama: "Dairy", threshold_h_minus: [7, 3, 1] });
     await repo.createSKU({ nama: "Susu UHT", kategori_id: k.id!, hpp: 10000, harga_normal: 15000 });
     await repo.createSKU({ nama: "Yoghurt", kategori_id: k.id!, hpp: 8000, harga_normal: 12000 });
-    await repo.createBatch({ sku_id: 1, qty: 10, expiry_date: "2026-09-10", hpp_snapshot: 10000 });
-    await repo.createBatch({ sku_id: 1, qty: 5, expiry_date: "2026-09-12", hpp_snapshot: 10000 });
-    await repo.createBatch({ sku_id: 2, qty: 8, expiry_date: "2026-09-15", hpp_snapshot: 8000 });
+    await repo.createBatch({ sku_id: 1, qty: 10, expiry_date: "2026-09-10", modal_snapshot: 10000 });
+    await repo.createBatch({ sku_id: 1, qty: 5, expiry_date: "2026-09-12", modal_snapshot: 10000 });
+    await repo.createBatch({ sku_id: 2, qty: 8, expiry_date: "2026-09-15", modal_snapshot: 8000 });
 
     const file = await exportEncryptedBackup("1234");
     expect(file).toBeDefined();
@@ -140,11 +140,11 @@ describe("TASK-18+24 Backup/Restore v2", () => {
     expect(trx.jenis).toBeDefined();
   });
 
-  test("threshold valid [14,7,3] tersimpan via updateKategoriThreshold in backup roundtrip", async () => {
+  test("threshold valid [14,7,3] tersimpan via aturIngatanBasi in backup roundtrip", async () => {
     const k = await repo.createKategori({ nama: "Makanan Basah", threshold_h_minus: [7, 3, 1] });
-    await repo.updateKategoriThreshold(k.id!, [14, 7, 3]);
+    await repo.aturIngatanBasi(k.id!, [14, 7, 3]);
     const file = await exportEncryptedBackup("1234");
-    await repo.updateKategoriThreshold(k.id!, [7, 3, 1]); // mutate
+    await repo.aturIngatanBasi(k.id!, [7, 3, 1]); // mutate
     const payload = await importEncryptedBackup(file, "1234");
     const restoredKat = (payload.tables.kategoris as { id: number; threshold_h_minus: number[] }[]).find((x) => x.id === k.id);
     expect(restoredKat?.threshold_h_minus).toEqual([14, 7, 3]);
@@ -152,12 +152,12 @@ describe("TASK-18+24 Backup/Restore v2", () => {
 
   test("threshold invalid [3,3,1] → Angka tidak boleh sama", async () => {
     const k = await repo.createKategori({ nama: "Rokok", threshold_h_minus: [7, 3, 1] });
-    await expect(repo.updateKategoriThreshold(k.id!, [3, 3, 1])).rejects.toThrow("Angka tidak boleh sama");
+    await expect(repo.aturIngatanBasi(k.id!, [3, 3, 1])).rejects.toThrow("Angka tidak boleh sama");
   });
 
   test("threshold invalid naik [1,3,7] → Harus menurun", async () => {
     const k = await repo.createKategori({ nama: "Misc", threshold_h_minus: [7, 3, 1] });
-    await expect(repo.updateKategoriThreshold(k.id!, [1, 3, 7])).rejects.toThrow("Harus menurun");
+    await expect(repo.aturIngatanBasi(k.id!, [1, 3, 7])).rejects.toThrow("Harus menurun");
   });
 
   test("wrong PIN decrypt fails with PIN salah", async () => {

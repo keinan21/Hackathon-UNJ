@@ -30,7 +30,7 @@ describe('LangChainGemini hybrid advisor + cache + guardrail', () => {
       qty: 10,
       expiry_date: '2026-09-05', // H-3 from 2026-09-02
       received_at: '2026-08-30T07:00:00.000Z',
-      hpp_snapshot: 10000,
+      modal_snapshot: 10000,
       org_id: org,
     };
     await repo.createBatch(batchUrgent);
@@ -63,8 +63,8 @@ describe('LangChainGemini hybrid advisor + cache + guardrail', () => {
 
   it('top-N 3 urgent → 3 suggestions cached', async () => {
     // add 2 more urgent batches
-    await repo.createBatch({ id: 'batch-2', sku_id: 'sku-susu', qty: 5, expiry_date: '2026-09-03', received_at: '2026-08-30T07:00:00.000Z', hpp_snapshot: 10000, org_id: org });
-    await repo.createBatch({ id: 'batch-3', sku_id: 'sku-susu', qty: 8, expiry_date: '2026-09-04', received_at: '2026-08-30T07:00:00.000Z', hpp_snapshot: 10000, org_id: org });
+    await repo.createBatch({ id: 'batch-2', sku_id: 'sku-susu', qty: 5, expiry_date: '2026-09-03', received_at: '2026-08-30T07:00:00.000Z', modal_snapshot: 10000, org_id: org });
+    await repo.createBatch({ id: 'batch-3', sku_id: 'sku-susu', qty: 8, expiry_date: '2026-09-04', received_at: '2026-08-30T07:00:00.000Z', modal_snapshot: 10000, org_id: org });
     const results = await advisor.suggestTopN(org, 3);
     expect(results.length).toBe(3);
     // second call should be cached
@@ -94,7 +94,7 @@ describe('LangChainGemini hybrid advisor + cache + guardrail', () => {
   });
 
   it('expiry null batch not suggested', async () => {
-    await repo.createBatch({ id: 'batch-null', sku_id: 'sku-susu', qty: 10, expiry_date: null, received_at: '2026-08-30T07:00:00.000Z', hpp_snapshot: 10000, org_id: org });
+    await repo.createBatch({ id: 'batch-null', sku_id: 'sku-susu', qty: 10, expiry_date: null, received_at: '2026-08-30T07:00:00.000Z', modal_snapshot: 10000, org_id: org });
     const result = await advisor.suggestForBatch('batch-null', org);
     expect(result).toBeNull();
   });
@@ -103,12 +103,12 @@ describe('LangChainGemini hybrid advisor + cache + guardrail', () => {
     const results = await advisor.triggerDailyCheck(org);
     expect(results.length).toBeGreaterThanOrEqual(1);
     // on-demand: new urgent batch H-2
-    const newBatch: Batch = { id: 'batch-new', sku_id: 'sku-susu', qty: 10, expiry_date: '2026-09-04', received_at: new Date().toISOString(), hpp_snapshot: 10000, org_id: org };
+    const newBatch: Batch = { id: 'batch-new', sku_id: 'sku-susu', qty: 10, expiry_date: '2026-09-04', received_at: new Date().toISOString(), modal_snapshot: 10000, org_id: org };
     await repo.createBatch(newBatch);
     const onDemand = await advisor.onBatchInserted('batch-new', org);
     expect(onDemand).not.toBeNull();
     // non-urgent >7 days should not trigger
-    const nonUrgent: Batch = { id: 'batch-far', sku_id: 'sku-susu', qty: 10, expiry_date: '2026-09-20', received_at: new Date().toISOString(), hpp_snapshot: 10000, org_id: org };
+    const nonUrgent: Batch = { id: 'batch-far', sku_id: 'sku-susu', qty: 10, expiry_date: '2026-09-20', received_at: new Date().toISOString(), modal_snapshot: 10000, org_id: org };
     await repo.createBatch(nonUrgent);
     const noTrigger = await advisor.onBatchInserted('batch-far', org);
     expect(noTrigger).toBeNull();

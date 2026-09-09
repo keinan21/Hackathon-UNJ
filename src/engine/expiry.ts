@@ -1,15 +1,15 @@
 /**
- * TASK-09 [FRD-03] — Expiry engine: days_to_expiry + urgencyScore deterministik
+ * TASK-09 [FRD-03] — Expiry engine: days_to_expiry + peringkat deterministik
  *
  * Rule deterministik, bukan LLM (CONTEXT.md + FRD-03).
- * - daysToExpiry: ceil((expiry_date - startOfDay(Asia/Jakarta)) / 86400000)
+ * - daysToExpiry: ceil((expiry_date - awalHari(Asia/Jakarta)) / 86400000)
  *   Batch dengan expiry_date null → return null (skip engine, non-perishable)
- * - urgencyScore: qty * days_to_expiry / max(avg_daily_usage, 1)
+ * - peringkat: qty * days_to_expiry / max(avg_daily_usage, 1)
  *   lower / more negative = more urgent, jika avg 0 pakai 1 agar tidak Infinity
- * - sortByUrgency: sort ascending urgencyScore, skip expiry null
+ * - sortByUrgency: sort ascending peringkat, skip expiry null
  *
  * TZ handling: TIDAK pakai date-fns-tz (tidak ada di deps), pakai Intl.DateTimeFormat
- * dengan timeZone Asia/Jakarta untuk startOfDay. Jakarta UTC+7 fixed (tanpa DST).
+ * dengan timeZone Asia/Jakarta untuk awalHari. Jakarta UTC+7 fixed (tanpa DST).
  *
  * Trace: TASK-09 [FRD-03] — FRD-03 F3 Expiry Engine dan Notifikasi
  * References: CONTEXT.md:12-15, docs/frd/frd-03-expiry.md, docs/adr/0002-langchain-gemini-hybrid-advisor.md:7
@@ -22,7 +22,7 @@
 const JAKARTA_OFFSET_MS = 7 * 60 * 60 * 1000;
 
 /**
- * Ambil startOfDay untuk tanggal `d` dalam kalender Asia/Jakarta.
+ * Ambil awalHari untuk tanggal `d` dalam kalender Asia/Jakarta.
  * - Ekstrak year/month/day via Intl.DateTimeFormat timeZone Asia/Jakarta
  * - Kembalikan Date UTC yang merepresentasikan 00:00 Jakarta hari tersebut
  *
@@ -54,7 +54,7 @@ function expiryDateToJakartaMidnight(expiry_date: string): Date {
   const m = Number(s.slice(5, 7));
   const d = Number(s.slice(8, 10));
   if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) {
-    // Fallback: coba parse sebagai Date lalu ambil Jakarta startOfDay-nya
+    // Fallback: coba parse sebagai Date lalu ambil Jakarta awalHari-nya
     // Ini jaga-jaga kalau format tak terduga, tapi tetap basis Jakarta
     const parsed = new Date(expiry_date);
     if (!Number.isNaN(parsed.getTime())) {
@@ -71,7 +71,7 @@ function expiryDateToJakartaMidnight(expiry_date: string): Date {
  *
  * - Jika expiry_date null → return null (non-perishable, skip engine)
  * - Jika expiry_date string kosong/invalid → return null
- * - today opsional (default now), di-normalize ke startOfDay Asia/Jakarta via toJakartaStartOfDay
+ * - today opsional (default now), di-normalize ke awalHari Asia/Jakarta via toJakartaStartOfDay
  * - expiry_date di-normalize ke midnight Jakarta via expiryDateToJakartaMidnight
  * - Rumus: Math.ceil((expiryMidnight - todayMidnight) / 86400000)
  *
@@ -96,7 +96,7 @@ export function daysToExpiry(expiry_date: string | null, today?: Date): number |
 }
 
 /**
- * Hitung urgencyScore deterministik.
+ * Hitung peringkat deterministik.
  * Formula FRD-03 + CONTEXT.md: qty * days_to_expiry / max(avg_daily_usage, 1)
  * - Semakin kecil (atau negatif) semakin urgent
  * - Jika avgDailyUsage 0 atau negatif, pakai 1 agar tidak Infinity / NaN
@@ -105,7 +105,7 @@ export function daysToExpiry(expiry_date: string | null, today?: Date): number |
  * @param days - daysToExpiry (bisa negatif untuk kadaluarsa)
  * @param avgDailyUsage - avg harian SKU (fallback minimal 1)
  */
-export function urgencyScore(qty: number, days: number, avgDailyUsage: number): number {
+export function peringkat(qty: number, days: number, avgDailyUsage: number): number {
   const denom = Math.max(avgDailyUsage, 1);
   return (qty * days) / denom;
 }
@@ -142,7 +142,7 @@ function resolveAvg(item: Record<string, unknown>): number {
 /**
  * Sort helper deterministik.
  * - Filter item dengan days === null (expiry null → skip engine)
- * - Hitung urgencyScore per item
+ * - Hitung peringkat per item
  * - Sort ascending: paling urgent (score terkecil / paling negatif) di atas
  * - Return array baru (tidak mutasi input), stabil sort (pertahankan urutan asal jika score sama)
  */
@@ -158,7 +158,7 @@ export function sortByUrgency<T extends Record<string, any>>(items: T[]): T[] {
     const qty = (item as unknown as { qty: number }).qty;
     const days = (item as unknown as { days: number }).days;
     const avg = resolveAvg(item as Record<string, unknown>);
-    const score = urgencyScore(qty, days, avg);
+    const score = peringkat(qty, days, avg);
     return { item, score, idx };
   });
 

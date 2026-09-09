@@ -1,8 +1,8 @@
 import * as React from "react";
 import { Shop, Package, WarningCircle, Home, Settings, ShoppingBag } from "iconoir-react";
 
-// ───────── Design tokens — warm warung, brand #0F7A4A tetap ─────────
-// Cream #F5F5F0 (base-200), primary #0F7A4A, accent amber #F59E0B untuk hangat,
+// ───────── Design tokens — warm warung, brand primary ─────────
+// base-200 (warm muted), primary, accent untuk hangat,
 // Card rounded-2xl, shadow lembut, spacing lega, Bahasa sederhana.
 
 // ───────── AppButton — konsisten 48px / 16px ─────────
@@ -38,12 +38,10 @@ export function AppButton({
   return (
     <button
       className={[
-        "btn rounded-xl font-semibold normal-case",
-        "min-h-[48px] text-[16px]",
-        "shadow-sm hover:shadow-md transition-shadow",
+        "btn min-h-12 text-base font-semibold",
         variantClass[variant],
         sizeCls,
-        fullWidth ? "w-full" : "",
+        fullWidth ? "btn-block" : "",
         className ?? "",
       ].join(" ")}
       disabled={disabled || loading}
@@ -66,19 +64,16 @@ export type PageHeaderProps = {
 
 export function PageHeader({ title, subtitle, icon, action, testId }: PageHeaderProps) {
   return (
-    <div
-      data-testid={testId}
-      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6"
-    >
+    <div data-testid={testId} className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
         {icon ? (
-          <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+          <div className="bg-primary/10 text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-field">
             {icon}
           </div>
         ) : null}
         <div>
-          <h2 className="text-xl font-bold text-neutral leading-tight">{title}</h2>
-          {subtitle ? <p className="text-sm text-[#595959] mt-0.5 leading-relaxed">{subtitle}</p> : null}
+          <h2 className="text-lg font-bold leading-tight">{title}</h2>
+          {subtitle ? <p className="text-base text-base-content/70 mt-0.5 leading-relaxed">{subtitle}</p> : null}
         </div>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -107,30 +102,21 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <div
-      className={[
-        "card bg-base-100 rounded-2xl shadow-sm border border-base-300/50",
-        "p-8 text-center flex flex-col items-center",
-        className ?? "",
-      ].join(" ")}
-    >
-      <div className="w-16 h-16 rounded-2xl bg-[#FFF8E1] border border-[#FFE082]/60 flex items-center justify-center text-[#8D6E63] mb-4">
-        {icon ?? <Package width={28} height={28} strokeWidth={1.6} />}
+    <div className={["card card-border bg-base-100", className ?? ""].join(" ")}>
+      <div className="card-body items-center text-center">
+        <div className="bg-base-200 text-base-content/70 flex h-14 w-14 items-center justify-center rounded-field">
+          {icon ?? <Package width={26} height={26} strokeWidth={1.6} />}
+        </div>
+        <h3 className="card-title text-base">{title}</h3>
+        {description ? <p className="text-base text-base-content/70 leading-relaxed max-w-sm">{description}</p> : null}
+        {actionLabel && onAction ? (
+          <div className="card-actions mt-2">
+            <AppButton variant="primary" onClick={onAction} data-testid={actionTestId}>
+              {actionLabel}
+            </AppButton>
+          </div>
+        ) : null}
       </div>
-      <h3 className="text-base font-bold text-neutral">{title}</h3>
-      {description ? (
-        <p className="text-sm text-[#595959] mt-1.5 leading-relaxed max-w-sm">{description}</p>
-      ) : null}
-      {actionLabel && onAction ? (
-        <AppButton
-          variant="primary"
-          className="mt-5"
-          onClick={onAction}
-          data-testid={actionTestId}
-        >
-          {actionLabel}
-        </AppButton>
-      ) : null}
     </div>
   );
 }
@@ -146,32 +132,26 @@ export type StatCardProps = {
 };
 
 export function StatCard({ label, value, subtitle, icon, variant = "default", className }: StatCardProps) {
-  const variantBg =
+  const iconBg =
     variant === "success"
-      ? "bg-[#E8F5E9] border-[#A5D6A7]/60 text-[#1B5E20]"
+      ? "bg-success/10 text-success"
       : variant === "warning"
-        ? "bg-[#FFF3E0] border-[#FFCC80]/60 text-[#E65100]"
-        : variant === "neutral"
-          ? "bg-base-200 border-base-300 text-neutral"
-          : "bg-base-100 border-base-300/50 text-neutral";
+        ? "bg-warning/10 text-warning"
+        : "bg-base-200 text-base-content/70";
 
   return (
-    <div
-      className={[
-        "card rounded-2xl shadow-sm border p-4 flex flex-row items-center gap-3",
-        variantBg,
-        className ?? "",
-      ].join(" ")}
-    >
-      {icon ? (
-        <div className="w-10 h-10 rounded-xl bg-white/80 border border-base-300/40 flex items-center justify-center shrink-0">
-          {icon}
+    <div className={["card card-border bg-base-100", className ?? ""].join(" ")}>
+      <div className="card-body flex-row items-center gap-3 p-4">
+        {icon ? (
+          <div className={["flex h-10 w-10 shrink-0 items-center justify-center rounded-field", iconBg].join(" ")}>
+            {icon}
+          </div>
+        ) : null}
+        <div className="min-w-0">
+          <p className="stat-title truncate">{label}</p>
+          <p className="stat-value text-2xl truncate">{value}</p>
+          {subtitle ? <p className="stat-desc line-clamp-2 leading-relaxed">{subtitle}</p> : null}
         </div>
-      ) : null}
-      <div className="min-w-0">
-        <p className="text-xs font-semibold tracking-wide opacity-70 uppercase truncate">{label}</p>
-        <p className="text-xl font-extrabold leading-none mt-1 truncate">{value}</p>
-        {subtitle ? <p className="text-xs opacity-70 mt-1 line-clamp-2 leading-relaxed">{subtitle}</p> : null}
       </div>
     </div>
   );
@@ -185,31 +165,22 @@ export type BadgeKritisProps = {
   className?: string;
 };
 
-function badgeStyle(days: number): { bg: string; color: string } {
-  if (days <= 1) return { bg: "#C62828", color: "#FFFFFF" };
-  if (days <= 3) return { bg: "#EF6C00", color: "#FFFFFF" };
-  if (days <= 7) return { bg: "#F9A825", color: "#1A1A1A" };
-  return { bg: "#D9D9D9", color: "#1A1A1A" };
+function badgeClass(days: number): string {
+  if (days <= 1) return "badge-error";
+  if (days <= 3) return "badge-warning";
+  return "badge-info";
 }
 
 export function BadgeKritis({ days, qty, expiryDate, className }: BadgeKritisProps) {
   if (days === null || days === undefined) return null;
-  const { bg, color } = badgeStyle(days);
   const aria = expiryDate ? `H-${days}, ${qty ?? ""} pcs, kadaluarsa ${expiryDate}` : `H-${days} kritis`;
   return (
     <span
       role="status"
       aria-label={aria}
-      className={["badge gap-1 border-none font-bold rounded-full", className ?? ""].join(" ")}
-      style={{
-        backgroundColor: bg,
-        color,
-        fontSize: 12,
-        padding: "2px 10px",
-        height: 24,
-      }}
+      className={["badge badge-sm gap-1 font-semibold", badgeClass(days), className ?? ""].join(" ")}
     >
-      <WarningCircle width={12} height={12} aria-hidden style={{ flexShrink: 0 }} />
+      <WarningCircle width={12} height={12} aria-hidden />
       H-{days}
     </span>
   );

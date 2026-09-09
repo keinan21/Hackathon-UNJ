@@ -64,10 +64,10 @@ export function StatistikTab() {
     if (skuMap.size === 0) return transaksis;
     return transaksis.map((t) => {
       const anyT = t as unknown as Record<string, unknown>;
-      if ((t.jenis ?? "keluar") === "keluar" && typeof anyT.hpp_snapshot !== "number") {
+      if ((t.jenis ?? "keluar") === "keluar" && typeof anyT.modal_snapshot !== "number") {
         const sku = skuMap.get(t.sku_id);
         if (sku && typeof sku.hpp === "number") {
-          return { ...t, hpp_snapshot: sku.hpp } as unknown as Transaksi;
+          return { ...t, modal_snapshot: sku.hpp } as unknown as Transaksi;
         }
       }
       return t;
@@ -155,11 +155,11 @@ export function StatistikTab() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-neutral leading-tight">Statistik 14 Hari</h2>
-            <p className="text-sm text-[#595959] mt-0.5">Rank, kecepatan, histori, dan omzet dari data real Dexie.</p>
+            <p className="text-sm text-base-content/70 mt-0.5">Rank, kecepatan, histori, dan omzet dari data real Dexie.</p>
           </div>
         </div>
-        <div className="bg-white border border-[#D9D9D9] rounded-[12px] p-6 text-center" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-          <p className="text-base text-[#595959]" style={{ fontSize: "16px" }}>Memuat statistik...</p>
+        <div className="bg-base-100 border border-base-300 rounded-[12px] p-6 text-center" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+          <p className="text-base text-base-content/70" style={{ fontSize: "16px" }}>Memuat statistik...</p>
         </div>
       </div>
     );
@@ -183,11 +183,11 @@ export function StatistikTab() {
           aria-live="polite"
           className="card bg-base-100 rounded-2xl shadow-sm border border-base-300/50 p-8 text-center flex flex-col items-center"
         >
-          <div className="w-16 h-16 rounded-2xl bg-[#FFF8E1] border border-[#FFE082]/60 flex items-center justify-center text-[#8D6E63] mb-4">
+          <div className="w-16 h-16 rounded-2xl bg-warning/10 border border-warning/30 flex items-center justify-center text-base-content/80 mb-4">
             <StatsReport width={28} height={28} strokeWidth={1.4} />
           </div>
           <h3 className="text-base font-bold text-neutral" style={{ fontSize: "16px" }}>Belum ada transaksi</h3>
-          <p className="text-sm text-[#595959] mt-1.5 leading-relaxed max-w-sm" style={{ fontSize: "16px" }}>
+          <p className="text-sm text-base-content/70 mt-1.5 leading-relaxed max-w-sm" style={{ fontSize: "16px" }}>
             Belum ada statistik. Catat barang masuk atau keluar dulu untuk melihat rank dan omzet 14 hari.
           </p>
         </div>
@@ -196,12 +196,12 @@ export function StatistikTab() {
       {/* Omzet 14d — selalu render header, nilai 0 jika kosong */}
       <section data-testid="section-omzet" className="space-y-3">
         <h3 className="text-[16px] font-bold text-neutral flex items-center gap-2" style={{ fontSize: "16px" }}>
-          <Box width={16} height={16} className="text-[#0F7A4A]" /> Omzet & Margin 14 Hari
+          <Box width={16} height={16} className="text-primary" /> Omzet & Margin 14 Hari
         </h3>
         <div className="grid grid-cols-2 gap-3">
-          <div data-testid="stats-omzet" className="card rounded-2xl shadow-sm border p-4 bg-[#E8F5E9] border-[#A5D6A7]/60">
+          <div data-testid="stats-omzet" className="card rounded-2xl shadow-sm border p-4 bg-success/10 border-success/20">
             <p className="text-xs font-semibold tracking-wide opacity-70 uppercase">Omzet</p>
-            <p data-testid="stats-omzet-value" className="text-xl font-extrabold leading-none mt-1 text-[#1B5E20]" style={{ fontSize: "18px" }}>
+            <p data-testid="stats-omzet-value" className="text-xl font-extrabold leading-none mt-1 text-success" style={{ fontSize: "18px" }}>
               {formatRp(omzetResult.omzet)}
             </p>
             <p className="text-xs opacity-70 mt-1">Σ harga × qty keluar 14 hari</p>
@@ -233,11 +233,11 @@ export function StatistikTab() {
       {/* Rank Masuk */}
       <section data-testid="section-rank-masuk" className="space-y-3">
         <h3 className="text-[16px] font-bold text-neutral flex items-center gap-2" style={{ fontSize: "16px" }}>
-          <ArrowLeft width={16} height={16} className="text-[#0F7A4A]" /> Rank Masuk (qty)
+          <ArrowLeft width={16} height={16} className="text-primary" /> Rank Masuk (qty)
         </h3>
         {rankMasuk.length === 0 ? (
-          <div data-testid="rank-masuk-empty" className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 text-center" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-            <p className="text-sm text-[#595959]" style={{ fontSize: "16px" }}>Belum ada transaksi masuk</p>
+          <div data-testid="rank-masuk-empty" className="bg-base-100 border border-base-300 rounded-[12px] p-4 text-center" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <p className="text-sm text-base-content/70" style={{ fontSize: "16px" }}>Belum ada transaksi masuk</p>
           </div>
         ) : (
           <ul data-testid="rank-masuk-list" className="space-y-2" aria-label="Rank masuk">
@@ -245,17 +245,17 @@ export function StatistikTab() {
               <li
                 key={r.skuId}
                 data-testid={`rank-masuk-item-${r.skuId}`}
-                className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 flex items-center justify-between gap-3"
+                className="bg-base-100 border border-base-300 rounded-[12px] p-4 flex items-center justify-between gap-3"
                 style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-8 h-8 rounded-xl bg-[#0F7A4A] text-white flex items-center justify-center text-sm font-bold shrink-0">{idx + 1}</span>
+                  <span className="w-8 h-8 rounded-xl bg-primary text-primary-content flex items-center justify-center text-sm font-bold shrink-0">{idx + 1}</span>
                   <div className="min-w-0">
-                    <p className="text-[16px] font-semibold text-[#1A1A1A] truncate" style={{ fontSize: "16px" }}>{r.skuName}</p>
-                    <p className="text-xs text-[#595959] truncate">{r.kategoriName}</p>
+                    <p className="text-[16px] font-semibold text-base-content truncate" style={{ fontSize: "16px" }}>{r.skuName}</p>
+                    <p className="text-xs text-base-content/70 truncate">{r.kategoriName}</p>
                   </div>
                 </div>
-                <span className="text-[16px] font-bold text-[#0F7A4A] shrink-0" style={{ fontSize: "16px" }}>
+                <span className="text-[16px] font-bold text-primary shrink-0" style={{ fontSize: "16px" }}>
                   {r.qty} pcs
                 </span>
               </li>
@@ -267,11 +267,11 @@ export function StatistikTab() {
       {/* Rank Keluar */}
       <section data-testid="section-rank-keluar" className="space-y-3">
         <h3 className="text-[16px] font-bold text-neutral flex items-center gap-2" style={{ fontSize: "16px" }}>
-          <ArrowRight width={16} height={16} className="text-[#C62828]" /> Rank Keluar (qty)
+          <ArrowRight width={16} height={16} className="text-error" /> Rank Keluar (qty)
         </h3>
         {rankKeluar.length === 0 ? (
-          <div data-testid="rank-keluar-empty" className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 text-center" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-            <p className="text-sm text-[#595959]" style={{ fontSize: "16px" }}>Belum ada transaksi keluar</p>
+          <div data-testid="rank-keluar-empty" className="bg-base-100 border border-base-300 rounded-[12px] p-4 text-center" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <p className="text-sm text-base-content/70" style={{ fontSize: "16px" }}>Belum ada transaksi keluar</p>
           </div>
         ) : (
           <ul data-testid="rank-keluar-list" className="space-y-2" aria-label="Rank keluar">
@@ -279,17 +279,17 @@ export function StatistikTab() {
               <li
                 key={r.skuId}
                 data-testid={`rank-keluar-item-${r.skuId}`}
-                className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 flex items-center justify-between gap-3"
+                className="bg-base-100 border border-base-300 rounded-[12px] p-4 flex items-center justify-between gap-3"
                 style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-8 h-8 rounded-xl bg-[#C62828] text-white flex items-center justify-center text-sm font-bold shrink-0">{idx + 1}</span>
+                  <span className="w-8 h-8 rounded-xl bg-error text-primary-content flex items-center justify-center text-sm font-bold shrink-0">{idx + 1}</span>
                   <div className="min-w-0">
-                    <p className="text-[16px] font-semibold text-[#1A1A1A] truncate" style={{ fontSize: "16px" }}>{r.skuName}</p>
-                    <p className="text-xs text-[#595959] truncate">{r.kategoriName}</p>
+                    <p className="text-[16px] font-semibold text-base-content truncate" style={{ fontSize: "16px" }}>{r.skuName}</p>
+                    <p className="text-xs text-base-content/70 truncate">{r.kategoriName}</p>
                   </div>
                 </div>
-                <span className="text-[16px] font-bold text-[#C62828] shrink-0" style={{ fontSize: "16px" }}>
+                <span className="text-[16px] font-bold text-error shrink-0" style={{ fontSize: "16px" }}>
                   {r.qty} pcs
                 </span>
               </li>
@@ -301,11 +301,11 @@ export function StatistikTab() {
       {/* Kecepatan per SKU */}
       <section data-testid="section-kecepatan-sku" className="space-y-3">
         <h3 className="text-[16px] font-bold text-neutral flex items-center gap-2" style={{ fontSize: "16px" }}>
-          <StatUp width={16} height={16} className="text-[#0F7A4A]" /> Kecepatan per SKU (avgUsage)
+          <StatUp width={16} height={16} className="text-primary" /> Kecepatan per SKU (avgUsage)
         </h3>
         {kecepatanSku.length === 0 ? (
-          <div data-testid="kecepatan-sku-empty" className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 text-center">
-            <p className="text-sm text-[#595959]" style={{ fontSize: "16px" }}>Belum ada SKU</p>
+          <div data-testid="kecepatan-sku-empty" className="bg-base-100 border border-base-300 rounded-[12px] p-4 text-center">
+            <p className="text-sm text-base-content/70" style={{ fontSize: "16px" }}>Belum ada SKU</p>
           </div>
         ) : (
           <ul data-testid="kecepatan-sku-list" className="space-y-2" aria-label="Kecepatan per SKU">
@@ -313,14 +313,14 @@ export function StatistikTab() {
               <li
                 key={r.id}
                 data-testid={`kecepatan-sku-item-${r.id}`}
-                className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 flex items-center justify-between gap-3"
+                className="bg-base-100 border border-base-300 rounded-[12px] p-4 flex items-center justify-between gap-3"
                 style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
               >
                 <div className="min-w-0">
-                  <p className="text-[16px] font-semibold text-[#1A1A1A] truncate" style={{ fontSize: "16px" }}>{r.nama}</p>
-                  <p className="text-xs text-[#595959]">Total keluar {r.totalQty} pcs</p>
+                  <p className="text-[16px] font-semibold text-base-content truncate" style={{ fontSize: "16px" }}>{r.nama}</p>
+                  <p className="text-xs text-base-content/70">Total keluar {r.totalQty} pcs</p>
                 </div>
-                <span data-testid={`kecepatan-sku-avg-${r.id}`} className="text-[16px] font-bold text-[#0F7A4A] shrink-0" style={{ fontSize: "16px" }}>
+                <span data-testid={`kecepatan-sku-avg-${r.id}`} className="text-[16px] font-bold text-primary shrink-0" style={{ fontSize: "16px" }}>
                   {formatAvg(r.avg)}
                 </span>
               </li>
@@ -332,11 +332,11 @@ export function StatistikTab() {
       {/* Kecepatan per Kategori */}
       <section data-testid="section-kecepatan-kategori" className="space-y-3">
         <h3 className="text-[16px] font-bold text-neutral flex items-center gap-2" style={{ fontSize: "16px" }}>
-          <Package width={16} height={16} className="text-[#0F7A4A]" /> Kecepatan per Kategori
+          <Package width={16} height={16} className="text-primary" /> Kecepatan per Kategori
         </h3>
         {kecepatanKategori.length === 0 ? (
-          <div data-testid="kecepatan-kategori-empty" className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 text-center">
-            <p className="text-sm text-[#595959]" style={{ fontSize: "16px" }}>Belum ada kategori</p>
+          <div data-testid="kecepatan-kategori-empty" className="bg-base-100 border border-base-300 rounded-[12px] p-4 text-center">
+            <p className="text-sm text-base-content/70" style={{ fontSize: "16px" }}>Belum ada kategori</p>
           </div>
         ) : (
           <ul data-testid="kecepatan-kategori-list" className="space-y-2" aria-label="Kecepatan per kategori">
@@ -344,14 +344,14 @@ export function StatistikTab() {
               <li
                 key={r.id}
                 data-testid={`kecepatan-kategori-item-${r.id}`}
-                className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 flex items-center justify-between gap-3"
+                className="bg-base-100 border border-base-300 rounded-[12px] p-4 flex items-center justify-between gap-3"
                 style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
               >
                 <div className="min-w-0">
-                  <p className="text-[16px] font-semibold text-[#1A1A1A] truncate" style={{ fontSize: "16px" }}>{r.nama}</p>
-                  <p className="text-xs text-[#595959]">Total keluar {r.totalQty} pcs</p>
+                  <p className="text-[16px] font-semibold text-base-content truncate" style={{ fontSize: "16px" }}>{r.nama}</p>
+                  <p className="text-xs text-base-content/70">Total keluar {r.totalQty} pcs</p>
                 </div>
-                <span data-testid={`kecepatan-kategori-avg-${r.id}`} className="text-[16px] font-bold text-[#0F7A4A] shrink-0" style={{ fontSize: "16px" }}>
+                <span data-testid={`kecepatan-kategori-avg-${r.id}`} className="text-[16px] font-bold text-primary shrink-0" style={{ fontSize: "16px" }}>
                   {formatAvg(r.avg)}
                 </span>
               </li>
@@ -363,11 +363,11 @@ export function StatistikTab() {
       {/* Histori keluar-masuk */}
       <section data-testid="section-histori-transaksi" className="space-y-3">
         <h3 className="text-[16px] font-bold text-neutral flex items-center gap-2" style={{ fontSize: "16px" }}>
-          <Clock width={16} height={16} className="text-[#595959]" /> Histori Keluar-Masuk (20 terbaru)
+          <Clock width={16} height={16} className="text-base-content/70" /> Histori Keluar-Masuk (20 terbaru)
         </h3>
         {histori.length === 0 ? (
-          <div data-testid="histori-transaksi-empty" className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 text-center" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-            <p className="text-sm text-[#595959]" style={{ fontSize: "16px" }}>Belum ada histori transaksi</p>
+          <div data-testid="histori-transaksi-empty" className="bg-base-100 border border-base-300 rounded-[12px] p-4 text-center" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <p className="text-sm text-base-content/70" style={{ fontSize: "16px" }}>Belum ada histori transaksi</p>
           </div>
         ) : (
           <ul data-testid="histori-transaksi-list" className="space-y-2" aria-label="Histori keluar masuk">
@@ -379,32 +379,27 @@ export function StatistikTab() {
                 <li
                   key={t.id}
                   data-testid={`histori-transaksi-item-${t.id}`}
-                  className="bg-white border border-[#D9D9D9] rounded-[12px] p-4 flex items-center justify-between gap-3"
+                  className="bg-base-100 border border-base-300 rounded-[12px] p-4 flex items-center justify-between gap-3"
                   style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span
                         data-testid={`histori-jenis-${t.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full border"
-                        style={{
-                          backgroundColor: isMasuk ? "#E8F5E9" : "#FFEBEE",
-                          color: isMasuk ? "#0F7A4A" : "#C62828",
-                          borderColor: isMasuk ? "#A5D6A7" : "#FFCDD2",
-                        }}
+                        className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full border ${isMasuk ? "bg-success/10 text-success border-success/20" : "bg-error/10 text-error border-error/20"}`}
                       >
                         {isMasuk ? <ArrowLeft width={12} height={12} /> : <ArrowRight width={12} height={12} />} {isMasuk ? "Masuk" : "Keluar"}
                       </span>
-                      <span className="text-[16px] font-semibold text-[#1A1A1A] truncate" style={{ fontSize: "16px" }}>
+                      <span className="text-[16px] font-semibold text-base-content truncate" style={{ fontSize: "16px" }}>
                         {sku?.nama ?? t.sku_id}
                       </span>
                     </div>
-                    <p className="text-xs text-[#595959] mt-1">
+                    <p className="text-xs text-base-content/70 mt-1">
                       {new Date(t.sold_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Jakarta" })} • {t.qty_sold} pcs
                       {typeof t.harga_jual_snapshot === "number" && t.harga_jual_snapshot > 0 ? ` • ${formatRp(t.harga_jual_snapshot)}` : ""}
                     </p>
                   </div>
-                  <Shop width={16} height={16} className="text-[#595959] shrink-0" />
+                  <Shop width={16} height={16} className="text-base-content/70 shrink-0" />
                 </li>
               );
             })}

@@ -1,9 +1,9 @@
 /**
- * TASK-05 [FRD-02]: Helper consumeFEFO — FEFO consume + transaksi keluar
+ * TASK-05 [FRD-02]: Helper consumeKeluar tercepat — Keluar tercepat consume + transaksi keluar
  *
  * Aturan (EXPECTED OUTCOME + CONTEXT):
- * - consumeFEFO(sku_id, qty): potong batch expiry terdekat dulu
- * - batch expiry null = non-perishable dilewati FEFO, hanya dipakai jika tidak ada batch expiry sama sekali (fallback)
+ * - consumeKeluar tercepat(sku_id, qty): potong batch expiry terdekat dulu
+ * - batch expiry null = non-perishable dilewati Keluar tercepat, hanya dipakai jika tidak ada batch expiry sama sekali (fallback)
  * - qty batch habis → set 0 (jangan hapus baris agar histori utuh)
  * - tulis 1 transaksis {jenis keluar, harga_jual_snapshot = sku.harga_normal, sold_at now}
  * - validasi qty>0 ("Qty harus lebih dari 0"), stok total<qty → reject "Stok tidak cukup" TANPA ubah apapun
@@ -38,13 +38,13 @@ function sortExpiryAsc(a: Batch, b: Batch): number {
 }
 
 /**
- * FEFO consume helper.
+ * Keluar tercepat consume helper.
  * @param skuId - sku_id numeric
  * @param qty - qty yang ingin dikeluarkan (>0)
  * @param orgId - org_id (default toko-01)
  * @param dbInstance - InventoryDB instance (default singleton db)
  */
-export async function consumeFEFO(
+export async function consumeKeluarTercepat(
   skuId: number,
   qty: number,
   orgId: string = DEFAULT_ORG_ID,
@@ -74,7 +74,7 @@ export async function consumeFEFO(
     let totalAvailable: number;
 
     if (expiring.length > 0) {
-      // Ada batch expiry → hanya pakai yang expiry, null dilewati sepenuhnya (KEPUTUSAN FEFO)
+      // Ada batch expiry → hanya pakai yang expiry, null dilewati sepenuhnya (KEPUTUSAN Keluar tercepat)
       targetBatches = expiring;
       totalAvailable = expiring.reduce((s, b) => s + b.qty, 0);
     } else {
@@ -87,7 +87,7 @@ export async function consumeFEFO(
       throw new ValidationError("Stok tidak cukup");
     }
 
-    // potong berurutan FEFO
+    // potong berurutan Keluar tercepat
     let remaining = qty;
     const details: ConsumeDetail[] = [];
 

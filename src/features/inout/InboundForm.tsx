@@ -43,10 +43,25 @@ export function InboundForm() {
   const [pengirim, setPengirim] = useState<string>("");
   const [hpp, setHpp] = useState<string>("");
   const [catatan, setCatatan] = useState<string>("");
+  const [awet, setAwet] = useState(false);
 
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [hppDeltaOk, setHppDeltaOk] = useState(false);
+
+  const selectedSku = skus.find((s) => s.id === skuId);
+  const hppNumPreview = Number(hpp);
+  const showHppDelta =
+    !!selectedSku &&
+    hpp.trim() !== "" &&
+    Number.isFinite(hppNumPreview) &&
+    hppNumPreview > 0 &&
+    hppNumPreview !== selectedSku.hpp;
+
+  useEffect(() => {
+    setHppDeltaOk(false);
+  }, [skuId, hpp]);
 
   useEffect(() => {
     (async () => {
@@ -55,23 +70,32 @@ export function InboundForm() {
     })();
   }, []);
 
+  const fail = (id: string, msg: string) => {
+    setError(msg);
+    document.getElementById(id)?.focus();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
 
     if (!skuId) {
-      setError("Pilih SKU terlebih dahulu");
+      fail("inbound-sku", "Pilih SKU terlebih dahulu");
       return;
     }
     const qtyNum = Number(qty);
     if (!Number.isFinite(qtyNum) || !(qtyNum > 0) || !Number.isInteger(qtyNum)) {
-      setError("Jumlah harus lebih dari 0");
+      fail("inbound-qty", "Jumlah harus lebih dari 0");
       return;
     }
     const hppNum = Number(hpp);
     if (!Number.isFinite(hppNum) || !(hppNum > 0)) {
-      setError("Harga beli harus lebih dari 0");
+      fail("inbound-hpp", "Harga beli harus lebih dari 0");
+      return;
+    }
+    if (showHppDelta && !hppDeltaOk) {
+      fail("hpp-delta-check", "Centang persetujuan ubah modal dulu Bu");
       return;
     }
 
@@ -80,25 +104,29 @@ export function InboundForm() {
     let expiry_date: string | null = null;
 
     if (mode === "tanggal") {
-      if (!tanggal) {
-        setError("Tanggal kadaluarsa wajib diisi");
-        return;
+      if (awet) {
+        expiry_date = null;
+      } else {
+        if (!tanggal) {
+          fail("inbound-tanggal", "Tanggal kadaluarsa wajib diisi");
+          return;
+        }
+        // tanggal is YYYY-MM-DD
+        const expiryMidnight = jakartaMidnightFromYMD(tanggal);
+        if (Number.isNaN(expiryMidnight.getTime())) {
+          fail("inbound-tanggal", "Tanggal tidak valid");
+          return;
+        }
+        if (expiryMidnight.getTime() < receivedStart.getTime()) {
+          fail("inbound-tanggal", "Tanggal tidak valid");
+          return;
+        }
+        expiry_date = tanggal.slice(0, 10);
       }
-      // tanggal is YYYY-MM-DD
-      const expiryMidnight = jakartaMidnightFromYMD(tanggal);
-      if (Number.isNaN(expiryMidnight.getTime())) {
-        setError("Tanggal tidak valid");
-        return;
-      }
-      if (expiryMidnight.getTime() < receivedStart.getTime()) {
-        setError("Tanggal tidak valid");
-        return;
-      }
-      expiry_date = tanggal.slice(0, 10);
     } else {
       const durNum = Number(durasi);
       if (!Number.isFinite(durNum) || !(durNum > 0) || !Number.isInteger(durNum)) {
-        setError("Durasi harus lebih dari 0");
+        fail("inbound-durasi", "Durasi harus lebih dari 0");
         return;
       }
       expiry_date = addDaysJakarta(receivedStart, durNum);
@@ -149,7 +177,7 @@ export function InboundForm() {
           qty: qtyNum,
           expiry_date,
           received_at: nowIso,
-          hpp_snapshot: hppBaru,
+          modal_snapshot: hppBaru,
           org_id: "toko-01",
         });
 
@@ -305,9 +333,21 @@ export function InboundForm() {
                 data-testid="input-tanggal"
                 type="date"
                 value={tanggal}
+                disabled={awet}
                 onChange={(e) => setTanggal(e.target.value)}
-                className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
+                className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3 disabled:opacity-50"
               />
+              <label className="flex items-start gap-2 cursor-pointer min-h-[48px] px-4 py-3 mt-2 rounded-xl border border-base-300 bg-base-100">
+                <input
+                  type="checkbox"
+                  id="inbound-awet"
+                  data-testid="input-awet"
+                  checked={awet}
+                  onChange={(e) => setAwet(e.target.checked)}
+                  className="checkbox checkbox-sm mt-1"
+                />
+                <span className="text-[16px]">Awet / tanpa kadaluarsa (misal beras karung)</span>
+              </label>
             </div>
           ) : (
             <div>
@@ -324,24 +364,45 @@ export function InboundForm() {
                 placeholder="Contoh: 30"
                 className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
               />
-              <p className="text-xs text-[#595959] mt-1.5">Akan jadi expiry = hari masuk + durasi (startOfDay Asia/Jakarta).</p>
+              <p className="text-xs text-[#595959] mt-1.5">Akan jadi expiry = hari masuk + durasi (awalHari Asia/Jakarta).</p>
             </div>
           )}
 
-          <div>
-            <label htmlFor="inbound-pengirim" className="block text-[16px] font-semibold text-neutral mb-2">
-              Pengirim
-            </label>
-            <input
-              id="inbound-pengirim"
-              data-testid="input-pengirim"
-              type="text"
-              value={pengirim}
-              onChange={(e) => setPengirim(e.target.value)}
-              placeholder="Contoh: Supplier A"
-              className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
-            />
-          </div>
+          <details data-testid="inbound-lanjutan" className="card card-border bg-base-100">
+            <summary className="cursor-pointer min-h-[48px] flex items-center px-4 text-base font-semibold">
+              Lanjutan (opsional)
+            </summary>
+            <div className="px-4 pb-4 space-y-4">
+              <div>
+                <label htmlFor="inbound-pengirim" className="block text-[16px] font-semibold text-neutral mb-2">
+                  Pengirim
+                </label>
+                <input
+                  id="inbound-pengirim"
+                  data-testid="input-pengirim"
+                  type="text"
+                  value={pengirim}
+                  onChange={(e) => setPengirim(e.target.value)}
+                  placeholder="Contoh: Supplier A"
+                  className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
+                />
+              </div>
+              <div>
+                <label htmlFor="inbound-catatan" className="block text-[16px] font-semibold text-neutral mb-2">
+                  Catatan
+                </label>
+                <textarea
+                  id="inbound-catatan"
+                  data-testid="textarea-catatan"
+                  value={catatan}
+                  onChange={(e) => setCatatan(e.target.value)}
+                  placeholder="Contoh: Nota #123, kondisi baik"
+                  rows={3}
+                  className="textarea textarea-bordered w-full min-h-[80px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3 py-3"
+                />
+              </div>
+            </div>
+          </details>
 
           <div>
             <label htmlFor="inbound-hpp" className="block text-[16px] font-semibold text-neutral mb-2">
@@ -357,22 +418,29 @@ export function InboundForm() {
               placeholder="Contoh: 12000"
               className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
             />
-            <p className="text-xs text-[#595959] mt-1.5">Akan timpa HPP SKU dan arsip ke riwayat (hpp_snapshot = harga beli).</p>
-          </div>
-
-          <div>
-            <label htmlFor="inbound-catatan" className="block text-[16px] font-semibold text-neutral mb-2">
-              Catatan
-            </label>
-            <textarea
-              id="inbound-catatan"
-              data-testid="textarea-catatan"
-              value={catatan}
-              onChange={(e) => setCatatan(e.target.value)}
-              placeholder="Contoh: Nota #123, kondisi baik"
-              rows={3}
-              className="textarea textarea-bordered w-full min-h-[80px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3 py-3"
-            />
+            {showHppDelta && selectedSku ? (
+              <div className="mt-2 space-y-2">
+                <p data-testid="hpp-delta-text" className="text-sm text-neutral leading-relaxed">
+                  Harga modal akan berubah Rp{selectedSku.hpp.toLocaleString("id-ID")} → Rp
+                  {hppNumPreview.toLocaleString("id-ID")} (arsip tersimpan).
+                </p>
+                <label className="flex items-start gap-2 cursor-pointer min-h-[48px] px-4 py-3 rounded-xl border border-base-300 bg-base-100">
+                  <input
+                    type="checkbox"
+                    data-testid="hpp-delta-check"
+                    checked={hppDeltaOk}
+                    onChange={(e) => setHppDeltaOk(e.target.checked)}
+                    className="checkbox checkbox-sm mt-1"
+                  />
+                  <span className="text-[16px]">
+                    Ya, ubah modal dari Rp{selectedSku.hpp.toLocaleString("id-ID")} menjadi Rp
+                    {hppNumPreview.toLocaleString("id-ID")}
+                  </span>
+                </label>
+              </div>
+            ) : (
+              <p className="text-sm text-[#595959] mt-1.5">Harga beli menjadi modal barang (tersimpan otomatis).</p>
+            )}
           </div>
 
           {error && (
