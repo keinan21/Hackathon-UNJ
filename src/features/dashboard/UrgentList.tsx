@@ -3,6 +3,7 @@ import Badge from "../../components/Badge";
 import { daysToExpiry, peringkat } from "../../engine/expiry";
 import { realRepo } from "../../db/dexieRepository";
 import { seedDefaultKategoris } from "../../db/seed";
+import { namaTampilKategori } from "../../lib/kategoriTampil";
 
 export type UrgentListProps = {
   onViewSuggestion?: (batchId: string) => void;
@@ -169,7 +170,7 @@ export function UrgentList({ onViewSuggestion, actions = true }: UrgentListProps
           <option value="Semua">Semua kategori</option>
           {kategoriOptions.map((k) => (
             <option key={k.id} value={k.nama}>
-              {k.nama}
+              {namaTampilKategori(k.nama)}
             </option>
           ))}
         </select>

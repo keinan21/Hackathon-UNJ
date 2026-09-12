@@ -4,6 +4,7 @@ import type { SKU, Kategori, Batch, Tag } from "../../db/types";
 import { daysToExpiry } from "../../engine/expiry";
 import { PageHeader, EmptyState, AppButton, BadgeKritis } from "../../components/ui";
 import { Package, Search, Plus, WarningCircle, ArrowRight } from "iconoir-react";
+import { namaTampilKategori } from "../../lib/kategoriTampil";
 
 type BatchMap = Record<string, Batch[]>;
 type SkuTagsMap = Record<string, Tag[]>;
@@ -225,7 +226,7 @@ export function KatalogPage() {
           <option value="">Semua kategori</option>
           {dedupedKategoris.map((k) => (
             <option key={k.id} value={k.id}>
-              {k.nama}
+              {namaTampilKategori(k.nama)}
             </option>
           ))}
         </select>
@@ -322,7 +323,7 @@ export function KatalogPage() {
                         <p className="text-base font-semibold truncate">{sku.nama}</p>
                       </div>
                       <p className="text-sm text-base-content/70 mt-2 ml-1">
-                        {sku.kode ?? "-"} {sku.barcode ? `• ${sku.barcode}` : ""} • {kategori?.nama ?? "-"}
+                        {sku.kode ?? "-"} {sku.barcode ? `• ${sku.barcode}` : ""} • {kategori ? namaTampilKategori(kategori.nama) : "-"}
                       </p>
                       {tagsForSku.length > 0 && (
                         <p className="text-xs text-base-content/70 mt-1 ml-1" data-testid={`sku-tags-${sku.id}`}>

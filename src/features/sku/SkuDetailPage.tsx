@@ -13,6 +13,7 @@ import { daysToExpiry, toJakartaStartOfDay } from "../../engine/expiry";
 import { build14DaysJakarta, aggregateArus14, formatJakarta } from "../../engine/arus";
 import { onBatchInserted } from "../../engine/notifScheduler";
 import { AppButton, StatCard } from "../../components/ui";
+import { namaTampilKategori } from "../../lib/kategoriTampil";
 import {
   ArrowLeft,
   Package,
@@ -595,7 +596,7 @@ export function SkuDetailPage({ id }: { id: string }) {
               <span>Kode: {sku.kode ?? "-"} </span> {sku.barcode ? <span className="badge badge-sm bg-base-200 border-base-300 text-neutral">Barcode: {sku.barcode}</span> : null}
             </p>
             <p data-testid="sku-detail-kategori" className="text-sm text-[#595959] mt-1">
-              Kategori: {kategori?.nama ?? "-"} • Threshold: [{kategori?.threshold_h_minus.join(",") ?? "7,3,1"}]
+              Kategori: {kategori ? namaTampilKategori(kategori.nama) : "-"} • Threshold: [{kategori?.threshold_h_minus.join(",") ?? "7,3,1"}]
             </p>
             {tags.length > 0 && (
               <p data-testid="sku-detail-tags" className="text-[16px] text-[#595959] mt-2 flex items-center gap-1.5 flex-wrap">

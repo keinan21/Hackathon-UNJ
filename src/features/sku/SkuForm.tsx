@@ -3,6 +3,7 @@ import { realRepo, dexieV2 } from "../../db/dexieRepository";
 import type { Kategori, SKU, Tag, SkuTag } from "../../db/types";
 import { getPrefixForKategori, computeNextKode } from "../../db/kode";
 import { PageHeader, AppButton } from "../../components/ui";
+import { namaTampilKategori, contohKategori } from "../../lib/kategoriTampil";
 import { Package, Plus, ScanBarcode, Hashtag, WarningCircle, CheckCircle } from "iconoir-react";
 
 function isSkuWithKode(s: SKU): s is SKU & { kode: string } {
@@ -235,7 +236,7 @@ export function SkuForm() {
           >
             {kategoris.map((k) => (
               <option key={k.id} value={k.id}>
-                {k.nama}
+                {namaTampilKategori(k.nama)}{contohKategori(k.nama) ? ` (contoh: ${contohKategori(k.nama)})` : ""}
               </option>
             ))}
           </select>

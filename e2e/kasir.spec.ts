@@ -78,7 +78,9 @@ test.describe("Kasir /keluar — keranjang multi-barang FEFO", () => {
 
     await page.getByTestId("kasir-simpan").click();
     await expect(page.getByTestId("form-success")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId("form-success")).toContainText("Penjualan tersimpan");
+    await expect(page.getByTestId("form-success")).toContainText("Jualan Rp42.000 tersimpan (2 barang).");
+    await page.getByTestId("kasir-baru").click();
+    await expect(page.getByTestId("kasir-search")).toBeFocused();
 
     const susu = await readBatches(page, "sku-ks-susu");
     const near = susu.find((b) => b.id === "b-ks-1");
@@ -107,7 +109,8 @@ test.describe("Kasir /keluar — keranjang multi-barang FEFO", () => {
     await page.getByTestId("kasir-simpan").click();
     const err = page.getByTestId("kasir-error-sku-ks-susu");
     await expect(err).toBeVisible({ timeout: 5000 });
-    await expect(err).toContainText("Stok tidak cukup");
+    await expect(err).toContainText("Susu UHT 1L tinggal 15. Kurangi jumlahnya.");
+    await expect(page.getByTestId("kasir-qty-sku-ks-susu")).toBeFocused();
     const susu = await readBatches(page, "sku-ks-susu");
     expect(susu.find((b) => b.id === "b-ks-1")?.qty).toBe(5);
     expect(susu.find((b) => b.id === "b-ks-2")?.qty).toBe(10);
@@ -120,6 +123,16 @@ test.describe("Kasir /keluar — keranjang multi-barang FEFO", () => {
     await expect(page.getByTestId("kasir-page")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId("kasir-simpan")).toBeDisabled();
     await expect(page.getByTestId("kasir-empty-hint")).toBeVisible();
+    await expect(page.getByTestId("kasir-empty-hint")).toContainText("Belum ada yang dipilih. Tap + pada barang.");
     await expect(page.getByTestId("kasir-total")).toContainText("Rp0");
+  });
+
+  test("DB kosong → empty + CTA Tambah Barang ke /sku/baru", async ({ page }) => {
+    await clearDexie(page);
+    await page.goto("/keluar");
+    await expect(page.getByTestId("kasir-page")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("kasir-empty")).toBeVisible({ timeout: 10_000 });
+    await page.getByTestId("kasir-empty-cta").click();
+    await expect(page).toHaveURL(/\/sku\/baru/);
   });
 });
