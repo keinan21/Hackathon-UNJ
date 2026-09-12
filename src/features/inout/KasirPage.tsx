@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { realRepo } from "../../db/dexieRepository";
 import { consumeKeluarTercepat } from "../../db/keluar";
 import type { SKU } from "../../db/types";
@@ -16,6 +16,7 @@ function formatRp(n: number): string {
 
 export function KasirPage() {
   const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<Record<string, number>>({});
   const [penerima, setPenerima] = useState("");
@@ -25,14 +26,21 @@ export function KasirPage() {
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const searchRef = useRef<HTMLInputElement>(null);
+
   const loadRows = async () => {
-    const skus = await realRepo.listSkus("toko-01").catch(() => [] as SKU[]);
-    const out: Row[] = [];
-    for (const s of skus) {
-      const batches = await realRepo.listBatchesBySku(s.id, "toko-01").catch(() => []);
-      out.push({ sku: s, stok: batches.reduce((t, b) => t + b.qty, 0) });
+    setLoading(true);
+    try {
+      const skus = await realRepo.listSkus("toko-01").catch(() => [] as SKU[]);
+      const out: Row[] = [];
+      for (const s of skus) {
+        const batches = await realRepo.listBatchesBySku(s.id, "toko-01").catch(() => []);
+        out.push({ sku: s, stok: batches.reduce((t, b) => t + b.qty, 0) });
+      }
+      setRows(out);
+    } finally {
+      setLoading(false);
     }
-    setRows(out);
   };
 
   useEffect(() => {
@@ -80,10 +88,14 @@ export function KasirPage() {
     const bad: Record<string, string> = {};
     for (const x of items) {
       const stok = byId.get(x.row.sku.id)?.stok ?? 0;
-      if (x.qty > stok) bad[x.row.sku.id] = `Kari ${stok} tok, ojo ngawur! (Stok tidak cukup)`;
+      if (x.qty > stok) bad[x.row.sku.id] = `${x.row.sku.nama} tinggal ${stok}. Kurangi jumlahnya.`;
     }
     if (Object.keys(bad).length > 0) {
       setRowErrors(bad);
+      const firstId = Object.keys(bad)[0];
+      requestAnimationFrame(() => {
+        document.querySelector<HTMLInputElement>(`[data-testid="kasir-qty-${firstId}"]`)?.focus();
+      });
       return;
     }
 
@@ -92,14 +104,16 @@ export function KasirPage() {
       await consumeKeluarTercepat(
         items.map((x) => ({ skuId: x.row.sku.id, qty: x.qty, penerima, catatan })),
       );
+      const totalStr = formatRp(total);
+      const count = items.length;
       setCart({});
       setRowErrors({});
-      setSuccess("Penjualan tersimpan");
+      setSuccess(`Jualan ${totalStr} tersimpan (${count} barang).`);
       await loadRows();
       window.dispatchEvent(new CustomEvent("outbound-created", { detail: { count: items.length } }));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("Stok tidak cukup")) setError("Stok tidak cukup — cek sisa tiap barang");
+      if (msg.includes("Stok tidak cukup")) setError("Ada jumlah melebihi stok. Baris yang salah ditandai merah di atas.");
       else if (msg.includes("Qty harus lebih dari 0")) setError("Qty harus lebih dari 0");
       else if (msg.includes("SKU tidak ditemukan")) setError("SKU tidak ditemukan");
       else setError(msg || "Gagal menyimpan penjualan");
@@ -108,12 +122,33 @@ export function KasirPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div data-testid="kasir-page" className="w-full max-w-[640px] mx-auto space-y-5">
+        <PageHeader
+          title="Kasir"
+          subtitle="Cari barang, atur jumlah, tap Selesaikan Jualan."
+          icon={<Shop width={18} height={18} />}
+        />
+        <div data-testid="kasir-loading" aria-busy="true" aria-label="Memuat barang" className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} aria-hidden className="card bg-base-100 rounded-2xl border border-base-300/50 p-4 animate-pulse">
+              <div className="h-5 w-2/3 rounded bg-base-300" />
+              <div className="h-4 w-1/3 rounded bg-base-300 mt-2" />
+            </div>
+          ))}
+          <p className="text-sm text-base-content/70 text-center">Memuat barang...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (rows.length === 0) {
     return (
       <div data-testid="kasir-page" className="w-full max-w-[640px] mx-auto space-y-5">
         <PageHeader
           title="Kasir"
-          subtitle="Jual cepat — cari barang, atur jumlah, simpan terjual."
+          subtitle="Cari barang, atur jumlah, tap Selesaikan Jualan."
           icon={<Shop width={18} height={18} />}
         />
         <div
@@ -123,6 +158,16 @@ export function KasirPage() {
         >
           <h3 className="text-base font-bold text-neutral">Belum ada barang</h3>
           <p className="text-sm text-[#595959] mt-1.5 leading-relaxed">Tambah barang dan stok dulu sebelum jualan.</p>
+          <AppButton
+            onClick={() => {
+              window.history.pushState({}, "", "/sku/baru");
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            }}
+            data-testid="kasir-empty-cta"
+            className="mt-5 rounded-xl"
+          >
+            Tambah Barang
+          </AppButton>
         </div>
       </div>
     );
@@ -132,16 +177,17 @@ export function KasirPage() {
     <div data-testid="kasir-page" className="w-full max-w-[640px] mx-auto space-y-5">
       <PageHeader
         title="Kasir"
-        subtitle="Jual cepat — cari barang, atur jumlah, simpan terjual."
+        subtitle="Cari barang, atur jumlah, tap Selesaikan Jualan."
         icon={<Shop width={18} height={18} />}
       />
 
       <input
         type="search"
+        ref={searchRef}
         data-testid="kasir-search"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Cari nama, kode, barcode..."
+        placeholder="Cari nama barang... contoh: Susu UHT"
         aria-label="Cari barang"
         className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl bg-base-100 border-base-300 focus:border-[#0F7A4A] focus:outline-none px-3"
       />
@@ -167,7 +213,7 @@ export function KasirPage() {
                       <div className="min-w-0">
                         <p className="text-base font-semibold truncate">{sku.nama}</p>
                         <p className="text-sm text-base-content/70">
-                          {formatRp(sku.harga_normal)} • sisa {stok}
+                          {formatRp(sku.harga_normal)} • Stok: {stok}
                         </p>
                       </div>
                       <div className="flex items-center gap-1 shrink-0" role="group" aria-label={`Jumlah ${sku.nama}`}>
@@ -215,7 +261,7 @@ export function KasirPage() {
 
         <details data-testid="kasir-lanjutan" className="card card-border bg-base-100">
           <summary className="cursor-pointer min-h-[48px] flex items-center px-4 text-base font-semibold">
-            Lanjutan (opsional)
+            Catatan (boleh kosong)
           </summary>
           <div className="px-4 pb-4 space-y-3">
             <input
@@ -223,8 +269,8 @@ export function KasirPage() {
               data-testid="kasir-penerima"
               value={penerima}
               onChange={(e) => setPenerima(e.target.value)}
-              placeholder="Pembeli (boleh kosong)"
-              aria-label="Pembeli"
+              placeholder="Contoh: Bu Ani"
+              aria-label="Nama pembeli"
               className="input input-bordered w-full min-h-[48px] text-[16px] rounded-xl px-3"
             />
             <input
@@ -247,13 +293,32 @@ export function KasirPage() {
         )}
 
         {success && (
-          <p data-testid="form-success" role="status" className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium bg-[#E8F5E9] text-[#0F7A4A] border border-[#C8E6C9]">
-            <CheckCircle width={16} height={16} className="shrink-0" />
-            {success}
-          </p>
+          <div className="space-y-2">
+            <p data-testid="form-success" role="status" className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium bg-[#E8F5E9] text-[#0F7A4A] border border-[#C8E6C9]">
+              <CheckCircle width={16} height={16} className="shrink-0" />
+              {success}
+            </p>
+            <AppButton
+              type="button"
+              variant="outline"
+              data-testid="kasir-baru"
+              fullWidth
+              className="rounded-xl"
+              onClick={() => {
+                setSuccess("");
+                setSearch("");
+                searchRef.current?.focus();
+              }}
+            >
+              Mulai jualan baru
+            </AppButton>
+          </div>
         )}
 
-        <div className="card card-border bg-base-100 sticky bottom-20 lg:static">
+        <div
+          className="card card-border bg-base-100 sticky bottom-20 lg:static"
+          style={{ paddingBottom: "max(0px, env(safe-area-inset-bottom))" }}
+        >
           <div className="card-body gap-2 p-4">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-base font-semibold">Total</span>
@@ -263,11 +328,11 @@ export function KasirPage() {
             </div>
             {items.length === 0 && (
               <p data-testid="kasir-empty-hint" className="text-sm text-base-content/70">
-                Pilih barang dulu Bu — tap + untuk tambah.
+                Belum ada yang dipilih. Tap + pada barang.
               </p>
             )}
             <AppButton type="submit" data-testid="kasir-simpan" disabled={submitting || items.length === 0} loading={submitting} fullWidth className="rounded-xl">
-              {submitting ? "Menyimpan..." : "Simpan Terjual"}
+              {submitting ? "Menyimpan..." : "Selesaikan Jualan"}
             </AppButton>
           </div>
         </div>

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { CheckCircle, WarningCircle, Shop, Lock, Download, Upload, Settings as SettingsIcon } from "iconoir-react";
+import { CheckCircle, WarningCircle, Shop, Lock, Download, Upload, Settings as SettingsIcon, Droplet, Package, Leaf, ShieldCheck } from "iconoir-react";
 import { getProfilToko } from "../auth/LoginPage";
 import { verifyPin, setPin } from "../auth/pinStore";
 import { realRepo, dexieV2 } from "../../db/dexieRepository";
 import { exportEncryptedBackup, importEncryptedBackup, buildBackupFilename, triggerDownload } from "../backup/backupService";
 import { AppButton, PageHeader } from "../../components/ui";
 import { presetUntukThreshold, THRESHOLD_PRESETS, FALLBACK_KATEGORI_PRESET } from "../../db/thresholdPresets";
+import { namaTampilKategori, contohKategori } from "../../lib/kategoriTampil";
 
 const PROFILE_KEY = "profil_toko_v1";
 export type ThresholdKategori = { id: string; name: string; threshold: number[] };
@@ -16,6 +17,10 @@ const FALLBACK_KATEGORI: ThresholdKategori[] = FALLBACK_KATEGORI_PRESET.map((p) 
   name: p.name,
   threshold: p.threshold,
 }));
+
+// Mapping nama ikon preset (kontrak: ThresholdPreset.icon) ke komponen iconoir-react.
+// Render <Icon width={18} height={18} aria-hidden className="shrink-0" /> sebelum label.
+const PRESET_ICONS: Record<string, typeof Droplet> = { Droplet, Package, Leaf, ShieldCheck };
 
 function saveNamaToko(nama: string): void {
   try {
@@ -343,29 +348,36 @@ export function SettingsPage() {
         {loadingKategori ? <p className="text-[16px] text-[#595959]" style={{ fontSize: "14px" }}>Memuat kategori...</p> : null}
         {!loadingKategori && kategoriList.map((kat) => {
           const currentPreset = presetUntukThreshold(kat.threshold);
+          const CurrentIcon = PRESET_ICONS[currentPreset.icon] ?? Package;
           return (
           <div key={kat.id} className="card card-border bg-base-100 p-4" data-testid={`kategori-${kat.id}`}>
             <label className="block text-[16px] font-semibold text-[#1A1A1A] mb-2" style={{ fontSize: "16px" }}>
-              {kat.name}
+              {namaTampilKategori(kat.name)}
             </label>
-            <div className="flex flex-wrap gap-2 mb-2" role="radiogroup" aria-label={`Ingatan basi ${kat.name}`}>
-              {THRESHOLD_PRESETS.map((p) => (
+            {contohKategori(kat.name) ? (
+              <p className="text-sm text-base-content/70 mb-2">Contoh: {contohKategori(kat.name)}</p>
+            ) : null}
+            <div className="flex flex-wrap gap-2 mb-2" role="radiogroup" aria-label={`Ingatan basi ${namaTampilKategori(kat.name)}`}>
+              {THRESHOLD_PRESETS.map((p) => {
+                const Icon = PRESET_ICONS[p.icon] ?? Package;
+                return (
                 <button
                   type="button"
                   key={p.label}
                   role="radio"
                   aria-checked={currentPreset.label === p.label}
                   onClick={() => handlePresetClick(kat, p)}
-                  className={`min-h-[48px] px-4 py-2 rounded-xl border text-[16px] font-semibold transition-colors ${
+                  className={`min-h-[48px] inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-[16px] font-semibold transition-colors ${
                     currentPreset.label === p.label
                       ? "border-[#0F7A4A] bg-[#E8F5E9] text-[#0F7A4A]"
                       : "border-[#D9D9D9] bg-base-100 text-[#1A1A1A] hover:border-[#0F7A4A]"
                   }`}
                   data-testid={`preset-${kat.id}-${p.emoji}`}
                 >
-                  {p.emoji} {p.label}
+                  <Icon width={18} height={18} aria-hidden className="shrink-0" /> {p.label}
                 </button>
-              ))}
+                );
+              })}
             </div>
             <details
               data-testid={`manual-${kat.id}`}
@@ -398,7 +410,7 @@ export function SettingsPage() {
                 </AppButton>
               </div>
             </details>
-            <p className="text-sm text-base-content/70 mt-2">Ingatan: <span className="font-semibold">{currentPreset.emoji} {currentPreset.label}</span></p>
+            <p className="text-sm text-base-content/70 mt-2">Ingatan: <span className="font-semibold inline-flex items-center gap-1"><CurrentIcon width={18} height={18} aria-hidden className="shrink-0" /> {currentPreset.label}</span></p>
           </div>
         );})}
       </section>
